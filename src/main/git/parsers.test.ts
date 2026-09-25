@@ -7,6 +7,7 @@ import {
   parseLog,
   parseMergeTools,
   parseNameStatus,
+  parseReflog,
   parseRefs,
   parseRemotes,
   parseStatus,
@@ -281,5 +282,38 @@ describe('parseMergeTools', () => {
 
   it('returns nothing for unexpected output', () => {
     expect(parseMergeTools('fatal: not a git repository')).toEqual([])
+  })
+})
+
+describe('parseReflog', () => {
+  it('splits the action from the message and reads the date', () => {
+    const output = [
+      ['a'.repeat(40), 'HEAD@{1758800000}', 'reset: moving to HEAD~1', 'one'].join(F),
+      ['b'.repeat(40), 'HEAD@{1758790000}', 'commit (initial): one', 'one'].join(F),
+      ['c'.repeat(40), 'main@{0}', 'branch: Created from HEAD', 'two'].join(F)
+    ].join('\n')
+    expect(parseReflog(output)).toEqual([
+      {
+        hash: 'a'.repeat(40),
+        date: 1758800000,
+        action: 'reset',
+        message: 'moving to HEAD~1',
+        subject: 'one'
+      },
+      {
+        hash: 'b'.repeat(40),
+        date: 1758790000,
+        action: 'commit (initial)',
+        message: 'one',
+        subject: 'one'
+      },
+      {
+        hash: 'c'.repeat(40),
+        date: 0,
+        action: 'branch',
+        message: 'Created from HEAD',
+        subject: 'two'
+      }
+    ])
   })
 })

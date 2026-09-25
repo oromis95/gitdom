@@ -18,6 +18,8 @@ export interface RepoTab {
   diff?: DiffTarget
   /** File whose history or blame replaces the graph; an open diff still takes precedence */
   inspect?: FileInspect
+  /** Reflog or backups listed instead of the graph (ADV-05, NFR-04) */
+  recovery?: RecoveryView
   /** Label of the long-running operation in progress (fetch, push…) */
   busy?: string
   draft: CommitDraft
@@ -46,6 +48,8 @@ export interface FileInspect {
   /** Path of the file at `rev`, when it was renamed since */
   revPath?: string
 }
+
+export type RecoveryView = 'reflog' | 'backups'
 
 export interface CommitDraft {
   summary: string
@@ -90,6 +94,8 @@ interface AppState {
   compare(target: CompareTarget | null): void
   /** Shows the history or blame of a file, closing the diff. */
   inspectFile(inspect: FileInspect | null): void
+  /** Lists the reflog or the backups in place of the graph, closing the diff and the inspector. */
+  openRecovery(view: RecoveryView | null): void
   setDraft(path: string, draft: Partial<CommitDraft>): void
   setBusy(path: string, busy: string | undefined): void
   /** Changes the branches the graph shows and reloads it. */
@@ -265,7 +271,16 @@ export const useApp = create<AppState>((set, get) => {
 
     inspectFile(inspect) {
       const tab = get().tabs[get().active]
-      if (tab) updateTab(tab.path, { inspect: inspect ?? undefined, diff: undefined })
+      if (tab) {
+        updateTab(tab.path, { inspect: inspect ?? undefined, diff: undefined, recovery: undefined })
+      }
+    },
+
+    openRecovery(view) {
+      const tab = get().tabs[get().active]
+      if (tab) {
+        updateTab(tab.path, { recovery: view ?? undefined, diff: undefined, inspect: undefined })
+      }
     },
 
     setDraft(path, draft) {

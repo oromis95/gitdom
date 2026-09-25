@@ -39,6 +39,38 @@ export interface Stash {
   date: number
 }
 
+/** A reflog entry (ADV-05): where a ref pointed after a command moved it. */
+export interface ReflogEntry {
+  hash: string
+  /** Unix timestamp in seconds of the move */
+  date: number
+  /** What moved the ref, e.g. "checkout", "commit (amend)", "reset" */
+  action: string
+  /** git's description of the move, e.g. "moving from main to feature" */
+  message: string
+  /** Subject of the commit the ref pointed to */
+  subject: string
+}
+
+/** Where branches pointed before an operation that rewrites or overwrites history (NFR-04). */
+export interface Backup {
+  id: string
+  /** The operation, e.g. "Rebase onto main" */
+  label: string
+  /** Unix timestamp in milliseconds */
+  date: number
+  refs: BackupRef[]
+}
+
+export interface BackupRef {
+  /** Full ref name, e.g. refs/heads/main or refs/remotes/origin/main */
+  name: string
+  /** Commit it pointed to when the backup was made */
+  hash: string
+  /** Commit it points to now, null once deleted */
+  current: string | null
+}
+
 /** Branches left out of the graph (GRAPH-14), as full ref names */
 export interface GraphFilter {
   /** Refs whose commits are hidden, unless another ref reaches them */

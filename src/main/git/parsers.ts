@@ -9,6 +9,7 @@ import type {
   FileStatusCode,
   Identity,
   Ref,
+  ReflogEntry,
   Remote,
   Stash,
   Submodule,
@@ -93,6 +94,26 @@ export function parseStashes(output: string): Stash[] {
     .map((line) => {
       const [hash, selector, message, parents = '', date = '0'] = line.split(FIELD)
       return { hash, selector, message, base: parents.split(' ')[0], date: Number(date) }
+    })
+}
+
+/** Used with --date=unix, so the selector carries the time of the move: HEAD@{1727000000} */
+export const REFLOG_FORMAT = ['%H', '%gd', '%gs', '%s'].join('%x1f')
+
+export function parseReflog(output: string): ReflogEntry[] {
+  return output
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [hash, selector = '', description = '', subject = ''] = line.split(FIELD)
+      const colon = description.indexOf(': ')
+      return {
+        hash,
+        date: Number(/@\{(\d+)\}$/.exec(selector)?.[1] ?? 0),
+        action: colon < 0 ? description : description.slice(0, colon),
+        message: colon < 0 ? '' : description.slice(colon + 2),
+        subject
+      }
     })
 }
 

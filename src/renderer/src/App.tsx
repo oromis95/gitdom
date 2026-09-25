@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Download, FolderOpen, FolderPlus, Star, TriangleAlert, User, X } from 'lucide-react'
+import {
+  Download,
+  FolderOpen,
+  FolderPlus,
+  ScrollText,
+  Star,
+  TriangleAlert,
+  User,
+  X
+} from 'lucide-react'
 import type { RepoSnapshot } from '../../shared/types'
 import TabBar from './components/TabBar'
 import Toolbar from './components/Toolbar'
@@ -11,6 +20,9 @@ import ConflictView from './components/ConflictView'
 import FileInspector from './components/FileInspector'
 import Overlays from './components/Overlays'
 import TerminalDock from './components/TerminalDock'
+import ActivityDock from './components/ActivityDock'
+import RecoveryView from './components/RecoveryView'
+import Updates from './components/Updates'
 import Splash, { HighwayLogo } from './components/Splash'
 import { restoreSession, useActiveTab, useApp } from './store'
 import { fetchAll } from './actions'
@@ -18,6 +30,8 @@ import { identityMenu } from './identity'
 import { openMenu, openPreferences, openRepoDialog } from './ui'
 import { stepZoom, useSettings } from './settings'
 import { splashEnabled, useTheme } from './theme'
+import { startActivityLog, toggleActivity, useActivity } from './activity'
+import { checkForUpdates, showWhatsNew, startupChecks } from './updates'
 
 function IdentityButton({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
   const { name, email, scope } = snapshot.identity
@@ -115,12 +129,22 @@ function App(): React.JSX.Element {
 
   useEffect(() => restoreSession(), [])
 
+  useEffect(() => {
+    startActivityLog()
+    startupChecks()
+  }, [])
+
   useEffect(
     () =>
       window.api.menu.onCommand((command) => {
         if (command === 'open') void useApp.getState().pickAndOpen()
         else if (command === 'clone' || command === 'init') openRepoDialog(command)
         else if (command === 'preferences') openPreferences()
+        else if (command === 'activity') toggleActivity()
+        else if (command === 'reflog' || command === 'backups') {
+          useApp.getState().openRecovery(command)
+        } else if (command === 'whatsNew') showWhatsNew()
+        else if (command === 'checkUpdates') void checkForUpdates(true)
         else stepZoom(command === 'zoomIn' ? 1 : command === 'zoomOut' ? -1 : 0)
       }),
     []
@@ -176,6 +200,7 @@ function App(): React.JSX.Element {
     }
   }, [])
   const zoom = useSettings((s) => s.zoom)
+  const activityShown = useActivity((s) => s.shown)
 
   // Pick up changes made outside the app (terminal, IDE) when the window regains focus
   useEffect(() => {
@@ -207,6 +232,8 @@ function App(): React.JSX.Element {
                 <DiffView snapshot={snapshot} target={tab.diff} />
               ) : tab.inspect ? (
                 <FileInspector snapshot={snapshot} inspect={tab.inspect} />
+              ) : tab.recovery ? (
+                <RecoveryView snapshot={snapshot} view={tab.recovery} />
               ) : (
                 <GraphView snapshot={snapshot} selected={tab.selected} />
               )}
@@ -217,7 +244,10 @@ function App(): React.JSX.Element {
           )}
         </>
       )}
-      <TerminalDock />
+      <div className="dock-area">
+        <TerminalDock />
+        <ActivityDock />
+      </div>
       <div className="statusbar">
         {snapshot && (
           <>
@@ -230,6 +260,13 @@ function App(): React.JSX.Element {
         {tab?.busy && <span className="status-busy">{tab.busy}…</span>}
         <span style={{ marginLeft: 'auto' }} />
         {snapshot && <IdentityButton snapshot={snapshot} />}
+        <button
+          className={`status-activity${activityShown ? ' active' : ''}`}
+          title="Activity log: the git commands GitDom runs (Ctrl+Shift+L)"
+          onClick={() => toggleActivity()}
+        >
+          <ScrollText size={13} /> Activity
+        </button>
         {zoom !== 1 && (
           <button className="status-zoom" title="Reset zoom (Ctrl+0)" onClick={() => stepZoom(0)}>
             {Math.round(zoom * 100)}%
@@ -238,6 +275,7 @@ function App(): React.JSX.Element {
         <span>GitDom {__APP_VERSION__}</span>
       </div>
       <Overlays />
+      <Updates />
       {splash && <Splash onDone={() => setSplash(false)} />}
     </div>
   )

@@ -1,7 +1,9 @@
 // The native menu bar: File (repositories, preferences), Electron's standard Edit menu, View with the
-// zoom, and Window with the themes. Commands go to the renderer, which owns the state.
-import { BrowserWindow, ipcMain, Menu, type MenuItemConstructorOptions } from 'electron'
+// zoom and the recovery tools, Window with the themes, and Help. Commands go to the renderer,
+// which owns the state.
+import { BrowserWindow, ipcMain, Menu, shell, type MenuItemConstructorOptions } from 'electron'
 import { IPC, type MenuCommand, type ThemeChoice } from '../shared/api'
+import { REPO_URL } from './updates'
 
 const THEMES: { theme: ThemeChoice; label: string }[] = [
   { theme: 'dark', label: 'Dark' },
@@ -36,6 +38,16 @@ function build(): void {
       { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: send('zoomOut') },
       { label: 'Actual Size', accelerator: 'CmdOrCtrl+0', click: send('zoomReset') },
       { type: 'separator' },
+      // Handled by the renderer, which also gets it from the terminal: only shown here
+      {
+        label: 'Activity Log',
+        accelerator: 'CmdOrCtrl+Shift+L',
+        registerAccelerator: false,
+        click: send('activity')
+      },
+      { label: 'Reflog', click: send('reflog') },
+      { label: 'Backups', click: send('backups') },
+      { type: 'separator' },
       { role: 'togglefullscreen' },
       { role: 'reload' },
       { role: 'toggleDevTools' }
@@ -59,7 +71,16 @@ function build(): void {
       { role: 'close' }
     ]
   }
-  Menu.setApplicationMenu(Menu.buildFromTemplate([file, { role: 'editMenu' }, view, window]))
+  const help: MenuItemConstructorOptions = {
+    label: 'Help',
+    submenu: [
+      { label: "What's New", click: send('whatsNew') },
+      { label: 'Check for Updates…', click: send('checkUpdates') },
+      { type: 'separator' },
+      { label: 'GitDom on GitHub', click: () => void shell.openExternal(REPO_URL) }
+    ]
+  }
+  Menu.setApplicationMenu(Menu.buildFromTemplate([file, { role: 'editMenu' }, view, window, help]))
 }
 
 export function registerMenu(): void {

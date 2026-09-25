@@ -1,4 +1,5 @@
 import type {
+  Backup,
   Blame,
   CommitDetail,
   DiffOptions,
@@ -8,6 +9,7 @@ import type {
   FileRevision,
   GraphFilter,
   ImagePair,
+  ReflogEntry,
   RepoSnapshot,
   WorkingTreeStatus
 } from './types'
@@ -117,6 +119,14 @@ export interface RepoOps {
   revert(hash: string): OpOutcome
   /** A hard reset first saves uncommitted changes in a stash: returns its hash, or null. */
   reset(hash: string, mode: ResetMode): string | null
+
+  /** Where HEAD, or a branch (full ref name), pointed over time, newest first (ADV-05). */
+  reflog(ref: string): ReflogEntry[]
+  /** Automatic backups made before resets, rebases and force pushes, newest first (NFR-04). */
+  backups(): Backup[]
+  /** Moves a local branch back to where a backup saw it; the checked out one keeps local changes. */
+  restoreBackup(id: string, ref: string): void
+  deleteBackup(id: string): void
 
   /** Undoes the last GitDom action; returns its label. */
   undo(): string
@@ -275,6 +285,57 @@ export interface ToolsApi {
   setZoom(factor: number): void
 }
 
+/** A git command GitDom ran, for the activity log (UI-09, NFR-07). */
+export interface ActivityEntry {
+  id: number
+  /** Folder git ran in */
+  repo: string
+  /** The user action it belongs to, e.g. "Push"; null for background work (refreshes, reads) */
+  action: string | null
+  /** Groups the commands of one action */
+  actionId: number | null
+  /** git's arguments, with credentials written in URLs hidden */
+  args: string[]
+  /** Unix timestamp in milliseconds */
+  start: number
+  duration: number
+  /** null when git couldn't be started or was cancelled */
+  exitCode: number | null
+  /** Succeeded: some commands also succeed with exit codes other than 0 */
+  ok: boolean
+  /** stdout then stderr, cut to a maximum length */
+  output: string
+  truncated: boolean
+}
+
+/** The activity log, kept in the main process for the whole session. */
+export interface ActivityApi {
+  list(): Promise<ActivityEntry[]>
+  clear(): void
+  /** Subscribes to commands as they complete; returns the unsubscribe function. */
+  onEntry(listener: (entry: ActivityEntry) => void): () => void
+}
+
+/** A GitDom release published on GitHub. */
+export interface ReleaseInfo {
+  /** e.g. 0.6.0 */
+  version: string
+  /** Release page */
+  url: string
+  /** The portable exe, when attached */
+  downloadUrl: string | null
+  /** Release notes, in Markdown */
+  notes: string
+}
+
+/** GitDom itself: updates and links. */
+export interface AppApi {
+  /** The latest release on GitHub. */
+  latestRelease(): Promise<Result<ReleaseInfo>>
+  /** Opens a page of GitDom's GitHub repository in the browser. */
+  openRepoPage(url: string): void
+}
+
 /** Themes offered in the app and in the Window menu; 'system' follows Windows' light or dark setting. */
 export type ThemeChoice = 'dark' | 'light' | 'system' | 'studio'
 
@@ -290,7 +351,18 @@ export interface MenuApi {
 
 /** File menu entries handled by the renderer. */
 export type MenuCommand =
-  'open' | 'clone' | 'init' | 'preferences' | 'zoomIn' | 'zoomOut' | 'zoomReset'
+  | 'open'
+  | 'clone'
+  | 'init'
+  | 'preferences'
+  | 'zoomIn'
+  | 'zoomOut'
+  | 'zoomReset'
+  | 'activity'
+  | 'reflog'
+  | 'backups'
+  | 'whatsNew'
+  | 'checkUpdates'
 
 /** API exposed by the preload script on `window.api`. */
 export interface GitDomApi {
@@ -307,6 +379,8 @@ export interface GitDomApi {
   tools: ToolsApi
   terminal: TerminalApi
   menu: MenuApi
+  activity: ActivityApi
+  app: AppApi
 }
 
 export const IPC = {
@@ -334,5 +408,10 @@ export const IPC = {
   toolsCheckGit: 'tools:check-git',
   toolsMergeTools: 'tools:merge-tools',
   toolsOpenInEditor: 'tools:open-in-editor',
-  toolsShowInFolder: 'tools:show-in-folder'
+  toolsShowInFolder: 'tools:show-in-folder',
+  activityList: 'activity:list',
+  activityClear: 'activity:clear',
+  activityEntry: 'activity:entry',
+  appLatestRelease: 'app:latest-release',
+  appOpenRepoPage: 'app:open-repo-page'
 } as const

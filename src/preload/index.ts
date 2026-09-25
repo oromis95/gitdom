@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webFrame, type IpcRendererEvent } from 'electron'
 import {
   IPC,
+  type ActivityEntry,
   type ChangeScope,
   type CloneProgress,
   type GitDomApi,
@@ -70,6 +71,19 @@ const api: GitDomApi = {
       ipcRenderer.on(IPC.menuCommand, handler)
       return () => ipcRenderer.removeListener(IPC.menuCommand, handler)
     }
+  },
+  activity: {
+    list: () => ipcRenderer.invoke(IPC.activityList),
+    clear: () => ipcRenderer.send(IPC.activityClear),
+    onEntry: (listener) => {
+      const handler = (_event: IpcRendererEvent, entry: ActivityEntry): void => listener(entry)
+      ipcRenderer.on(IPC.activityEntry, handler)
+      return () => ipcRenderer.removeListener(IPC.activityEntry, handler)
+    }
+  },
+  app: {
+    latestRelease: () => ipcRenderer.invoke(IPC.appLatestRelease),
+    openRepoPage: (url) => ipcRenderer.send(IPC.appOpenRepoPage, url)
   }
 }
 

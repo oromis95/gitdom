@@ -13,6 +13,7 @@ import {
 } from '../settings'
 import { setSplashEnabled, setTheme, splashEnabled, useTheme, type ThemeChoice } from '../theme'
 import { useUi } from '../ui'
+import { checkForUpdates, showWhatsNew } from '../updates'
 
 const THEMES: { value: ThemeChoice; label: string }[] = [
   { value: 'dark', label: 'Dark' },
@@ -284,6 +285,24 @@ function Git({ s }: { s: Settings }): React.JSX.Element {
             </option>
           ))}
         </select>
+      </Row>
+      <Row label="Updates" hint={`GitDom ${__APP_VERSION__}`}>
+        <label className="modal-check">
+          <input
+            type="checkbox"
+            checked={s.checkUpdates}
+            onChange={(e) => updateSettings({ checkUpdates: e.target.checked })}
+          />
+          Tell me at startup when a new version is out
+        </label>
+        <div className="pref-buttons">
+          <button className="btn btn-small" onClick={() => void checkForUpdates(true)}>
+            Check now
+          </button>
+          <button className="btn btn-small" onClick={() => showWhatsNew()}>
+            What&apos;s new
+          </button>
+        </div>
       </Row>
     </>
   )

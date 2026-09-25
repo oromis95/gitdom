@@ -1,10 +1,10 @@
 # GitDom — Roadmap
 
-> Versione 0.5.0 pubblicata il 2026-09-25 (Step 1, 2, 3 e 4 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 0.6.0 pubblicata il 2026-09-25 (Step 1–5 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
-Le milestone 0–4 sono completate:
+Le milestone 0–5 sono completate:
 
 - grafo dei commit virtualizzato;
 - staging per file, hunk e riga;
@@ -18,9 +18,10 @@ Le milestone 0–4 sono completate:
 - clone e nuovo repository, preferiti (Step 1);
 - preferenze, zoom, pannelli ridimensionabili, editor e merge tool esterni (Step 2);
 - diff affiancato, parole evidenziate, opzioni del diff, confronto tra revisioni e diff delle immagini (Step 3);
-- ricerca nel grafo, colonne configurabili, branch nascosti o isolati, avatar, stash nel grafo e minimap (Step 4).
+- ricerca nel grafo, colonne configurabili, branch nascosti o isolati, avatar, stash nel grafo e minimap (Step 4);
+- log attività, backup automatici, reflog consultabile, avviso di nuova versione e changelog (Step 5).
 
-I requisiti P0 sono coperti; resta buona parte dei P1, a partire dalla trasparenza sulle operazioni (Step 5).
+I requisiti P0 sono coperti; resta buona parte dei P1, a partire dai commit completi: firma, hook, reword (Step 6).
 
 ## Principi per l'ordine
 
@@ -77,7 +78,9 @@ Oggi molti comportamenti sono fissi nel codice, per esempio il fetch ogni 10 min
 - **Stash come nodi** nel grafo (STASH-03)
 - Evidenziazione del branch al passaggio del mouse e minimap con indicatori (GRAPH-15, GRAPH-16)
 
-## Step 5 — v0.6: Trasparenza e rete di sicurezza
+## Step 5 — v0.6: Trasparenza e rete di sicurezza ✅
+
+> Completato: pannello Attività (Ctrl+Shift+L) con i comandi git raggruppati per azione, durata, esito e output, credenziali nascoste; backup dei branch prima di reset, rebase e force push, con ripristino, creazione di un branch e undo del ripristino; vista Reflog di HEAD e di ogni branch, con i commit fuori dal grafo segnalati. In più, anticipati dallo Step 10: avviso all'avvio quando su GitHub c'è una versione più recente, con il link per scaricarla, e un CHANGELOG mostrato dopo ogni aggiornamento (Aiuto → What's New) e usato come note delle release.
 
 Serve a fidarsi dell'app anche nelle operazioni rischiose.
 
@@ -118,9 +121,9 @@ Obiettivo della v1.0: tutti i requisiti P0 e P1 coperti.
 
 ## Step 10 — v1.1: Aggiornamenti e qualità del rilascio
 
-- **Avviso di nuova versione**: all'avvio l'app controlla le Releases su GitHub e propone il download (NFR-08)
+- ~~Avviso di nuova versione~~ e ~~changelog~~: anticipati nello Step 5 (NFR-08)
+- **Aggiornamento dall'app**: scaricare e sostituire l'exe senza passare dal browser
 - **CI su ogni push**: lint, typecheck e test su GitHub Actions, non solo al momento del rilascio
-- **Changelog** generato dai commit a ogni tag
 
 ## Step 11 — v1.2: Integrazione GitHub
 

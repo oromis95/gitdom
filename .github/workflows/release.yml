@@ -38,10 +38,23 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        # A rerun replaces the executable of the existing release instead of failing
+        # The notes are the version's section of CHANGELOG.md, or GitHub's list of changes when it
+        # has none. A rerun replaces the executable and the notes instead of failing.
         run: |
+          awk -v version="${GITHUB_REF_NAME#v}" '
+            /^## / {
+              if (found) exit
+              split(substr($0, 4), words, " ")
+              gsub(/[][]|^v/, "", words[1])
+              found = words[1] == version
+              next
+            }
+            found
+          ' CHANGELOG.md > notes.md
+          if grep -q '[^[:space:]]' notes.md; then notes=(--notes-file notes.md); else notes=(--generate-notes); fi
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" dist/*-portable.exe --clobber
+            if [ "${notes[0]}" = --notes-file ]; then gh release edit "$GITHUB_REF_NAME" --notes-file notes.md; fi
           else
-            gh release create "$GITHUB_REF_NAME" dist/*-portable.exe --title "GitDom $GITHUB_REF_NAME" --generate-notes
+            gh release create "$GITHUB_REF_NAME" dist/*-portable.exe --title "GitDom $GITHUB_REF_NAME" "${notes[@]}"
           fi

@@ -11,7 +11,14 @@ import type {
   StashMode
 } from '../../shared/api'
 import { parseDiff } from '../../shared/diff'
-import { FILE_LOG_FORMAT, parseBlame, parseFileLog, parseNameStatus } from './parsers'
+import {
+  FILE_LOG_FORMAT,
+  REFLOG_FORMAT,
+  parseBlame,
+  parseFileLog,
+  parseNameStatus,
+  parseReflog
+} from './parsers'
 import type { DiffOptions, FileDiff, ImagePair } from '../../shared/types'
 import { GitError, runGit, tryGit } from './exec'
 import { toolSettings } from '../settings'
@@ -23,6 +30,8 @@ import {
   readOperation
 } from './repository'
 import * as history from './history'
+import * as backups from './backups'
+import { inAction } from './activity'
 
 type OpImpl = { [K in OpName]: (repo: string, ...args: OpArgs<K>) => Promise<OpResult<K>> }
 
@@ -30,6 +39,7 @@ const HASH_RE = /^[0-9a-f]{4,64}$/i
 const STASH_RE = /^stash@\{\d+\}$/
 const AUTO_STASH_MESSAGE = 'GitDom auto-stash before checkout'
 const FILE_HISTORY_LIMIT = 5000
+const REFLOG_LIMIT = 2000
 const CONFLICT_MARKER_RE = /^(<{7}|>{7})( |$)/m
 
 /** Rejects values git would parse as options. */
@@ -692,6 +702,45 @@ const ops: OpImpl = {
     return saved
   },
 
+  async reflog(repo, ref) {
+    assertArg(ref, 'ref')
+    if (ref !== 'HEAD' && (await tryGit(repo, ['check-ref-format', ref])) === null) {
+      throw new Error(`Invalid ref: ${ref}`)
+    }
+    // A ref without a reflog (new repository, reflogs turned off) has no entries
+    const output = await tryGit(repo, [
+      'reflog',
+      'show',
+      '--date=unix',
+      `--format=${REFLOG_FORMAT}`,
+      `-n${REFLOG_LIMIT}`,
+      ref,
+      '--'
+    ])
+    return parseReflog(output ?? '')
+  },
+
+  backups: (repo) => backups.listBackups(repo),
+
+  async restoreBackup(repo, id, ref) {
+    if (!ref.startsWith('refs/heads/')) {
+      throw new Error(
+        'Only local branches can be restored: create a branch from the backup instead'
+      )
+    }
+    const hash = await backups.backedUpCommit(repo, id, ref)
+    const checkedOut = (await tryGit(repo, ['symbolic-ref', '-q', 'HEAD']))?.trim()
+    if (checkedOut === ref) {
+      await assertIdle(repo)
+      // --keep refuses to overwrite uncommitted changes to the files it has to change
+      await runGit(repo, ['reset', '-q', '--keep', hash])
+    } else {
+      await runGit(repo, ['update-ref', ref, hash])
+    }
+  },
+
+  deleteBackup: (repo, id) => backups.deleteBackup(repo, id),
+
   undo: (repo) => history.undo(repo),
   redo: (repo) => history.redo(repo),
 
@@ -920,7 +969,12 @@ const READ_ONLY = new Set<OpName>([
   'conflictMarkers',
   'rebaseCommits',
   'readConflictFile',
-  'isAncestor'
+  'isAncestor',
+  'searchCommits',
+  'compareFiles',
+  'imagePair',
+  'reflog',
+  'backups'
 ])
 
 /**
@@ -948,11 +1002,77 @@ export function runOp<K extends OpName>(
     return Promise.reject(new Error(`Unknown operation: ${String(name)}`))
   const impl = ops[name] as (repo: string, ...args: OpArgs<K>) => Promise<OpResult<K>>
   const work = (): Promise<OpResult<K>> => impl(repo, ...args)
-  if (READ_ONLY.has(name) || UNQUEUED.has(name)) return work()
-  return enqueue(repo, () => recorded(repo, name, args, work))
+  if (READ_ONLY.has(name)) return work()
+  const label = actionLabel(name, args)
+  if (UNQUEUED.has(name)) return inAction(label, work)
+  return enqueue(repo, () =>
+    inAction(label, () => recorded(repo, name, args, () => backedUp(repo, name, args, label, work)))
+  )
 }
 
 const short = (hash: string): string => hash.slice(0, 7)
+const shortRef = (ref: string): string => ref.replace(/^refs\/(heads|remotes)\//, '')
+
+/** Labels of actions in the activity log that aren't undoable, or read better than the undo label. */
+const LABELS: { [K in OpName]?: (...args: OpArgs<K>) => string } = {
+  push: (force) => (force ? 'Force push' : 'Push'),
+  restoreBackup: (_id, ref) => `Restore ${shortRef(ref)} from a backup`
+}
+
+/** The action as shown in the activity log: "stashPush" becomes "Stash push". */
+function actionLabel<K extends OpName>(name: K, args: OpArgs<K>): string {
+  const label = LABELS[name] as ((...a: OpArgs<K>) => string) | undefined
+  if (label) return label(...args)
+  const undoable = UNDOABLE[name] as ((...a: OpArgs<K>) => { label: string }) | undefined
+  if (undoable) return undoable(...args).label
+  const words = name.replace(/[A-Z]/g, (c) => ` ${c.toLowerCase()}`)
+  return words[0].toUpperCase() + words.slice(1)
+}
+
+async function currentBranchRef(repo: string): Promise<string[]> {
+  const ref = (await tryGit(repo, ['symbolic-ref', '-q', 'HEAD']))?.trim()
+  return ref ? [ref] : []
+}
+
+/** Remote branch a push of the current branch would overwrite. */
+async function pushTarget(repo: string): Promise<string[]> {
+  const branch = await currentBranch(repo)
+  const remote = await getConfig(repo, `branch.${branch}.remote`)
+  const merge = await getConfig(repo, `branch.${branch}.merge`)
+  if (remote && merge) return [`refs/remotes/${remote}/${merge.replace(/^refs\/heads\//, '')}`]
+  const fallback = await defaultRemote(repo, branch).catch(() => null)
+  return fallback ? [`refs/remotes/${fallback}/${branch}`] : []
+}
+
+/** Operations that rewrite or overwrite history, and the refs to back up before them (NFR-04). */
+const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise<string[]> } = {
+  reset: (repo) => currentBranchRef(repo),
+  rebase: (repo) => currentBranchRef(repo),
+  rebaseInteractive: (repo) => currentBranchRef(repo),
+  push: async (repo, force) => (force ? pushTarget(repo) : []),
+  // Restoring a backup moves the branch too: where it was is saved first
+  restoreBackup: async (_repo, _id, ref) => [ref]
+}
+
+/** Runs an operation, backing up the refs it may rewrite; the backup is dropped if they didn't move. */
+async function backedUp<K extends OpName>(
+  repo: string,
+  name: K,
+  args: OpArgs<K>,
+  label: string,
+  work: () => Promise<OpResult<K>>
+): Promise<OpResult<K>> {
+  const refsOf = BACKED_UP[name] as
+    ((repo: string, ...a: OpArgs<K>) => Promise<string[]>) | undefined
+  if (!refsOf) return work()
+  const backup = await backups.createBackup(repo, label, await refsOf(repo, ...args))
+  try {
+    return await work()
+  } finally {
+    // A rebase stopped on conflicts hasn't moved the branch yet: keep the backup
+    if (backup && !(await readOperation(repo))) await backups.dropIfUnchanged(repo, backup)
+  }
+}
 
 /** Undoable operations: history label, and how undo/redo move the current branch (default keep). */
 const UNDOABLE: {
@@ -982,7 +1102,8 @@ const UNDOABLE: {
   reset: (hash, mode) => ({
     label: `Reset to ${short(hash)} (${mode})`,
     move: mode === 'hard' ? 'keep' : mode
-  })
+  }),
+  restoreBackup: (_id, ref) => ({ label: `Restore ${shortRef(ref)}` })
 }
 
 /** Runs a write operation, recording undoable ones in the history once they complete. */

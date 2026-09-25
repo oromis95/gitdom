@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import { gitBinary } from '../settings'
+import { logCommand } from './activity'
 
 export class GitError extends Error {
   constructor(
@@ -47,6 +48,7 @@ const BASE_ARGS = [
  */
 export function runGit(cwd: string, args: string[], options: RunOptions = {}): Promise<string> {
   return new Promise((resolve, reject) => {
+    const logged = logCommand(cwd, args)
     const child = spawn(gitBinary(), [...BASE_ARGS, ...args], {
       cwd,
       windowsHide: true,
@@ -64,18 +66,27 @@ export function runGit(cwd: string, args: string[], options: RunOptions = {}): P
       options.onStderr?.(chunk.toString('utf8'))
     })
 
-    child.on('error', (e) =>
-      reject(
-        options.signal?.aborted
-          ? new GitError('Cancelled', args, null, '')
-          : new GitError(`Unable to run git: ${e.message}`, args, null, '')
-      )
-    )
+    child.on('error', (e) => {
+      const error = options.signal?.aborted
+        ? new GitError('Cancelled', args, null, '')
+        : new GitError(`Unable to run git: ${e.message}`, args, null, '')
+      logged(null, error.message, false)
+      reject(error)
+    })
     child.on('close', (code) => {
-      if (options.signal?.aborted) return reject(new GitError('Cancelled', args, null, ''))
+      if (options.signal?.aborted) {
+        logged(null, 'Cancelled', false)
+        return reject(new GitError('Cancelled', args, null, ''))
+      }
       const stdout = Buffer.concat(out).toString(options.encoding ?? 'utf8')
       const stderr = Buffer.concat(err).toString('utf8')
-      if (code === 0 || (code !== null && options.okExitCodes?.includes(code))) {
+      const ok = code === 0 || (code !== null && !!options.okExitCodes?.includes(code))
+      const shown =
+        options.encoding === 'base64'
+          ? `(binary output, ${Buffer.concat(out).length} bytes)`
+          : stdout
+      logged(code, stderr ? `${shown.trimEnd()}\n${stderr}`.trim() : shown, ok)
+      if (ok) {
         resolve(options.withStderr ? (stdout + stderr).trim() : stdout)
       } else {
         const text = (stderr.trim() || stdout.trim()).split('\n')

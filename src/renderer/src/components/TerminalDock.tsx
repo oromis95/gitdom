@@ -153,8 +153,8 @@ function TerminalView({
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown' || !e.ctrlKey || e.altKey) return true
       const key = e.key.toLowerCase()
-      // App shortcuts: toggle the terminal, command palette
-      if (e.code === 'Backquote' || (e.shiftKey && key === 'p')) return false
+      // App shortcuts: toggle the terminal, command palette, activity log
+      if (e.code === 'Backquote' || (e.shiftKey && (key === 'p' || key === 'l'))) return false
       // Ctrl+C copies when there is a selection, and interrupts otherwise
       if (key === 'c' && (e.shiftKey || term.hasSelection())) {
         void navigator.clipboard.writeText(term.getSelection())

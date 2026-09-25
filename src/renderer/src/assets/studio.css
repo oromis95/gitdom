@@ -84,13 +84,6 @@
 .app.studio > .center-message {
   grid-area: main;
 }
-.app.studio > .terminal-dock {
-  grid-area: dock;
-  margin: 0 var(--gap) var(--gap) 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
 .app.studio > .statusbar {
   grid-area: status;
 }

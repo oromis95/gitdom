@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import {
   IPC,
   type CloneOptions,
@@ -7,6 +7,7 @@ import {
   type OpName,
   type Result
 } from '../shared/api'
+import { activityEntries, clearActivity, inAction, onActivity, redact } from './git/activity'
 import { cancelClone, cloneRepository, initRepository } from './git/clone'
 import { GitError } from './git/exec'
 import { runOp } from './git/operations'
@@ -15,6 +16,7 @@ import { loadSnapshot, resolveRepoRoot } from './git/repository'
 import { setWatchedRepos } from './watcher'
 import { registerTerminalHandlers } from './terminal'
 import { registerToolHandlers } from './tools'
+import { isRepoUrl, latestRelease } from './updates'
 
 async function toResult<T>(work: () => Promise<T>): Promise<Result<T>> {
   try {
@@ -53,16 +55,18 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.clone, (event, id: number, options: CloneOptions) =>
     toResult(() =>
-      cloneRepository(id, options, (progress) => {
-        if (!event.sender.isDestroyed()) event.sender.send(IPC.cloneProgress, id, progress)
-      })
+      inAction(`Clone ${redact(String(options.url))}`, () =>
+        cloneRepository(id, options, (progress) => {
+          if (!event.sender.isDestroyed()) event.sender.send(IPC.cloneProgress, id, progress)
+        })
+      )
     )
   )
 
   ipcMain.on(IPC.cloneCancel, (_event, id: number) => cancelClone(id))
 
   ipcMain.handle(IPC.init, (_event, options: InitOptions) =>
-    toResult(() => initRepository(options))
+    toResult(() => inAction('New repository', () => initRepository(options)))
   )
 
   ipcMain.handle(IPC.openRepository, (_event, path: string, filter?: GraphFilter) =>
@@ -78,6 +82,19 @@ export function registerIpcHandlers(): void {
     setWatchedRepos(repoPaths, (repoPath, scope) => {
       if (!sender.isDestroyed()) sender.send(IPC.changed, repoPath, scope)
     })
+  })
+
+  ipcMain.handle(IPC.activityList, () => activityEntries())
+  ipcMain.on(IPC.activityClear, () => clearActivity())
+  onActivity((entry) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.webContents.isDestroyed()) window.webContents.send(IPC.activityEntry, entry)
+    }
+  })
+
+  ipcMain.handle(IPC.appLatestRelease, () => toResult(latestRelease))
+  ipcMain.on(IPC.appOpenRepoPage, (_event, url: unknown) => {
+    if (isRepoUrl(url)) void shell.openExternal(url)
   })
 
   registerTerminalHandlers()

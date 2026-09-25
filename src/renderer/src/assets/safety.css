@@ -1,0 +1,334 @@
+/* Transparency and safety net: activity log, reflog and backups, update notice, what's new. */
+
+/* --- Docks ------------------------------------------------------------------------------- */
+
+/* The terminal and the activity log stack at the bottom */
+.dock-area {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.app.studio > .dock-area {
+  grid-area: dock;
+}
+.app.studio > .dock-area > .terminal-dock,
+.app.studio > .dock-area > .activity-dock {
+  margin: 0 var(--gap) var(--gap) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* --- Activity log ------------------------------------------------------------------------ */
+
+.activity-dock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  animation: slide-up var(--medium) var(--ease-out);
+}
+.activity-dock .terminal-header label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.activity-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0;
+  font-size: 12.5px;
+}
+.activity-empty {
+  padding: 16px;
+}
+.activity-group {
+  border-bottom: 1px solid var(--border);
+}
+.activity-group.background {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  color: var(--text-muted);
+}
+.activity-group.background .activity-command {
+  flex: 1;
+  min-width: 0;
+}
+.activity-group-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+.activity-group-row:hover,
+.activity-command-row:hover {
+  background: var(--bg-hover);
+}
+.activity-time {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.activity-label {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-repo {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+.activity-meta {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.activity-good {
+  flex-shrink: 0;
+  color: var(--green);
+}
+.activity-bad {
+  flex-shrink: 0;
+  color: var(--red);
+}
+.activity-commands {
+  padding: 0 0 6px 28px;
+}
+.activity-command-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 12px 0 4px;
+  cursor: pointer;
+}
+.activity-command-row .graph-tool {
+  visibility: hidden;
+}
+.activity-command-row:hover .graph-tool {
+  visibility: visible;
+}
+.activity-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.activity-command.failed .activity-line,
+.activity-command.failed .activity-meta {
+  color: var(--danger-text);
+}
+.activity-output {
+  max-height: 240px;
+  overflow: auto;
+  margin: 2px 12px 6px 22px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--bg-panel);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+.status-activity {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 6px;
+  font: inherit;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.status-activity:hover,
+.status-activity.active {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+/* --- Reflog and backups ------------------------------------------------------------------ */
+
+.recovery-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.recovery-hint select {
+  padding: 2px 4px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.reflog-action {
+  flex-shrink: 0;
+  min-width: 90px;
+  color: var(--accent);
+  font-size: 12px;
+}
+.reflog-row .history-subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reflog-lost {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  font-size: 11.5px;
+}
+.backup {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.backup-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 28px;
+}
+.backup-title .row-action {
+  display: block;
+}
+.backup-label {
+  flex: 1;
+  font-weight: 600;
+}
+.backup-ref {
+  padding-left: 24px;
+  font-size: 12.5px;
+}
+.backup-ref-name {
+  font-weight: 600;
+}
+.backup-ref .row-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- Update notice and what's new -------------------------------------------------------- */
+
+.update-notice {
+  position: fixed;
+  left: 16px;
+  bottom: calc(var(--statusbar-h) + 12px);
+  z-index: 300;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  animation: slide-up var(--medium) var(--ease-out);
+}
+.update-notice-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.update-notice-title .pref-close {
+  margin-left: auto;
+}
+.update-notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.update-notice-actions .link {
+  margin-left: auto;
+}
+.modal.whats-new {
+  width: 620px;
+  max-height: 75vh;
+}
+.whats-new-body {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  user-select: text;
+}
+.whats-new-version {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.whats-new-version .muted {
+  font-size: 12px;
+  font-weight: normal;
+}
+.markdown {
+  line-height: 1.5;
+}
+.markdown p {
+  margin: 4px 0;
+}
+.md-heading {
+  margin: 10px 0 4px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 12px;
+}
+.md-item {
+  position: relative;
+  padding-left: 14px;
+  margin: 2px 0;
+}
+.md-item::before {
+  content: '•';
+  position: absolute;
+  left: 2px;
+  color: var(--text-muted);
+}
+.markdown code {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--bg);
+  font-size: 12px;
+}
+.pref-control:has(> .pref-buttons) {
+  flex-direction: column;
+  gap: 8px;
+}
+.pref-buttons {
+  display: flex;
+  gap: 6px;
+}

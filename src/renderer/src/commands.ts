@@ -13,6 +13,8 @@ import {
 } from './theme'
 import * as actions from './actions'
 import { toggleTerminal, useTerminal } from './terminal'
+import { toggleActivity, useActivity } from './activity'
+import { checkForUpdates, showWhatsNew } from './updates'
 import {
   adoptGlobalIdentity,
   applyProfile,
@@ -179,6 +181,12 @@ export function buildCommands(): Command[] {
       })
     }
 
+    add('Recovery', 'Reflog: where HEAD and the branches have been', () =>
+      app.openRecovery('reflog')
+    )
+    add('Recovery', 'Backups saved before resets, rebases and force pushes', () =>
+      app.openRecovery('backups')
+    )
     add('Repository', 'Refresh', () => void app.refresh())
     add('Repository', 'Open repository in editor', () => void actions.openInEditor(repo, null))
     add('Repository', 'Show repository in Explorer', () => actions.showInFolder(repo, null))
@@ -209,6 +217,13 @@ export function buildCommands(): Command[] {
     const shown = useTerminal.getState().shown
     add('View', shown ? 'Hide terminal' : 'Open terminal', () => toggleTerminal(), 'Ctrl+`')
   }
+  const activity = useActivity.getState().shown
+  add(
+    'View',
+    activity ? 'Hide the activity log' : 'Show the activity log (git commands run)',
+    () => toggleActivity(),
+    'Ctrl+Shift+L'
+  )
   const { theme, studio, detailHidden } = useTheme.getState()
   for (const t of THEMES) {
     add('View', t.title, () => setTheme(t.theme), t.theme === theme ? 'current' : undefined)
@@ -223,6 +238,8 @@ export function buildCommands(): Command[] {
   add('View', 'Zoom out', () => stepZoom(-1), 'Ctrl+-')
   add('View', 'Reset zoom', () => stepZoom(0), 'Ctrl+0')
   add('Preferences', 'Preferences…', () => openPreferences(), 'Ctrl+,')
+  add('Help', "What's new in GitDom", () => showWhatsNew())
+  add('Help', 'Check for updates', () => void checkForUpdates(true))
   const splash = splashEnabled()
   add('View', splash ? 'Turn off the startup animation' : 'Turn on the startup animation', () =>
     setSplashEnabled(!splash)

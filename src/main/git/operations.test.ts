@@ -326,6 +326,14 @@ describe('remotes', () => {
     })
     await runOp(repo, 'push', [true])
     expect(git(remote, 'log', '-1', '--format=%s', 'main')).toBe('local work')
+
+    // The overwritten remote branch is backed up; a plain push isn't
+    const [backup] = await runOp(repo, 'backups', [])
+    expect(backup).toMatchObject({
+      label: 'Force push',
+      refs: [{ name: 'refs/remotes/origin/main' }]
+    })
+    expect(git(repo, 'log', '-1', '--format=%s', backup.refs[0].hash)).toBe('remote work')
   })
 
   it('checks out a remote branch as a tracking branch and deletes it remotely', async () => {
@@ -724,5 +732,82 @@ describe('submodules, LFS and identity', () => {
     await runOp(repo, 'clearLocalIdentity', [])
     await runOp(repo, 'clearLocalIdentity', [])
     expect((await loadIdentity(repo)).scope).not.toBe('local')
+  })
+})
+
+describe('safety net', () => {
+  beforeEach(async () => {
+    await commitFile('a.txt', '1\n', 'one')
+    await commitFile('a.txt', '2\n', 'two')
+  })
+
+  const head = (): string => git(repo, 'rev-parse', 'HEAD')
+
+  it('backs up the branch before a reset, keeps it out of the graph and restores it', async () => {
+    const two = head()
+    await runOp(repo, 'reset', [git(repo, 'rev-parse', 'HEAD~1'), 'hard'])
+    const [backup] = await runOp(repo, 'backups', [])
+    expect(backup).toMatchObject({
+      label: expect.stringMatching(/^Reset/),
+      refs: [{ name: 'refs/heads/main', hash: two, current: head() }]
+    })
+    expect(git(repo, 'for-each-ref', '--format=%(objectname)', 'refs/gitdom/')).toBe(two)
+
+    // The backup ref keeps "two" alive, but it's no branch: the graph doesn't show it
+    const snapshot = await loadSnapshot(repo)
+    expect(snapshot.commits.map((c) => c.subject)).toEqual(['one'])
+
+    await runOp(repo, 'restoreBackup', [backup.id, 'refs/heads/main'])
+    expect(head()).toBe(two)
+    expect(readFileSync(join(repo, 'a.txt'), 'utf8')).toBe('2\n')
+    const labels = (await runOp(repo, 'backups', [])).map((b) => b.label)
+    expect(labels).toEqual(['Restore main from a backup', backup.label])
+
+    await runOp(repo, 'undo', [])
+    expect(git(repo, 'log', '-1', '--format=%s')).toBe('one')
+
+    await runOp(repo, 'deleteBackup', [backup.id])
+    expect((await runOp(repo, 'backups', [])).map((b) => b.id)).not.toContain(backup.id)
+    await expect(runOp(repo, 'restoreBackup', [backup.id, 'refs/heads/main'])).rejects.toThrow()
+  })
+
+  it('drops the backup of a reset that moves nothing', async () => {
+    await runOp(repo, 'reset', [head(), 'mixed'])
+    expect(await runOp(repo, 'backups', [])).toEqual([])
+    expect(git(repo, 'for-each-ref', 'refs/gitdom/')).toBe('')
+  })
+
+  it('refuses to restore anything but a local branch', async () => {
+    await runOp(repo, 'reset', [git(repo, 'rev-parse', 'HEAD~1'), 'soft'])
+    const [backup] = await runOp(repo, 'backups', [])
+    await expect(runOp(repo, 'restoreBackup', [backup.id, 'HEAD'])).rejects.toThrow(
+      'local branches'
+    )
+  })
+
+  it('lists the reflog of HEAD and of a branch', async () => {
+    await runOp(repo, 'reset', [git(repo, 'rev-parse', 'HEAD~1'), 'hard'])
+    const reflog = await runOp(repo, 'reflog', ['HEAD'])
+    expect(reflog[0]).toMatchObject({ action: 'reset', subject: 'one' })
+    expect(reflog[1]).toMatchObject({ action: 'commit', message: 'two', subject: 'two' })
+    expect(reflog[0].date).toBeGreaterThan(1e9)
+    expect((await runOp(repo, 'reflog', ['refs/heads/main'])).length).toBe(3)
+    expect(await runOp(repo, 'reflog', ['refs/heads/missing'])).toEqual([])
+    await expect(runOp(repo, 'reflog', ['--all'])).rejects.toThrow()
+  })
+
+  it('logs the commands of an action together, hiding credentials', async () => {
+    const { activityEntries, clearActivity } = await import('./activity')
+    clearActivity()
+    await runOp(repo, 'createBranch', ['topic', null, false])
+    await runOp(repo, 'addRemote', ['origin', 'https://me:secret@example.com/r.git'])
+    const entries = activityEntries()
+    const branch = entries.filter((e) => e.action === 'Create branch topic')
+    expect(branch.length).toBeGreaterThan(0)
+    expect(new Set(branch.map((e) => e.actionId)).size).toBe(1)
+    expect(branch.some((e) => e.args.includes('branch') && e.ok)).toBe(true)
+    const text = JSON.stringify(entries)
+    expect(text).not.toContain('secret')
+    expect(text).toContain('https://***@example.com')
   })
 })

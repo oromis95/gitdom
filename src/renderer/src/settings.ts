@@ -33,6 +33,8 @@ export interface Settings extends ToolSettings {
   graphShowDate: boolean
   /** Author pictures from Gravatar in the graph nodes, initials otherwise (GRAPH-04) */
   graphAvatars: boolean
+  /** Look for a newer GitDom release on GitHub at startup */
+  checkUpdates: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -57,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graphShowAuthor: true,
   graphShowDate: true,
   graphAvatars: true,
+  checkUpdates: true,
   gitPath: '',
   editor: '',
   mergeTool: ''

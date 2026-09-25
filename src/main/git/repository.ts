@@ -116,7 +116,8 @@ export function logRevisions(filter?: GraphFilter): string[] {
   const hidden = (filter?.hidden ?? []).filter(valid)
   // Glob characters in a hidden name would hide more than asked: escape them
   const exclude = hidden.map((ref) => `--exclude=${ref.replace(/[*?[\\]/g, '\\$&')}`)
-  return ['--exclude=refs/stash', ...exclude, '--all']
+  // Backups (backups.ts) keep old commits alive: they'd bring them back into the graph
+  return ['--exclude=refs/stash', '--exclude=refs/gitdom/*', ...exclude, '--all']
 }
 
 export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<RepoSnapshot> {

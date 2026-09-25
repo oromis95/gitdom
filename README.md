@@ -50,6 +50,12 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Drag a branch onto another to fast-forward, merge or rebase
 - Undo / redo of the last operations
 
+**Safety net**
+
+- Activity log (**View → Activity Log**, `Ctrl+Shift+L`): every git command GitDom runs, grouped by action, with its duration, result and output
+- Automatic backup of the branch before a reset, a rebase or a force push; restore it with one click or create a branch from it (**View → Backups**)
+- Reflog of HEAD and of each branch, to find commits lost after a reset or a rebase (**View → Reflog**)
+
 **Productivity**
 
 - Command palette (`Ctrl+P`) for every action
@@ -69,6 +75,12 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Drag the edges of the side panels to resize them; GitDom remembers the sizes (double-click an edge to reset it)
 - Background fetch interval (or off), default pull strategy
 - Path of the git executable, external editor and merge tool
+- Startup check for new versions
+
+**Updates**
+
+- At startup GitDom tells you when a newer version is out on GitHub, with a link to download it
+- **Help → What's New** lists what each version added; the full list is in [CHANGELOG.md](CHANGELOG.md)
 
 **Themes**
 
@@ -132,7 +144,7 @@ docs/         Requirements (Italian) and screenshots
 
 ## Status
 
-GitDom is a personal project under active development (version 0.4.0).
+GitDom is a personal project under active development (version 0.6.0).
 The full list of requirements is in [docs/REQUISITI.md](docs/REQUISITI.md), and the plan for the next versions is in [docs/ROADMAP.md](docs/ROADMAP.md) (both in Italian).
 
 ## License
