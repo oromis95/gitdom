@@ -103,7 +103,7 @@ docs/         Requirements (Italian) and screenshots
 ## Status
 
 GitDom is a personal project under active development (version 0.1.0).
-The full list of requirements and the roadmap are in [docs/REQUISITI.md](docs/REQUISITI.md) (in Italian).
+The full list of requirements is in [docs/REQUISITI.md](docs/REQUISITI.md), and the plan for the next versions is in [docs/ROADMAP.md](docs/ROADMAP.md) (both in Italian).
 
 ## License
 
