@@ -18,6 +18,9 @@ asarUnpack:
   - node_modules/@lydell/node-pty*/**
 win:
   executableName: gitdom
+# A single self-contained exe: it unpacks itself to a temporary folder at each start, nothing to install
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

@@ -52,6 +52,10 @@ At startup GitDom shows its logo: cars on a six-lane highway change lanes withou
 
 <p align="center"><img src="docs/screenshots/splash.png" alt="GitDom startup logo" width="600"></p>
 
+## Download
+
+Get `GitDom-<version>-portable.exe` from the [Releases](https://github.com/oromis95/gitdom/releases) page. It's a single self-contained exe that you start with a double-click; there's nothing to install. You need [Git](https://git-scm.com/) on the `PATH`.
+
 ## Requirements
 
 - [Git](https://git-scm.com/) on the `PATH`
@@ -75,6 +79,7 @@ npm run dev
 | `npm run lint` / `npm run typecheck` | Checks code style and types                         |
 | `npm run build:unpack`               | Builds a standalone app folder in `dist/`           |
 | `npm run build:win`                  | Builds a Windows installer                          |
+| `npm run build:portable`             | Builds a single self-contained Windows exe          |
 
 ## Tech stack
 

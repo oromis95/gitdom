@@ -15,7 +15,7 @@ function createWindow(): void {
     show: false,
     title: 'GitDom',
     backgroundColor: '#1b1d23',
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
