@@ -6,6 +6,10 @@ import { registerIpcHandlers } from './ipc'
 import { registerMenu } from './menu'
 import { closeAllTerminals } from './terminal'
 
+// Development runs keep their own tabs, recent repositories and settings: on Windows
+// %APPDATA%\gitdom is otherwise the same folder as the packaged GitDom's %APPDATA%\GitDom
+if (!app.isPackaged) app.setPath('userData', `${app.getPath('userData')}-dev`)
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1600,

@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 0.1.0 pubblicata il 2026-09-25. Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 0.3.0 pubblicata il 2026-09-25 (Step 1 e 2 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -14,9 +14,11 @@ Le milestone 0–4 sono completate:
 - command palette, terminale integrato, blame e cronologia file;
 - submodule, LFS e profili di identità;
 - temi Scuro, Chiaro e Studio, animazioni e logo all'avvio;
-- exe portable generato da GitHub Actions.
+- exe portable generato da GitHub Actions;
+- clone e nuovo repository, preferiti (Step 1);
+- preferenze, zoom, pannelli ridimensionabili, editor e merge tool esterni (Step 2).
 
-Restano da coprire alcuni requisiti P0 (clone, impostazioni) e buona parte dei P1.
+I requisiti P0 sono coperti; resta buona parte dei P1, a partire dal diff (Step 3).
 
 ## Principi per l'ordine
 
