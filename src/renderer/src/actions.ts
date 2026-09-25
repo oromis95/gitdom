@@ -958,3 +958,13 @@ export function savedPullMode(): PullMode {
 export function savePullMode(mode: PullMode): void {
   localStorage.setItem(PULL_MODE_KEY, mode)
 }
+
+/** Opens a file of the repository, or the repository itself (null), in the external editor. */
+export async function openInEditor(repo: string, path: string | null): Promise<void> {
+  const result = await window.api.tools.openInEditor(repo, path)
+  if (!result.ok) notify('error', `Couldn't open the editor: ${result.error}`, result.details)
+}
+
+export function showInFolder(repo: string, path: string | null): void {
+  window.api.tools.showInFolder(repo, path)
+}

@@ -1,4 +1,5 @@
 import { spawn } from 'child_process'
+import { gitBinary } from '../settings'
 
 export class GitError extends Error {
   constructor(
@@ -44,7 +45,7 @@ const BASE_ARGS = [
  */
 export function runGit(cwd: string, args: string[], options: RunOptions = {}): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn('git', [...BASE_ARGS, ...args], {
+    const child = spawn(gitBinary(), [...BASE_ARGS, ...args], {
       cwd,
       windowsHide: true,
       signal: options.signal,

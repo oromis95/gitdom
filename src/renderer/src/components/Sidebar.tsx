@@ -21,6 +21,8 @@ import type { Ref, RepoSnapshot, SubmoduleState } from '../../../shared/types'
 import { useApp } from '../store'
 import { openMenu } from '../ui'
 import * as actions from '../actions'
+import { roomBeside, updateSettings } from '../settings'
+import ResizeHandle from './ResizeHandle'
 
 const SUBMODULE_STATES: Record<SubmoduleState, string> = {
   uninitialized: 'not initialized',
@@ -203,6 +205,12 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
 
   return (
     <aside className="sidebar">
+      <ResizeHandle
+        edge="right"
+        min={180}
+        max={() => Math.min(window.innerWidth * 0.4, roomBeside('.detail', 180))}
+        onResize={(width) => updateSettings({ sidebarWidth: width })}
+      />
       <div className="sidebar-filter">
         <Search size={14} className="muted" />
         <input placeholder="Filter" value={filter} onChange={(e) => setFilter(e.target.value)} />

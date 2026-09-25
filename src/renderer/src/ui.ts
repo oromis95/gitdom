@@ -73,6 +73,7 @@ interface UiState {
   palette: boolean
   /** Clone or new repository dialog open */
   repoDialog: 'clone' | 'init' | null
+  preferences: boolean
   dismiss(id: number): void
   closeForm(values: FormValues | null): void
   closeMenu(): void
@@ -85,6 +86,7 @@ export const useUi = create<UiState>((set, get) => ({
   rebase: null,
   palette: false,
   repoDialog: null,
+  preferences: false,
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   closeForm(values) {
     get().form?.resolve(values)
@@ -139,6 +141,8 @@ export async function confirm(
 
 export const openRepoDialog = (dialog: 'clone' | 'init'): void =>
   useUi.setState({ repoDialog: dialog })
+
+export const openPreferences = (): void => useUi.setState({ preferences: true })
 
 export function openMenu(event: React.MouseEvent, items: MenuItem[]): void {
   event.preventDefault()

@@ -15,10 +15,9 @@ import Splash, { HighwayLogo } from './components/Splash'
 import { restoreSession, useActiveTab, useApp } from './store'
 import { fetchAll } from './actions'
 import { identityMenu } from './identity'
-import { openMenu, openRepoDialog } from './ui'
+import { openMenu, openPreferences, openRepoDialog } from './ui'
+import { stepZoom, useSettings } from './settings'
 import { splashEnabled, useTheme } from './theme'
-
-const AUTO_FETCH_MS = 10 * 60 * 1000
 
 function IdentityButton({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
   const { name, email, scope } = snapshot.identity
@@ -120,7 +119,9 @@ function App(): React.JSX.Element {
     () =>
       window.api.menu.onCommand((command) => {
         if (command === 'open') void useApp.getState().pickAndOpen()
-        else openRepoDialog(command)
+        else if (command === 'clone' || command === 'init') openRepoDialog(command)
+        else if (command === 'preferences') openPreferences()
+        else stepZoom(command === 'zoomIn' ? 1 : command === 'zoomOut' ? -1 : 0)
       }),
     []
   )
@@ -140,14 +141,41 @@ function App(): React.JSX.Element {
   )
 
   // Keep remote branches current with a periodic background fetch
+  const autoFetchMinutes = useSettings((s) => s.autoFetchMinutes)
   useEffect(() => {
-    const timer = setInterval(() => {
-      for (const t of useApp.getState().tabs) {
-        if (t.snapshot?.remotes.length && !t.busy) void fetchAll(t.path, true)
-      }
-    }, AUTO_FETCH_MS)
+    if (autoFetchMinutes <= 0) return
+    const timer = setInterval(
+      () => {
+        for (const t of useApp.getState().tabs) {
+          if (t.snapshot?.remotes.length && !t.busy) void fetchAll(t.path, true)
+        }
+      },
+      autoFetchMinutes * 60 * 1000
+    )
     return () => clearInterval(timer)
+  }, [autoFetchMinutes])
+
+  // Ctrl+Shift+= types "+" on most layouts: the menu only binds Ctrl+=. Ctrl+wheel zooms too.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.ctrlKey && !e.altKey && e.key === '+') {
+        e.preventDefault()
+        stepZoom(1)
+      }
+    }
+    const onWheel = (e: WheelEvent): void => {
+      if (!e.ctrlKey || e.deltaY === 0) return
+      e.preventDefault()
+      stepZoom(e.deltaY < 0 ? 1 : -1)
+    }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('wheel', onWheel)
+    }
   }, [])
+  const zoom = useSettings((s) => s.zoom)
 
   // Pick up changes made outside the app (terminal, IDE) when the window regains focus
   useEffect(() => {
@@ -202,7 +230,12 @@ function App(): React.JSX.Element {
         {tab?.busy && <span className="status-busy">{tab.busy}…</span>}
         <span style={{ marginLeft: 'auto' }} />
         {snapshot && <IdentityButton snapshot={snapshot} />}
-        <span>GitDom 0.1.0</span>
+        {zoom !== 1 && (
+          <button className="status-zoom" title="Reset zoom (Ctrl+0)" onClick={() => stepZoom(0)}>
+            {Math.round(zoom * 100)}%
+          </button>
+        )}
+        <span>GitDom {__APP_VERSION__}</span>
       </div>
       <Overlays />
       {splash && <Splash onDone={() => setSplash(false)} />}

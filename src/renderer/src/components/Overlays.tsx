@@ -4,6 +4,7 @@ import { useUi, type FormValues } from '../ui'
 import RebaseEditor from './RebaseEditor'
 import CommandPalette from './CommandPalette'
 import RepoDialogs from './RepoDialogs'
+import Preferences from './Preferences'
 
 function Toasts(): React.JSX.Element {
   const toasts = useUi((s) => s.toasts)
@@ -212,6 +213,7 @@ export default function Overlays(): React.JSX.Element {
       <RebaseEditor />
       <CommandPalette />
       <RepoDialogs />
+      <Preferences />
       <FormDialog />
       <Toasts />
     </>

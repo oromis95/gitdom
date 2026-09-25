@@ -5,6 +5,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import type { ShellInfo } from '../../../shared/api'
 import { useApp } from '../store'
+import { codeFont, useSettings } from '../settings'
 import {
   ensureSession,
   pruneSessions,
@@ -88,8 +89,8 @@ function TerminalView({
     const host = hostRef.current!
     const api = window.api.terminal
     const term = new Terminal({
-      fontFamily: "Consolas, 'Cascadia Mono', monospace",
-      fontSize: 13,
+      fontFamily: codeFont().family,
+      fontSize: codeFont().size,
       cursorBlink: true,
       scrollback: 5000,
       theme: themeColors()
@@ -170,6 +171,12 @@ function TerminalView({
     resizeObserver.observe(host)
     const themeObserver = new MutationObserver(() => (term.options.theme = themeColors()))
     themeObserver.observe(document.documentElement, { attributeFilter: ['data-theme'] })
+    const offFont = useSettings.subscribe((s, previous) => {
+      if (s.codeFont === previous.codeFont && s.codeFontSize === previous.codeFontSize) return
+      term.options.fontFamily = codeFont(s).family
+      term.options.fontSize = codeFont(s).size
+      fit()
+    })
 
     void start()
     return () => {
@@ -179,6 +186,7 @@ function TerminalView({
       offExit()
       resizeObserver.disconnect()
       themeObserver.disconnect()
+      offFont()
       termRef.current = null
       term.dispose()
     }

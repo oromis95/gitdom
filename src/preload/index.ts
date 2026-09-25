@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webFrame, type IpcRendererEvent } from 'electron'
 import {
   IPC,
   type ChangeScope,
@@ -30,6 +30,14 @@ const api: GitDomApi = {
       return () => ipcRenderer.removeListener(IPC.cloneProgress, handler)
     },
     init: (options) => ipcRenderer.invoke(IPC.init, options)
+  },
+  tools: {
+    configure: (settings) => ipcRenderer.send(IPC.toolsConfigure, settings),
+    checkGit: (gitPath) => ipcRenderer.invoke(IPC.toolsCheckGit, gitPath),
+    mergeTools: () => ipcRenderer.invoke(IPC.toolsMergeTools),
+    openInEditor: (repo, path) => ipcRenderer.invoke(IPC.toolsOpenInEditor, repo, path),
+    showInFolder: (repo, path) => ipcRenderer.send(IPC.toolsShowInFolder, repo, path),
+    setZoom: (factor) => webFrame.setZoomFactor(factor)
   },
   terminal: {
     shells: () => ipcRenderer.invoke(IPC.terminalShells),

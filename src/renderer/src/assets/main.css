@@ -1,4 +1,7 @@
 :root {
+  --font-ui: 'Segoe UI', system-ui, sans-serif;
+  --font-code: Consolas, 'Cascadia Mono', monospace;
+  --code-size: 13px;
   --bg: #1b1d23;
   --bg-panel: #22252b;
   --bg-elevated: #2a2e35;
@@ -53,7 +56,7 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-ui);
   font-size: 13px;
   overflow: hidden;
   user-select: none;
@@ -226,7 +229,8 @@ input {
 /* ---------- Sidebar ---------- */
 
 .sidebar {
-  width: 280px;
+  position: relative;
+  width: var(--sidebar-w, 280px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -431,7 +435,9 @@ input {
 /* ---------- Detail panel ---------- */
 
 .detail {
-  width: 460px;
+  position: relative;
+  /* Narrower in small or zoomed windows, so the graph keeps room for the commit messages */
+  width: max(260px, min(var(--detail-w, 460px), calc(100vw - var(--sidebar-w, 280px) - 760px)));
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -675,4 +681,31 @@ input {
 }
 .recent-action.favorite {
   color: var(--orange, #f5b454);
+}
+
+/* ---------- Resizable panels ---------- */
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 5;
+  width: 6px;
+  cursor: col-resize;
+}
+.resize-handle.right {
+  right: -1px;
+}
+.resize-handle.left {
+  left: -1px;
+}
+.resize-handle:hover,
+body.resizing .resize-handle:hover {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: background 120ms ease 150ms;
+}
+body.resizing,
+body.resizing * {
+  cursor: col-resize !important;
+  transition: none !important;
 }

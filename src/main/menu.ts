@@ -1,5 +1,5 @@
-// The native menu bar: a File menu to open, clone and create repositories, Electron's standard Edit
-// and View menus, and a Window menu with the themes.
+// The native menu bar: File (repositories, preferences), Electron's standard Edit menu, View with the
+// zoom, and Window with the themes. Commands go to the renderer, which owns the state.
 import { BrowserWindow, ipcMain, Menu, type MenuItemConstructorOptions } from 'electron'
 import { IPC, type MenuCommand, type ThemeChoice } from '../shared/api'
 
@@ -24,7 +24,21 @@ function build(): void {
       { label: 'Clone Repository…', click: send('clone') },
       { label: 'New Repository…', click: send('init') },
       { type: 'separator' },
+      { label: 'Preferences…', accelerator: 'CmdOrCtrl+,', click: send('preferences') },
+      { type: 'separator' },
       { role: 'quit' }
+    ]
+  }
+  const view: MenuItemConstructorOptions = {
+    label: 'View',
+    submenu: [
+      { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', click: send('zoomIn') },
+      { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: send('zoomOut') },
+      { label: 'Actual Size', accelerator: 'CmdOrCtrl+0', click: send('zoomReset') },
+      { type: 'separator' },
+      { role: 'togglefullscreen' },
+      { role: 'reload' },
+      { role: 'toggleDevTools' }
     ]
   }
   const window: MenuItemConstructorOptions = {
@@ -45,9 +59,7 @@ function build(): void {
       { role: 'close' }
     ]
   }
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate([file, { role: 'editMenu' }, { role: 'viewMenu' }, window])
-  )
+  Menu.setApplicationMenu(Menu.buildFromTemplate([file, { role: 'editMenu' }, view, window]))
 }
 
 export function registerMenu(): void {

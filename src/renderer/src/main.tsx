@@ -6,6 +6,7 @@ import './assets/motion.css'
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './settings'
 import App from './App'
 import './theme'
 

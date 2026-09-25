@@ -46,6 +46,16 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Submodules: status, initialize and update
 - Git LFS: tracked patterns, LFS badges on files, track or untrack from the file list
 - Author identity per repository or global, with saved profiles to switch between
+- Open a file in your editor (VS Code or any command you choose) or show it in Explorer
+- Launch your merge tool on a conflicted file
+
+**Preferences** (**File → Preferences**, `Ctrl+,`)
+
+- Interface and code fonts, code text size
+- Zoom the whole interface with `Ctrl+=` / `Ctrl+-` / `Ctrl+0` or `Ctrl`+mouse wheel; the status bar shows the level
+- Drag the edges of the side panels to resize them; GitDom remembers the sizes (double-click an edge to reset it)
+- Background fetch interval (or off), default pull strategy
+- Path of the git executable, external editor and merge tool
 
 **Themes**
 
@@ -55,7 +65,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 
 ![GitDom, Studio theme](docs/screenshots/studio.png)
 
-At startup GitDom shows its logo: cars on a six-lane highway change lanes without ever touching, like changes from many authors flowing through Git. Click or press any key to skip it. You can also turn it off from the command palette.
+At startup GitDom shows its logo: cars on a six-lane highway change lanes without ever touching, like changes from many authors flowing through Git. Click or press any key to skip it. You can also turn it off in Preferences or from the command palette.
 
 <p align="center"><img src="docs/screenshots/splash.png" alt="GitDom startup logo" width="600"></p>
 
@@ -109,7 +119,7 @@ docs/         Requirements (Italian) and screenshots
 
 ## Status
 
-GitDom is a personal project under active development (version 0.1.0).
+GitDom is a personal project under active development (version 0.3.0).
 The full list of requirements is in [docs/REQUISITI.md](docs/REQUISITI.md), and the plan for the next versions is in [docs/ROADMAP.md](docs/ROADMAP.md) (both in Italian).
 
 ## License

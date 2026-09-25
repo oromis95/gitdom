@@ -37,7 +37,9 @@ Chiude i requisiti P0 mancanti per iniziare a lavorare su un progetto senza usar
 - **Nuovo repository** con `git init` e template per .gitignore, README e licenza (REPO-03)
 - Preferiti tra i repository recenti (REPO-05)
 
-## Step 2 — v0.3: Impostazioni
+## Step 2 — v0.3: Impostazioni ✅
+
+> Completato: finestra Preferenze (File → Preferences, Ctrl+,), zoom con indicatore nella barra di stato, pannelli laterali ridimensionabili, editor e merge tool esterni.
 
 Oggi molti comportamenti sono fissi nel codice, per esempio il fetch ogni 10 minuti.
 

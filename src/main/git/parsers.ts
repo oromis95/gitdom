@@ -15,6 +15,7 @@ import type {
   SubmoduleState,
   WorkingTreeStatus
 } from '../../shared/types'
+import type { MergeToolInfo } from '../../shared/api'
 
 export const FIELD = '\x1f'
 export const RECORD = '\x1e'
@@ -324,4 +325,33 @@ export function parseIdentity(output: string): Identity {
     }
   }
   return identity
+}
+
+// Tools that run inside a terminal: GitDom has none to give them
+const TERMINAL_TOOLS = /^(g?vimdiff\d|vimdiff|nvimdiff\d?|emerge)$/
+
+/** Parses `git mergetool --tool-help`: tools found on this machine first, then the known ones. */
+export function parseMergeTools(output: string): MergeToolInfo[] {
+  const tools: MergeToolInfo[] = []
+  let section: 'available' | 'unavailable' | null = null
+  for (const raw of output.split(/\r?\n/)) {
+    if (/may be set to one of the following/.test(raw)) section = 'available'
+    else if (/valid, but not currently available/.test(raw)) section = 'unavailable'
+    else if (/^\S/.test(raw)) section = null
+    else if (section && raw.trim()) {
+      const [, name, label] = /^\s+(\S+)\s*(.*)$/.exec(raw) ?? []
+      if (!name || TERMINAL_TOOLS.test(name)) continue
+      tools.push({
+        name,
+        // "Use Meld (requires a graphical session) with optional `auto merge` (see ...)" → "Meld"
+        label:
+          label
+            .replace(/\s*\(requires a graphical session\)/, '')
+            .replace(/^Use /, '')
+            .replace(/\s+(with|where|\(see)\s.*$/, '') || name,
+        available: section === 'available'
+      })
+    }
+  }
+  return tools
 }

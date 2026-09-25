@@ -5,6 +5,7 @@ import { join } from 'path'
 import { ipcMain, type WebContents } from 'electron'
 import { spawn, type IPty } from '@lydell/node-pty'
 import { IPC, type Result, type ShellInfo } from '../shared/api'
+import { gitBinary } from './settings'
 
 interface Shell extends ShellInfo {
   file: string
@@ -23,7 +24,7 @@ let shells: Promise<Shell[]> | null = null
 /** Git for Windows ships bash next to git: found through git's exec path. */
 function gitBash(): Promise<string | null> {
   return new Promise((resolve) => {
-    execFile('git', ['--exec-path'], { windowsHide: true }, (error, stdout) => {
+    execFile(gitBinary(), ['--exec-path'], { windowsHide: true }, (error, stdout) => {
       if (error) return resolve(null)
       // <git>/mingw64/libexec/git-core -> <git>/bin/bash.exe
       const bash = join(stdout.trim(), '..', '..', '..', 'bin', 'bash.exe')

@@ -187,10 +187,10 @@
   overflow: hidden;
 }
 .app.studio .sidebar {
-  width: 260px;
+  width: var(--sidebar-w, 260px);
 }
 .app.studio .detail {
-  width: 420px;
+  width: max(260px, min(var(--detail-w, 420px), calc(100vw - var(--sidebar-w, 260px) - 820px)));
   transition:
     width 260ms var(--ease-out),
     margin 260ms var(--ease-out),
@@ -282,4 +282,7 @@
 .app.studio .statusbar {
   background: var(--bg-deep);
   border-top: none;
+}
+.app.studio .workspace.detail-hidden .detail .resize-handle {
+  display: none;
 }

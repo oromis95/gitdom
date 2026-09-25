@@ -5,6 +5,8 @@ import { lfsMatcher } from '../../../shared/lfs'
 import type { CommitDetail, DiffSource, FileChange, RepoSnapshot } from '../../../shared/types'
 import { WIP_HASH, useActiveTab, useApp, type DiffTarget } from '../store'
 import { notify, openMenu, type MenuItem } from '../ui'
+import { roomBeside, updateSettings } from '../settings'
+import ResizeHandle from './ResizeHandle'
 import {
   abortOperation,
   conflictMenu,
@@ -13,7 +15,9 @@ import {
   lfsPatternFor,
   lfsTrack,
   markResolved,
+  openInEditor,
   run,
+  showInFolder,
   runValue,
   skipOperation
 } from '../actions'
@@ -116,6 +120,17 @@ function FileList({
           }
         ]
       : []),
+    'separator' as const,
+    {
+      label: 'Open in editor',
+      disabled: f.status === 'D',
+      onClick: () => void openInEditor(repo, f.path)
+    },
+    {
+      label: 'Show in Explorer',
+      disabled: f.status === 'D',
+      onClick: () => showInFolder(repo, f.path)
+    },
     'separator' as const,
     ...(f.status !== '?'
       ? [
@@ -578,5 +593,15 @@ export default function DetailPanel({
   else if (selected) content = <CommitPanel repoPath={snapshot.path} hash={selected} />
   else content = <div className="center-message">Select a commit</div>
 
-  return <aside className="detail">{content}</aside>
+  return (
+    <aside className="detail">
+      <ResizeHandle
+        edge="left"
+        min={300}
+        max={() => roomBeside('.sidebar', 300)}
+        onResize={(width) => updateSettings({ detailWidth: width })}
+      />
+      {content}
+    </aside>
+  )
 }

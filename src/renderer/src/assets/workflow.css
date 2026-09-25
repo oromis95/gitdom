@@ -192,8 +192,8 @@
 .diff-body {
   flex: 1;
   overflow: auto;
-  font-family: Consolas, 'Cascadia Mono', monospace;
-  font-size: 13px;
+  font-family: var(--font-code);
+  font-size: var(--code-size);
 }
 .hunk {
   min-width: max-content;
@@ -218,7 +218,7 @@
 }
 .diff-line {
   display: flex;
-  line-height: 20px;
+  line-height: calc(var(--code-size) + 7px);
   white-space: pre;
 }
 .diff-line.add {
@@ -609,13 +609,13 @@
 .merge-pane-body {
   flex: 1;
   overflow: auto;
-  font-family: Consolas, 'Cascadia Mono', monospace;
-  font-size: 13px;
+  font-family: var(--font-code);
+  font-size: var(--code-size);
 }
 .merge-line {
   display: flex;
   min-width: max-content;
-  line-height: 20px;
+  line-height: calc(var(--code-size) + 7px);
   white-space: pre;
   color: var(--text-muted);
 }
@@ -664,9 +664,9 @@
   padding: 6px 10px;
   background: var(--bg);
   color: var(--text);
-  font-family: Consolas, 'Cascadia Mono', monospace;
-  font-size: 13px;
-  line-height: 20px;
+  font-family: var(--font-code);
+  font-size: var(--code-size);
+  line-height: calc(var(--code-size) + 7px);
   white-space: pre;
   overflow: auto;
 }
@@ -834,7 +834,7 @@
 }
 .blame-line {
   display: flex;
-  line-height: 20px;
+  line-height: calc(var(--code-size) + 7px);
   white-space: pre;
 }
 .blame-line.first {
@@ -1074,4 +1074,137 @@
   to {
     transform: translateX(340%);
   }
+}
+
+/* --- Preferences ----------------------------------------------------------------------- */
+.modal.preferences {
+  width: 720px;
+  max-width: calc(100vw - 40px);
+}
+.pref-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pref-close {
+  display: flex;
+  padding: 4px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pref-close:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.pref-body {
+  display: flex;
+  gap: 16px;
+  min-height: 340px;
+}
+.pref-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 150px;
+  flex-shrink: 0;
+}
+.pref-nav button {
+  padding: 7px 10px;
+  font: inherit;
+  text-align: left;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pref-nav button:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.pref-nav button.active {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+.pref-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pref-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.pref-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 5px;
+}
+.pref-hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.pref-hint code {
+  font-family: var(--font-code);
+}
+.pref-ok {
+  color: var(--text-muted);
+}
+.pref-bad {
+  color: var(--danger-text);
+}
+.pref-control {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+}
+.pref-control > input,
+.pref-control > select,
+.pref-inline input,
+.pref-inline select {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  outline: none;
+}
+.pref-control input:focus,
+.pref-control select:focus {
+  border-color: var(--accent);
+}
+.pref-inline {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+}
+.pref-inline .pref-size {
+  flex: 0 0 76px;
+}
+
+.status-zoom {
+  height: 100%;
+  padding: 0 6px;
+  font: inherit;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.status-zoom:hover {
+  color: var(--text);
+  background: var(--bg-hover);
 }

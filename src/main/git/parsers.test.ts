@@ -5,6 +5,7 @@ import {
   parseIdentity,
   parseLfsPatterns,
   parseLog,
+  parseMergeTools,
   parseNameStatus,
   parseRefs,
   parseRemotes,
@@ -251,5 +252,34 @@ describe('parseIdentity', () => {
 
   it('reports no identity', () => {
     expect(parseIdentity('')).toEqual({ name: null, email: null, scope: null })
+  })
+})
+
+describe('parseMergeTools', () => {
+  const output = [
+    "'git mergetool --tool=<tool>' may be set to one of the following:",
+    '\t\tvimdiff          Use Vim with a custom layout',
+    '\t\tvscode           Use Visual Studio Code (requires a graphical session)',
+    '',
+    'The following tools are valid, but not currently available:',
+    '\t\tbc4              Use Beyond Compare (requires a graphical session)',
+    "\t\temerge           Use Emacs' Emerge",
+    '\t\tgvimdiff2        Use gVim (requires a graphical session) with a 3 panes layout',
+    "\t\tmeld             Use Meld (requires a graphical session) with optional `auto merge` (see `git help mergetool`'s `CONFIGURATION` section)",
+    '',
+    'Some of the tools listed above only work in a windowed',
+    'environment. If run in a terminal-only session, they will fail.'
+  ].join('\r\n')
+
+  it('lists graphical tools, available ones first, with readable names', () => {
+    expect(parseMergeTools(output)).toEqual([
+      { name: 'vscode', label: 'Visual Studio Code', available: true },
+      { name: 'bc4', label: 'Beyond Compare', available: false },
+      { name: 'meld', label: 'Meld', available: false }
+    ])
+  })
+
+  it('returns nothing for unexpected output', () => {
+    expect(parseMergeTools('fatal: not a git repository')).toEqual([])
   })
 })

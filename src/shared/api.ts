@@ -230,6 +230,39 @@ export interface ReposApi {
   init(options: InitOptions): Promise<Result<InitOutcome>>
 }
 
+/** Settings the main process needs; the renderer owns and saves them, and sends them at startup. */
+export interface ToolSettings {
+  /** git executable; empty for the one on the PATH (SET-04) */
+  gitPath: string
+  /** Command line of the external editor, the file path is appended; empty for the system default (DIFF-12) */
+  editor: string
+  /** Merge tool name for `git mergetool --tool`; empty to use merge.tool from git config (MERGE-08) */
+  mergeTool: string
+}
+
+export interface MergeToolInfo {
+  name: string
+  /** git's description, e.g. "Use Visual Studio Code" */
+  label: string
+  /** Found on this machine */
+  available: boolean
+}
+
+/** External programs: git itself, the editor, the file manager. */
+export interface ToolsApi {
+  configure(settings: ToolSettings): void
+  /** Runs `git --version` with the given executable (empty: from the PATH). */
+  checkGit(gitPath: string): Promise<Result<string>>
+  /** Merge tools git knows, for `git mergetool --tool`; terminal-only tools are left out. */
+  mergeTools(): Promise<MergeToolInfo[]>
+  /** Opens a file of the repository, or the repository folder when `path` is null, in the editor. */
+  openInEditor(repo: string, path: string | null): Promise<Result<void>>
+  /** Shows a file, or the repository folder, in the system file manager. */
+  showInFolder(repo: string, path: string | null): void
+  /** Zoom factor of the window, 1 for 100%. */
+  setZoom(factor: number): void
+}
+
 /** Themes offered in the app and in the Window menu; 'system' follows Windows' light or dark setting. */
 export type ThemeChoice = 'dark' | 'light' | 'system' | 'studio'
 
@@ -244,7 +277,8 @@ export interface MenuApi {
 }
 
 /** File menu entries handled by the renderer. */
-export type MenuCommand = 'open' | 'clone' | 'init'
+export type MenuCommand =
+  'open' | 'clone' | 'init' | 'preferences' | 'zoomIn' | 'zoomOut' | 'zoomReset'
 
 /** API exposed by the preload script on `window.api`. */
 export interface GitDomApi {
@@ -258,6 +292,7 @@ export interface GitDomApi {
   /** Subscribes to on-disk changes; returns the unsubscribe function. */
   onRepoChanged(listener: (repoPath: string, scope: ChangeScope) => void): () => void
   repos: ReposApi
+  tools: ToolsApi
   terminal: TerminalApi
   menu: MenuApi
 }
@@ -282,5 +317,10 @@ export const IPC = {
   clone: 'repos:clone',
   cloneCancel: 'repos:clone-cancel',
   cloneProgress: 'repos:clone-progress',
-  init: 'repos:init'
+  init: 'repos:init',
+  toolsConfigure: 'tools:configure',
+  toolsCheckGit: 'tools:check-git',
+  toolsMergeTools: 'tools:merge-tools',
+  toolsOpenInEditor: 'tools:open-in-editor',
+  toolsShowInFolder: 'tools:show-in-folder'
 } as const

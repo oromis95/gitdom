@@ -13,6 +13,7 @@ import { runOp } from './git/operations'
 import { loadSnapshot, resolveRepoRoot } from './git/repository'
 import { setWatchedRepos } from './watcher'
 import { registerTerminalHandlers } from './terminal'
+import { registerToolHandlers } from './tools'
 
 async function toResult<T>(work: () => Promise<T>): Promise<Result<T>> {
   try {
@@ -79,4 +80,5 @@ export function registerIpcHandlers(): void {
   })
 
   registerTerminalHandlers()
+  registerToolHandlers()
 }

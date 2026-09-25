@@ -1,7 +1,8 @@
 // Everything the command palette can do, built from the current state when it opens.
 import type { PullMode } from '../../shared/api'
 import { useApp } from './store'
-import { openRepoDialog } from './ui'
+import { openPreferences, openRepoDialog } from './ui'
+import { stepZoom, useSettings } from './settings'
 import {
   setSplashEnabled,
   setTheme,
@@ -179,6 +180,8 @@ export function buildCommands(): Command[] {
     }
 
     add('Repository', 'Refresh', () => void app.refresh())
+    add('Repository', 'Open repository in editor', () => void actions.openInEditor(repo, null))
+    add('Repository', 'Show repository in Explorer', () => actions.showInFolder(repo, null))
   }
 
   add('Repository', 'Open repository…', () => void app.pickAndOpen(), 'Ctrl+O')
@@ -215,6 +218,11 @@ export function buildCommands(): Command[] {
       toggleDetail()
     )
   }
+  const zoom = Math.round(useSettings.getState().zoom * 100)
+  add('View', 'Zoom in', () => stepZoom(1), `Ctrl+=  (${zoom}%)`)
+  add('View', 'Zoom out', () => stepZoom(-1), 'Ctrl+-')
+  add('View', 'Reset zoom', () => stepZoom(0), 'Ctrl+0')
+  add('Preferences', 'Preferences…', () => openPreferences(), 'Ctrl+,')
   const splash = splashEnabled()
   add('View', splash ? 'Turn off the startup animation' : 'Turn on the startup animation', () =>
     setSplashEnabled(!splash)

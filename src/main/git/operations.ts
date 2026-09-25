@@ -14,6 +14,7 @@ import { parseDiff } from '../../shared/diff'
 import { FILE_LOG_FORMAT, parseBlame, parseFileLog } from './parsers'
 import type { FileDiff } from '../../shared/types'
 import { GitError, runGit, tryGit } from './exec'
+import { toolSettings } from '../settings'
 import { loadCommitDetail, loadStatus, readOperation } from './repository'
 import * as history from './history'
 
@@ -383,10 +384,22 @@ const ops: OpImpl = {
   async openMergeTool(repo, path) {
     repoFile(repo, path)
     // Without a configured tool git would try terminal editors, which can't run here
-    if (!(await getConfig(repo, 'merge.tool'))) {
-      throw new Error('No external merge tool configured: set merge.tool in your git config')
+    const tool = toolSettings().mergeTool
+    if (tool && !/^[\w.-]+$/.test(tool)) throw new Error(`Invalid merge tool: ${tool}`)
+    if (!tool && !(await getConfig(repo, 'merge.tool'))) {
+      throw new Error(
+        'No external merge tool configured: choose one in Preferences, or set merge.tool in your git config'
+      )
     }
-    await runGit(repo, ['-c', 'mergetool.keepBackup=false', 'mergetool', '--no-prompt', '--', path])
+    await runGit(repo, [
+      '-c',
+      'mergetool.keepBackup=false',
+      'mergetool',
+      '--no-prompt',
+      ...(tool ? [`--tool=${tool}`] : []),
+      '--',
+      path
+    ])
   },
 
   readConflictFile: (repo, path) => readFile(repoFile(repo, path), 'utf8'),
