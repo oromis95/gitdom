@@ -12,7 +12,7 @@ import type {
   StashMode
 } from '../../shared/api'
 import type { FileChange, Ref, RepoSnapshot, Stash, Submodule } from '../../shared/types'
-import { WIP_HASH, useApp } from './store'
+import { NO_GRAPH_FILTER, WIP_HASH, useApp } from './store'
 import { confirm, notify, openMenuAt, prompt, showForm, useUi, type MenuItem } from './ui'
 
 function call<K extends OpName>(
@@ -755,6 +755,42 @@ function compareWithHead(snapshot: RepoSnapshot, ref: string): MenuItem {
   return compareItem(`Compare with ${current}`, current, ref, ref === snapshot.head.branch)
 }
 
+/** Hides a branch from the graph, or shows it alone (GRAPH-14). */
+function graphItems(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
+  const { graphFilters, setGraphFilter } = useApp.getState()
+  const repo = snapshot.path
+  const filter = graphFilters[repo] ?? NO_GRAPH_FILTER
+  const hidden = filter.hidden.includes(ref.fullName)
+  // The graph always includes HEAD, so the current branch can't be hidden
+  const isCurrent = ref.type === 'local' && ref.name === snapshot.head.branch
+  return [
+    hidden
+      ? {
+          label: 'Show in graph',
+          onClick: () =>
+            setGraphFilter(repo, {
+              ...filter,
+              hidden: filter.hidden.filter((name) => name !== ref.fullName)
+            })
+        }
+      : {
+          label: 'Hide in graph',
+          disabled: isCurrent || filter.solo !== null,
+          onClick: () =>
+            setGraphFilter(repo, { ...filter, hidden: [...filter.hidden, ref.fullName] })
+        },
+    filter.solo === ref.fullName
+      ? {
+          label: 'Show all branches',
+          onClick: () => setGraphFilter(repo, { ...filter, solo: null })
+        }
+      : {
+          label: 'Show only this branch',
+          onClick: () => setGraphFilter(repo, { ...filter, solo: ref.fullName })
+        }
+  ]
+}
+
 export function localBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
   const repo = snapshot.path
   const isCurrent = ref.name === snapshot.head.branch
@@ -784,6 +820,8 @@ export function localBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
       onClick: () => void deleteBranch(repo, ref.name)
     },
     'separator',
+    ...graphItems(snapshot, ref),
+    'separator',
     { label: 'Copy branch name', onClick: () => copy(ref.name) }
   ]
 }
@@ -804,6 +842,8 @@ export function remoteBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
       danger: true,
       onClick: () => void deleteRemoteBranch(repo, ref)
     },
+    'separator',
+    ...graphItems(snapshot, ref),
     'separator',
     { label: 'Copy branch name', onClick: () => copy(ref.name) }
   ]

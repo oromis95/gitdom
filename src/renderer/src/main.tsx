@@ -1,5 +1,6 @@
 import './assets/main.css'
 import './assets/workflow.css'
+import './assets/graph.css'
 import './assets/theme.css'
 import './assets/studio.css'
 import './assets/motion.css'

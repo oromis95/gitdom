@@ -84,15 +84,15 @@ export function parseRefs(output: string): Ref[] {
   return refs
 }
 
-export const STASH_FORMAT = ['%H', '%gd', '%s'].join('%x1f')
+export const STASH_FORMAT = ['%H', '%gd', '%s', '%P', '%ct'].join('%x1f')
 
 export function parseStashes(output: string): Stash[] {
   return output
     .split('\n')
     .filter(Boolean)
     .map((line) => {
-      const [hash, selector, message] = line.split(FIELD)
-      return { hash, selector, message }
+      const [hash, selector, message, parents = '', date = '0'] = line.split(FIELD)
+      return { hash, selector, message, base: parents.split(' ')[0], date: Number(date) }
     })
 }
 

@@ -10,6 +10,7 @@ import {
 import { cancelClone, cloneRepository, initRepository } from './git/clone'
 import { GitError } from './git/exec'
 import { runOp } from './git/operations'
+import type { GraphFilter } from '../shared/types'
 import { loadSnapshot, resolveRepoRoot } from './git/repository'
 import { setWatchedRepos } from './watcher'
 import { registerTerminalHandlers } from './terminal'
@@ -64,8 +65,8 @@ export function registerIpcHandlers(): void {
     toResult(() => initRepository(options))
   )
 
-  ipcMain.handle(IPC.openRepository, (_event, path: string) =>
-    toResult(async () => loadSnapshot(await resolveRepoRoot(path)))
+  ipcMain.handle(IPC.openRepository, (_event, path: string, filter?: GraphFilter) =>
+    toResult(async () => loadSnapshot(await resolveRepoRoot(path), filter))
   )
 
   ipcMain.handle(IPC.op, (_event, repoPath: string, name: OpName, args: OpArgs<OpName>) =>

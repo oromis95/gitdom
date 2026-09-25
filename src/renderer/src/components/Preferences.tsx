@@ -194,6 +194,19 @@ function Appearance({ s }: { s: Settings }): React.JSX.Element {
           Show the logo when GitDom starts
         </label>
       </Row>
+      <Row
+        label="Author pictures"
+        hint="Looked up on Gravatar (or GitHub, for its noreply addresses) from a hash of the email; initials otherwise"
+      >
+        <label className="modal-check">
+          <input
+            type="checkbox"
+            checked={s.graphAvatars}
+            onChange={(e) => updateSettings({ graphAvatars: e.target.checked })}
+          />
+          Show author pictures in the graph
+        </label>
+      </Row>
       <datalist id="pref-ui-fonts">
         {UI_FONTS.map((f) => (
           <option key={f} value={f} />

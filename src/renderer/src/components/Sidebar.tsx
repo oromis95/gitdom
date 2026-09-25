@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   Cloud,
+  EyeOff,
   File,
   Folder,
   GitBranch,
@@ -69,6 +70,7 @@ function Tree({
 }): React.JSX.Element {
   const currentBranch = snapshot.head.branch
   const select = useApp((s) => s.select)
+  const graphFilter = useApp((s) => s.graphFilters[snapshot.path])
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
   const entries = [...node.children.values()].sort((a, b) => {
@@ -107,10 +109,17 @@ function Tree({
         }
         const ref = child.ref!
         const isCurrent = ref.type === 'local' && ref.name === currentBranch
+        // Branches the graph leaves out (GRAPH-14); tags follow their commits
+        const hidden =
+          ref.type !== 'tag' &&
+          !!graphFilter &&
+          (graphFilter.solo
+            ? graphFilter.solo !== ref.fullName
+            : graphFilter.hidden.includes(ref.fullName))
         return (
           <button
             key={child.name}
-            className={`tree-item${isCurrent ? ' current' : ''}`}
+            className={`tree-item${isCurrent ? ' current' : ''}${hidden ? ' hidden-in-graph' : ''}`}
             style={pad}
             title={ref.name}
             onClick={() => select(ref.hash, true)}
@@ -128,6 +137,9 @@ function Tree({
               <span className="tree-badge">
                 {ref.ahead ? `↑${ref.ahead}` : ''} {ref.behind ? `↓${ref.behind}` : ''}
               </span>
+            )}
+            {hidden && (
+              <EyeOff size={13} className="tree-hidden" aria-label="Hidden in the graph" />
             )}
           </button>
         )
@@ -272,7 +284,7 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
               key={s.selector}
               className="tree-item"
               title={s.message}
-              onClick={() => select(s.hash)}
+              onClick={() => select(s.hash, true)}
               onContextMenu={(e) => openMenu(e, actions.stashMenu(snapshot, s))}
             >
               <Archive size={14} />

@@ -1,0 +1,186 @@
+/* ---------- Commit graph: search, columns, stashes, highlight and minimap ---------- */
+
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.graph-toolbar .segmented button {
+  padding: 2px 10px;
+}
+.graph-toolbar-gap {
+  flex: 1;
+}
+
+.graph-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 380px;
+  min-width: 160px;
+  padding: 2px 4px 2px 8px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.graph-search:focus-within {
+  border-color: var(--accent);
+}
+.graph-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  font: inherit;
+  color: var(--text);
+  background: none;
+  border: none;
+  outline: none;
+}
+.graph-search-count {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-tool {
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.graph-tool:not(:disabled):hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.graph-tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.graph-only {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Hidden or solo branches (GRAPH-14) */
+.graph-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 2px 8px;
+  font: inherit;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: default;
+}
+button.graph-filter-chip {
+  padding-right: 8px;
+  cursor: pointer;
+}
+.graph-filter-chip button {
+  padding: 0 6px;
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.graph-filter-chip button:hover {
+  text-decoration: underline;
+}
+
+.tree-item.hidden-in-graph > span:not(.tree-badge) {
+  opacity: 0.5;
+}
+.tree-hidden {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-dim);
+}
+
+/* Columns (GRAPH-03): the minimap takes the place of the scrollbar */
+.graph-header {
+  padding-right: 12px;
+}
+.graph-header > div {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.graph-header > .graph-col {
+  position: relative;
+  flex-shrink: 0;
+}
+.graph-scroller {
+  right: 12px;
+  scrollbar-width: none;
+}
+.graph-scroller::-webkit-scrollbar {
+  display: none;
+}
+.cell-sha {
+  font-family: var(--font-code, 'Cascadia Code', Consolas, monospace);
+  font-size: 12px;
+}
+
+/* Search matches (GRAPH-17) and the highlighted branch (GRAPH-15) */
+.graph-row.faded .cell-refs,
+.graph-row.faded .cell-message,
+.graph-row.faded .cell-sha,
+.graph-row.faded .cell-author,
+.graph-row.faded .cell-date {
+  opacity: 0.35;
+}
+.graph-row mark {
+  color: inherit;
+  background: color-mix(in srgb, var(--orange) 45%, transparent);
+  border-radius: 2px;
+}
+.graph-empty {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Stashes (STASH-03) */
+.stash-pill {
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px dashed var(--text-muted);
+}
+.stash-connector {
+  height: 0;
+  border-top: 2px dashed var(--text-muted);
+  opacity: 0.6;
+}
+.stash-message {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* Minimap (GRAPH-16) */
+.graph-minimap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 100%;
+  background: var(--bg-deep);
+  border-left: 1px solid var(--border);
+  cursor: pointer;
+}

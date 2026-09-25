@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { notify } from './ui'
-import type { DiffSource, RepoSnapshot } from '../../shared/types'
+import type { DiffSource, GraphFilter, RepoSnapshot } from '../../shared/types'
 
 export const WIP_HASH = 'WIP'
 
@@ -55,6 +55,8 @@ export interface CommitDraft {
 
 const EMPTY_DRAFT: CommitDraft = { summary: '', description: '', amend: false }
 
+export const NO_GRAPH_FILTER: GraphFilter = { hidden: [], solo: null }
+
 interface ScrollRequest {
   hash: string
   nonce: number
@@ -67,6 +69,8 @@ interface AppState {
   /** Pinned repositories, shown before the recent ones (REPO-05) */
   favorites: string[]
   scrollRequest: ScrollRequest | null
+  /** Branches hidden from the graph, or shown alone, per repository path (GRAPH-14) */
+  graphFilters: Record<string, GraphFilter>
 
   pickAndOpen(): Promise<void>
   openRepo(path: string): Promise<void>
@@ -88,11 +92,14 @@ interface AppState {
   inspectFile(inspect: FileInspect | null): void
   setDraft(path: string, draft: Partial<CommitDraft>): void
   setBusy(path: string, busy: string | undefined): void
+  /** Changes the branches the graph shows and reloads it. */
+  setGraphFilter(path: string, filter: GraphFilter): void
 }
 
 const TABS_KEY = 'gitdom.tabs'
 const RECENT_KEY = 'gitdom.recent'
 const FAVORITES_KEY = 'gitdom.favorites'
+const GRAPH_FILTERS_KEY = 'gitdom.graphFilters'
 const MAX_RECENT = 10
 
 function readJson<T>(key: string, fallback: T): T {
@@ -128,7 +135,9 @@ export const useApp = create<AppState>((set, get) => {
     loading.add(path)
     updateTab(path, { loading: true })
     try {
-      const result = await window.api.openRepository(path)
+      // Filters are saved under the repository root, which a tab's path may spell differently
+      const root = get().tabs.find((t) => t.path === path)?.snapshot?.path ?? path
+      const result = await window.api.openRepository(path, get().graphFilters[root])
       if (result.ok) {
         updateTab(path, { loading: false, error: undefined, snapshot: result.value })
       } else {
@@ -146,6 +155,7 @@ export const useApp = create<AppState>((set, get) => {
     recent: readJson<string[]>(RECENT_KEY, []),
     favorites: readJson<string[]>(FAVORITES_KEY, []),
     scrollRequest: null,
+    graphFilters: readJson<Record<string, GraphFilter>>(GRAPH_FILTERS_KEY, {}),
 
     async pickAndOpen() {
       const path = await window.api.pickRepository()
@@ -154,7 +164,7 @@ export const useApp = create<AppState>((set, get) => {
 
     async openRepo(requested) {
       // Resolve to the repository root first so the same repo is never opened twice
-      const result = await window.api.openRepository(requested)
+      const result = await window.api.openRepository(requested, get().graphFilters[requested])
       if (!result.ok) {
         notify('error', result.error)
         return
@@ -265,6 +275,16 @@ export const useApp = create<AppState>((set, get) => {
 
     setBusy(path, busy) {
       updateTab(path, { busy })
+    },
+
+    setGraphFilter(path, filter) {
+      const graphFilters = { ...get().graphFilters }
+      if (filter.solo || filter.hidden.length) graphFilters[path] = filter
+      else delete graphFilters[path]
+      localStorage.setItem(GRAPH_FILTERS_KEY, JSON.stringify(graphFilters))
+      set({ graphFilters })
+      for (const tab of get().tabs)
+        if (tab.path === path || tab.snapshot?.path === path) void load(tab.path)
     }
   }
 })

@@ -33,6 +33,18 @@ export interface Stash {
   /** e.g. stash@{0} */
   selector: string
   message: string
+  /** Commit the stash was made on: its node hangs from it in the graph (STASH-03) */
+  base: string
+  /** Unix timestamp in seconds */
+  date: number
+}
+
+/** Branches left out of the graph (GRAPH-14), as full ref names */
+export interface GraphFilter {
+  /** Refs whose commits are hidden, unless another ref reaches them */
+  hidden: string[]
+  /** When set, only the commits of this ref are shown */
+  solo: string | null
 }
 
 export interface Remote {

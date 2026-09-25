@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 0.4.0 pubblicata il 2026-09-25 (Step 1, 2 e 3 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 0.5.0 pubblicata il 2026-09-25 (Step 1, 2, 3 e 4 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -17,9 +17,10 @@ Le milestone 0–4 sono completate:
 - exe portable generato da GitHub Actions;
 - clone e nuovo repository, preferiti (Step 1);
 - preferenze, zoom, pannelli ridimensionabili, editor e merge tool esterni (Step 2);
-- diff affiancato, parole evidenziate, opzioni del diff, confronto tra revisioni e diff delle immagini (Step 3).
+- diff affiancato, parole evidenziate, opzioni del diff, confronto tra revisioni e diff delle immagini (Step 3);
+- ricerca nel grafo, colonne configurabili, branch nascosti o isolati, avatar, stash nel grafo e minimap (Step 4).
 
-I requisiti P0 sono coperti; resta buona parte dei P1, a partire dal grafo (Step 4).
+I requisiti P0 sono coperti; resta buona parte dei P1, a partire dalla trasparenza sulle operazioni (Step 5).
 
 ## Principi per l'ordine
 
@@ -65,7 +66,9 @@ Oggi molti comportamenti sono fissi nel codice, per esempio il fetch ogni 10 min
 - **Confronto tra due commit o branch qualsiasi**, selezionandoli nel grafo (DIFF-08)
 - Diff delle immagini: affiancate, sovrapposte, a scorrimento (DIFF-06)
 
-## Step 4 — v0.5: Grafo più potente
+## Step 4 — v0.5: Grafo più potente ✅
+
+> Completato: barra di ricerca sopra il grafo (Ctrl+F) su commit o file, con risultati evidenziati, navigazione e filtro; colonne SHA, autore e data ridimensionabili e nascondibili; "Nascondi nel grafo" e "Mostra solo questo branch" dai menu; avatar Gravatar/GitHub; stash come nodi; evidenziazione del branch sotto il mouse; minimap al posto della barra di scorrimento.
 
 - **Ricerca e filtro** per messaggio, autore, SHA o file, con evidenziazione dei risultati (GRAPH-17)
 - Colonne ridimensionabili e nascondibili (GRAPH-03)

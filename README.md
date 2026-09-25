@@ -20,6 +20,12 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 
 - Virtualized canvas graph that stays smooth on large histories, with colored lanes and branch/tag labels
 - Local and remote branches that point to the same commit share one label
+- Search by message, author, SHA or changed file (Ctrl+F), with matches highlighted, Enter to step through them, and an option to list only the matches
+- Hide a branch from the graph, or show only one branch, from its right-click menu
+- Resizable columns, an optional SHA column, and right-click the header to hide columns
+- Author pictures from Gravatar (or GitHub for its noreply addresses), with initials when offline
+- Stashes drawn as nodes on the commits they were made on
+- Hover a branch label to highlight its line; a minimap beside the graph marks HEAD, the selection and the search matches
 - Commit details, changed files, and diffs with syntax highlighting
 
 **Diffs**

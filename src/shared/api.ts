@@ -6,6 +6,7 @@ import type {
   FileChange,
   FileDiff,
   FileRevision,
+  GraphFilter,
   ImagePair,
   RepoSnapshot,
   WorkingTreeStatus
@@ -61,6 +62,11 @@ export interface RepoOps {
   imagePair(source: DiffSource, path: string, oldPath?: string): ImagePair
   /** Files that differ between two revisions (DIFF-08). */
   compareFiles(from: string, to: string): FileChange[]
+  /**
+   * Commits of the graph whose full message, or whose changed file paths, contain `text`
+   * (GRAPH-17); author, subject and hash are matched in the renderer.
+   */
+  searchCommits(field: 'message' | 'file', text: string, filter?: GraphFilter): string[]
   commitDetail(hash: string): CommitDetail
   /** Commits that changed a file, newest first, following renames. */
   fileHistory(path: string): FileRevision[]
@@ -291,7 +297,7 @@ export interface GitDomApi {
   /** Shows a folder picker; resolves null when cancelled. */
   pickRepository(): Promise<string | null>
   /** Resolves the repository root containing `path` and loads its snapshot. */
-  openRepository(path: string): Promise<Result<RepoSnapshot>>
+  openRepository(path: string, filter?: GraphFilter): Promise<Result<RepoSnapshot>>
   op<K extends OpName>(repoPath: string, name: K, ...args: OpArgs<K>): Promise<Result<OpResult<K>>>
   /** Replaces the set of repositories watched for changes on disk. */
   watch(repoPaths: string[]): void

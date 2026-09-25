@@ -15,7 +15,13 @@ import { FILE_LOG_FORMAT, parseBlame, parseFileLog, parseNameStatus } from './pa
 import type { DiffOptions, FileDiff, ImagePair } from '../../shared/types'
 import { GitError, runGit, tryGit } from './exec'
 import { toolSettings } from '../settings'
-import { loadCommitDetail, loadStatus, readOperation } from './repository'
+import {
+  COMMIT_LIMIT,
+  loadCommitDetail,
+  loadStatus,
+  logRevisions,
+  readOperation
+} from './repository'
 import * as history from './history'
 
 type OpImpl = { [K in OpName]: (repo: string, ...args: OpArgs<K>) => Promise<OpResult<K>> }
@@ -371,6 +377,25 @@ const ops: OpImpl = {
           after: await blobImage(repo, `${source.to}:${path}`, path)
         }
     }
+  },
+
+  async searchCommits(repo, field, text, filter) {
+    if (!text.trim()) return []
+    if (/[\0\n\r]/.test(text)) throw new Error('Invalid search text')
+    const match =
+      field === 'message'
+        ? ['-i', '-F', `--grep=${text}`]
+        : // Pathspec magic: any path containing the text, ignoring case. Its glob characters are
+          // made literal with brackets, as Git for Windows turns backslashes into slashes
+          ['--', `:(icase,glob)**/*${text.replace(/\\/g, '/').replace(/[*?[]/g, '[$&]')}*`]
+    const output = await runGit(repo, [
+      'log',
+      `-n${COMMIT_LIMIT}`,
+      '--format=%H',
+      ...logRevisions(filter),
+      ...match
+    ])
+    return output.split('\n').filter(Boolean)
   },
 
   async compareFiles(repo, from, to) {

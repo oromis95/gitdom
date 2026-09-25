@@ -383,6 +383,7 @@ input {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.cell-sha,
 .cell-author,
 .cell-date {
   flex-shrink: 0;
@@ -391,12 +392,6 @@ input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.cell-author {
-  width: 150px;
-}
-.cell-date {
-  width: 140px;
 }
 
 .wip-message {

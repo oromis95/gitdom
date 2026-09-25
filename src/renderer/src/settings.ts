@@ -22,6 +22,17 @@ export interface Settings extends ToolSettings {
   diffIgnoreWhitespace: boolean
   diffContext: number
   diffFullFile: boolean
+  /** Commit graph columns (GRAPH-03): widths set by dragging their edge, and which ones show */
+  graphRefsWidth: number
+  graphShaWidth: number
+  graphAuthorWidth: number
+  graphDateWidth: number
+  graphShowRefs: boolean
+  graphShowSha: boolean
+  graphShowAuthor: boolean
+  graphShowDate: boolean
+  /** Author pictures from Gravatar in the graph nodes, initials otherwise (GRAPH-04) */
+  graphAvatars: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -37,6 +48,15 @@ export const DEFAULT_SETTINGS: Settings = {
   diffIgnoreWhitespace: false,
   diffContext: 3,
   diffFullFile: false,
+  graphRefsWidth: 220,
+  graphShaWidth: 90,
+  graphAuthorWidth: 150,
+  graphDateWidth: 140,
+  graphShowRefs: true,
+  graphShowSha: false,
+  graphShowAuthor: true,
+  graphShowDate: true,
+  graphAvatars: true,
   gitPath: '',
   editor: '',
   mergeTool: ''
@@ -45,6 +65,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export const ZOOM_STEPS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]
 export const CODE_FONT_SIZES = { min: 9, max: 24 }
 export const DIFF_CONTEXT_MAX = 100
+export const GRAPH_COLUMN_WIDTH = { min: 60, max: 600 }
 
 const SETTINGS_KEY = 'gitdom.settings'
 
@@ -71,6 +92,13 @@ function load(): Settings {
   settings.zoom = clamp(settings.zoom, ZOOM_STEPS[0], ZOOM_STEPS[ZOOM_STEPS.length - 1])
   if (settings.diffLayout !== 'split') settings.diffLayout = 'unified'
   settings.diffContext = clamp(Math.round(settings.diffContext), 0, DIFF_CONTEXT_MAX)
+  for (const key of [
+    'graphRefsWidth',
+    'graphShaWidth',
+    'graphAuthorWidth',
+    'graphDateWidth'
+  ] as const)
+    settings[key] = clamp(settings[key], GRAPH_COLUMN_WIDTH.min, GRAPH_COLUMN_WIDTH.max)
   settings.codeFontSize = clamp(settings.codeFontSize, CODE_FONT_SIZES.min, CODE_FONT_SIZES.max)
   return settings
 }

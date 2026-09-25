@@ -360,6 +360,56 @@ describe('stash and tags', () => {
     await expect(runOp(repo, 'stashPop', ['stash@{0}; rm'])).rejects.toThrow('Invalid stash')
   })
 
+  it('hides branches from the graph, shows one alone, and places stashes on their base', async () => {
+    await commitFile('b.txt', 'b\n', 'base')
+    const base = git(repo, 'rev-parse', 'HEAD')
+    git(repo, 'checkout', '-q', '-b', 'side')
+    await commitFile('s.txt', 's\n', 'on side')
+    git(repo, 'checkout', '-q', 'main')
+    await commitFile('m.txt', 'm\n', 'on main')
+    write('a.txt', 'wip\n')
+    await runOp(repo, 'stashPush', ['my work', false])
+
+    const subjectsOf = async (filter?: {
+      hidden: string[]
+      solo: string | null
+    }): Promise<string[]> => (await loadSnapshot(repo, filter)).commits.map((c) => c.subject)
+    expect(await subjectsOf()).toEqual(['on main', 'on side', 'base', 'init'])
+    expect(await subjectsOf({ hidden: ['refs/heads/side'], solo: null })).toEqual([
+      'on main',
+      'base',
+      'init'
+    ])
+    expect(await subjectsOf({ hidden: [], solo: 'refs/heads/side' })).toEqual([
+      'on side',
+      'base',
+      'init'
+    ])
+    // Invalid names are ignored rather than passed to git
+    expect(await subjectsOf({ hidden: ['--all', 'refs/heads/a b'], solo: null })).toHaveLength(4)
+
+    const [stash] = (await loadSnapshot(repo)).stashes
+    expect(stash).toMatchObject({ selector: 'stash@{0}', base: git(repo, 'rev-parse', 'HEAD') })
+    expect(stash.base).not.toBe(base)
+    expect(stash.date).toBeGreaterThan(0)
+  })
+
+  it('searches commit messages and changed paths', async () => {
+    mkdirSync(join(repo, 'docs'))
+    write('docs/Guide.md', 'g\n')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-q', '-m', 'Add guide', '-m', 'Fixes the Onboarding issue')
+    const guide = git(repo, 'rev-parse', 'HEAD')
+    await commitFile('other.txt', 'o\n', 'other')
+
+    expect(await runOp(repo, 'searchCommits', ['message', 'onboarding'])).toEqual([guide])
+    expect(await runOp(repo, 'searchCommits', ['file', 'guide.MD'])).toEqual([guide])
+    expect(await runOp(repo, 'searchCommits', ['file', 'docs\\gui'])).toEqual([guide])
+    expect(await runOp(repo, 'searchCommits', ['file', '*'])).toEqual([])
+    expect(await runOp(repo, 'searchCommits', ['message', '  '])).toEqual([])
+    await expect(runOp(repo, 'searchCommits', ['message', 'a\nb'])).rejects.toThrow()
+  })
+
   it('creates lightweight and annotated tags and deletes them', async () => {
     await runOp(repo, 'createTag', ['v1', 'HEAD', null])
     await runOp(repo, 'createTag', ['v2', 'HEAD', 'Release 2'])

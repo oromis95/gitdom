@@ -3,6 +3,7 @@ import { readFile } from 'fs/promises'
 import { basename, resolve } from 'path'
 import type {
   CommitDetail,
+  GraphFilter,
   HeadInfo,
   Identity,
   LfsInfo,
@@ -30,7 +31,7 @@ import { GitError, runGit, tryGit } from './exec'
 import { historyLabels } from './history'
 
 /** Commits loaded per snapshot; incremental loading comes later (GRAPH-08). */
-const COMMIT_LIMIT = 10000
+export const COMMIT_LIMIT = 10000
 
 const HASH_RE = /^[0-9a-f]{4,64}$/i
 
@@ -103,18 +104,33 @@ export async function loadIdentity(repo: string): Promise<Identity> {
   return parseIdentity(output ?? '')
 }
 
-export async function loadSnapshot(repo: string): Promise<RepoSnapshot> {
+/** Revisions for `git log`: every ref but the hidden ones, or the single ref shown alone. */
+export function logRevisions(filter?: GraphFilter): string[] {
+  // Whitespace, control characters and '..' never appear in ref names
+  const valid = (ref: string): boolean =>
+    ref.startsWith('refs/') &&
+    !/\s/.test(ref) &&
+    ![...ref].some((ch) => ch.charCodeAt(0) < 32) &&
+    !ref.includes('..')
+  if (filter?.solo && valid(filter.solo)) return [filter.solo]
+  const hidden = (filter?.hidden ?? []).filter(valid)
+  // Glob characters in a hidden name would hide more than asked: escape them
+  const exclude = hidden.map((ref) => `--exclude=${ref.replace(/[*?[\\]/g, '\\$&')}`)
+  return ['--exclude=refs/stash', ...exclude, '--all']
+}
+
+export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<RepoSnapshot> {
   const [head, log, refs, stashes, remotes, status, operation, submodules, lfs, identity] =
     await Promise.all([
       readHead(repo),
       // An empty repository has no refs, so log may fail: treat it as no commits
       tryGit(repo, [
         'log',
-        '--exclude=refs/stash',
-        '--all',
         '--date-order',
         `-n${COMMIT_LIMIT + 1}`,
-        `--format=${LOG_FORMAT}`
+        `--format=${LOG_FORMAT}`,
+        ...logRevisions(filter),
+        '--'
       ]),
       runGit(repo, ['for-each-ref', `--format=${REF_FORMAT}`]),
       tryGit(repo, ['stash', 'list', `--format=${STASH_FORMAT}`]),
