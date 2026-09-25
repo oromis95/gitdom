@@ -981,3 +981,97 @@
   color: var(--text-muted);
   border: 1px solid var(--border);
 }
+
+/* --- Clone and new repository dialogs -------------------------------------------------- */
+.modal.repo-dialog {
+  width: 520px;
+}
+.folder-field {
+  display: flex;
+  gap: 6px;
+}
+.folder-field input {
+  flex: 1;
+  min-width: 0;
+}
+.folder-field .btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.modal-hint {
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.modal-field input.invalid {
+  border-color: var(--red, #e5534b);
+}
+.options-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+}
+.repo-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 18px;
+}
+.repo-options-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.modal-error {
+  padding: 8px 10px;
+  border-radius: 4px;
+  color: var(--red, #e5534b);
+  background: color-mix(in srgb, var(--red, #e5534b) 12%, transparent);
+  overflow-wrap: anywhere;
+}
+.modal-error pre {
+  margin-top: 6px;
+  max-height: 140px;
+  overflow: auto;
+  font-size: 11px;
+  white-space: pre-wrap;
+  color: var(--text-muted);
+}
+.clone-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.clone-progress-label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+}
+.progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.progress-bar > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+.progress-bar.indeterminate > div {
+  width: 30% !important;
+  animation: progress-slide 1.2s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FolderOpen, TriangleAlert, User } from 'lucide-react'
+import { Download, FolderOpen, FolderPlus, Star, TriangleAlert, User, X } from 'lucide-react'
 import type { RepoSnapshot } from '../../shared/types'
 import TabBar from './components/TabBar'
 import Toolbar from './components/Toolbar'
@@ -15,7 +15,7 @@ import Splash, { HighwayLogo } from './components/Splash'
 import { restoreSession, useActiveTab, useApp } from './store'
 import { fetchAll } from './actions'
 import { identityMenu } from './identity'
-import { openMenu } from './ui'
+import { openMenu, openRepoDialog } from './ui'
 import { splashEnabled, useTheme } from './theme'
 
 const AUTO_FETCH_MS = 10 * 60 * 1000
@@ -46,25 +46,60 @@ function IdentityButton({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Ele
   )
 }
 
+function RecentItem({ path }: { path: string }): React.JSX.Element {
+  const { favorites, openRepo, toggleFavorite, forgetRepo } = useApp()
+  const favorite = favorites.includes(path)
+  return (
+    <div className="recent-item">
+      <button className="recent-open" onClick={() => void openRepo(path)}>
+        <span>{path.split(/[\\/]/).pop()}</span>
+        <span className="muted">{path}</span>
+      </button>
+      <button
+        className={`recent-action${favorite ? ' favorite' : ''}`}
+        title={favorite ? 'Remove from favorites' : 'Add to favorites'}
+        onClick={() => toggleFavorite(path)}
+      >
+        <Star size={15} fill={favorite ? 'currentColor' : 'none'} />
+      </button>
+      <button
+        className="recent-action"
+        title="Remove from the list (the folder isn't touched)"
+        onClick={() => forgetRepo(path)}
+      >
+        <X size={15} />
+      </button>
+    </div>
+  )
+}
+
 function Welcome(): React.JSX.Element {
-  const { recent, openRepo, pickAndOpen } = useApp()
+  const { recent, favorites, pickAndOpen } = useApp()
+  const others = recent.filter((p) => !favorites.includes(p))
   return (
     <div className="welcome">
       <HighwayLogo size={220} />
       <h1>GitDom</h1>
-      <button className="primary" onClick={() => void pickAndOpen()}>
-        <FolderOpen size={18} /> Open repository
-      </button>
-      {recent.length > 0 && (
+      <div className="welcome-actions">
+        <button className="primary" onClick={() => void pickAndOpen()}>
+          <FolderOpen size={18} /> Open
+        </button>
+        <button className="primary" onClick={() => openRepoDialog('clone')}>
+          <Download size={18} /> Clone
+        </button>
+        <button className="primary" onClick={() => openRepoDialog('init')}>
+          <FolderPlus size={18} /> New
+        </button>
+      </div>
+      {(favorites.length > 0 || others.length > 0) && (
         <div className="recent">
-          <div className="muted" style={{ padding: '0 10px 6px' }}>
-            Recent
-          </div>
-          {recent.map((path) => (
-            <button key={path} className="recent-item" onClick={() => void openRepo(path)}>
-              <span>{path.split(/[\\/]/).pop()}</span>
-              <span className="muted">{path}</span>
-            </button>
+          {favorites.length > 0 && <div className="recent-heading muted">Favorites</div>}
+          {favorites.map((path) => (
+            <RecentItem key={path} path={path} />
+          ))}
+          {others.length > 0 && <div className="recent-heading muted">Recent</div>}
+          {others.map((path) => (
+            <RecentItem key={path} path={path} />
           ))}
         </div>
       )}
@@ -80,6 +115,15 @@ function App(): React.JSX.Element {
   const [splash, setSplash] = useState(splashEnabled)
 
   useEffect(() => restoreSession(), [])
+
+  useEffect(
+    () =>
+      window.api.menu.onCommand((command) => {
+        if (command === 'open') void useApp.getState().pickAndOpen()
+        else openRepoDialog(command)
+      }),
+    []
+  )
 
   // Watch the open repositories so changes made elsewhere (terminal, IDE) show up by themselves
   // Joined into a string so the selector result is stable; '|' cannot appear in Windows paths

@@ -56,11 +56,16 @@ interface AppState {
   tabs: RepoTab[]
   active: number
   recent: string[]
+  /** Pinned repositories, shown before the recent ones (REPO-05) */
+  favorites: string[]
   scrollRequest: ScrollRequest | null
 
   pickAndOpen(): Promise<void>
   openRepo(path: string): Promise<void>
   closeTab(index: number): void
+  toggleFavorite(path: string): void
+  /** Forgets a repository from the recent and favorite lists, e.g. once it's deleted. */
+  forgetRepo(path: string): void
   setActive(index: number): void
   refresh(index?: number): Promise<void>
   /** Reloads the snapshot of the repository at `path`, if open. */
@@ -77,6 +82,7 @@ interface AppState {
 
 const TABS_KEY = 'gitdom.tabs'
 const RECENT_KEY = 'gitdom.recent'
+const FAVORITES_KEY = 'gitdom.favorites'
 const MAX_RECENT = 10
 
 function readJson<T>(key: string, fallback: T): T {
@@ -128,6 +134,7 @@ export const useApp = create<AppState>((set, get) => {
     tabs: [],
     active: 0,
     recent: readJson<string[]>(RECENT_KEY, []),
+    favorites: readJson<string[]>(FAVORITES_KEY, []),
     scrollRequest: null,
 
     async pickAndOpen() {
@@ -166,6 +173,23 @@ export const useApp = create<AppState>((set, get) => {
         set({ tabs: [...tabs, tab], active: tabs.length, recent })
       }
       persist(get().tabs, get().active)
+    },
+
+    toggleFavorite(path) {
+      const { favorites } = get()
+      const next = favorites.includes(path)
+        ? favorites.filter((p) => p !== path)
+        : [...favorites, path]
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(next))
+      set({ favorites: next })
+    },
+
+    forgetRepo(path) {
+      const recent = get().recent.filter((p) => p !== path)
+      const favorites = get().favorites.filter((p) => p !== path)
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recent))
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
+      set({ recent, favorites })
     },
 
     closeTab(index) {

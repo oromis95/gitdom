@@ -1,6 +1,7 @@
-// The native menu bar: Electron's standard File, Edit and View menus, and a Window menu with the themes.
+// The native menu bar: a File menu to open, clone and create repositories, Electron's standard Edit
+// and View menus, and a Window menu with the themes.
 import { BrowserWindow, ipcMain, Menu, type MenuItemConstructorOptions } from 'electron'
-import { IPC, type ThemeChoice } from '../shared/api'
+import { IPC, type MenuCommand, type ThemeChoice } from '../shared/api'
 
 const THEMES: { theme: ThemeChoice; label: string }[] = [
   { theme: 'dark', label: 'Dark' },
@@ -12,7 +13,20 @@ const THEMES: { theme: ThemeChoice; label: string }[] = [
 /** Theme applied in the renderer, checked in Window > Theme; the renderer reports it at startup. */
 let current: ThemeChoice | null = null
 
+const send = (command: MenuCommand) => (_item: unknown, win: unknown) =>
+  (win as BrowserWindow | undefined)?.webContents.send(IPC.menuCommand, command)
+
 function build(): void {
+  const file: MenuItemConstructorOptions = {
+    label: 'File',
+    submenu: [
+      { label: 'Open Repository…', accelerator: 'CmdOrCtrl+O', click: send('open') },
+      { label: 'Clone Repository…', click: send('clone') },
+      { label: 'New Repository…', click: send('init') },
+      { type: 'separator' },
+      { role: 'quit' }
+    ]
+  }
   const window: MenuItemConstructorOptions = {
     label: 'Window',
     submenu: [
@@ -32,12 +46,7 @@ function build(): void {
     ]
   }
   Menu.setApplicationMenu(
-    Menu.buildFromTemplate([
-      { role: 'fileMenu' },
-      { role: 'editMenu' },
-      { role: 'viewMenu' },
-      window
-    ])
+    Menu.buildFromTemplate([file, { role: 'editMenu' }, { role: 'viewMenu' }, window])
   )
 }
 

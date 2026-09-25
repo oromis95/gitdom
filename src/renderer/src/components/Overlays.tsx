@@ -3,6 +3,7 @@ import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react'
 import { useUi, type FormValues } from '../ui'
 import RebaseEditor from './RebaseEditor'
 import CommandPalette from './CommandPalette'
+import RepoDialogs from './RepoDialogs'
 
 function Toasts(): React.JSX.Element {
   const toasts = useUi((s) => s.toasts)
@@ -210,6 +211,7 @@ export default function Overlays(): React.JSX.Element {
       <ContextMenu />
       <RebaseEditor />
       <CommandPalette />
+      <RepoDialogs />
       <FormDialog />
       <Toasts />
     </>

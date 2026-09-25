@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { IPC, type ChangeScope, type GitDomApi, type ThemeChoice } from '../shared/api'
+import {
+  IPC,
+  type ChangeScope,
+  type CloneProgress,
+  type GitDomApi,
+  type MenuCommand,
+  type ThemeChoice
+} from '../shared/api'
 
 const api: GitDomApi = {
   pickRepository: () => ipcRenderer.invoke(IPC.pickRepository),
@@ -11,6 +18,18 @@ const api: GitDomApi = {
       listener(repoPath, scope)
     ipcRenderer.on(IPC.changed, handler)
     return () => ipcRenderer.removeListener(IPC.changed, handler)
+  },
+  repos: {
+    pickFolder: (title) => ipcRenderer.invoke(IPC.pickFolder, title),
+    clone: (id, options) => ipcRenderer.invoke(IPC.clone, id, options),
+    cancelClone: (id) => ipcRenderer.send(IPC.cloneCancel, id),
+    onCloneProgress: (listener) => {
+      const handler = (_event: IpcRendererEvent, id: number, progress: CloneProgress): void =>
+        listener(id, progress)
+      ipcRenderer.on(IPC.cloneProgress, handler)
+      return () => ipcRenderer.removeListener(IPC.cloneProgress, handler)
+    },
+    init: (options) => ipcRenderer.invoke(IPC.init, options)
   },
   terminal: {
     shells: () => ipcRenderer.invoke(IPC.terminalShells),
@@ -37,6 +56,11 @@ const api: GitDomApi = {
       const handler = (_event: IpcRendererEvent, theme: ThemeChoice): void => listener(theme)
       ipcRenderer.on(IPC.menuTheme, handler)
       return () => ipcRenderer.removeListener(IPC.menuTheme, handler)
+    },
+    onCommand: (listener) => {
+      const handler = (_event: IpcRendererEvent, command: MenuCommand): void => listener(command)
+      ipcRenderer.on(IPC.menuCommand, handler)
+      return () => ipcRenderer.removeListener(IPC.menuCommand, handler)
     }
   }
 }

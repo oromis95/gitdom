@@ -179,6 +179,57 @@ export interface TerminalApi {
   onExit(listener: (id: number, exitCode: number) => void): () => void
 }
 
+export interface CloneOptions {
+  url: string
+  /** Folder the repository is cloned into, as a new subfolder */
+  parent: string
+  /** Name of the new subfolder */
+  name: string
+  /** Branch to check out instead of the remote's default */
+  branch?: string
+  /** Only the last N commits (shallow clone) */
+  depth?: number
+  /** Also clone the submodules, recursively */
+  recursive: boolean
+}
+
+export interface CloneProgress {
+  /** git's current phase, e.g. "Receiving objects" */
+  phase: string
+  /** Overall progress from 0 to 100, null while git hasn't reported any */
+  percent: number | null
+}
+
+export interface InitOptions {
+  /** Folder the repository is created in, as a new subfolder */
+  parent: string
+  name: string
+  defaultBranch: string
+  /** Id of a .gitignore template, from GITIGNORE_TEMPLATES */
+  gitignore: string | null
+  /** Id of a license, from LICENSE_TEMPLATES */
+  license: string | null
+  readme: boolean
+}
+
+export interface InitOutcome {
+  path: string
+  /** Whether the starter files were committed; it fails without an author identity */
+  committed: boolean
+}
+
+/** Getting repositories onto the machine: cloning and creating them. */
+export interface ReposApi {
+  /** Shows a folder picker; resolves null when cancelled. */
+  pickFolder(title: string): Promise<string | null>
+  /** Clones into parent/name; resolves the path of the new repository. `id` identifies the clone. */
+  clone(id: number, options: CloneOptions): Promise<Result<string>>
+  /** Stops a clone and deletes what it downloaded; the clone then resolves with an error. */
+  cancelClone(id: number): void
+  onCloneProgress(listener: (id: number, progress: CloneProgress) => void): () => void
+  init(options: InitOptions): Promise<Result<InitOutcome>>
+}
+
 /** Themes offered in the app and in the Window menu; 'system' follows Windows' light or dark setting. */
 export type ThemeChoice = 'dark' | 'light' | 'system' | 'studio'
 
@@ -188,7 +239,12 @@ export interface MenuApi {
   setTheme(theme: ThemeChoice): void
   /** Subscribes to themes picked from the menu; returns the unsubscribe function. */
   onTheme(listener: (theme: ThemeChoice) => void): () => void
+  /** Subscribes to File menu commands; returns the unsubscribe function. */
+  onCommand(listener: (command: MenuCommand) => void): () => void
 }
+
+/** File menu entries handled by the renderer. */
+export type MenuCommand = 'open' | 'clone' | 'init'
 
 /** API exposed by the preload script on `window.api`. */
 export interface GitDomApi {
@@ -201,6 +257,7 @@ export interface GitDomApi {
   watch(repoPaths: string[]): void
   /** Subscribes to on-disk changes; returns the unsubscribe function. */
   onRepoChanged(listener: (repoPath: string, scope: ChangeScope) => void): () => void
+  repos: ReposApi
   terminal: TerminalApi
   menu: MenuApi
 }
@@ -219,5 +276,11 @@ export const IPC = {
   terminalData: 'term:data',
   terminalExit: 'term:exit',
   menuSetTheme: 'menu:set-theme',
-  menuTheme: 'menu:theme'
+  menuTheme: 'menu:theme',
+  menuCommand: 'menu:command',
+  pickFolder: 'repos:pick-folder',
+  clone: 'repos:clone',
+  cloneCancel: 'repos:clone-cancel',
+  cloneProgress: 'repos:clone-progress',
+  init: 'repos:init'
 } as const

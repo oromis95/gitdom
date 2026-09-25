@@ -1,6 +1,7 @@
 // Everything the command palette can do, built from the current state when it opens.
 import type { PullMode } from '../../shared/api'
 import { useApp } from './store'
+import { openRepoDialog } from './ui'
 import {
   setSplashEnabled,
   setTheme,
@@ -180,18 +181,23 @@ export function buildCommands(): Command[] {
     add('Repository', 'Refresh', () => void app.refresh())
   }
 
-  add('Repository', 'Open repository…', () => void app.pickAndOpen())
+  add('Repository', 'Open repository…', () => void app.pickAndOpen(), 'Ctrl+O')
+  add('Repository', 'Clone repository…', () => openRepoDialog('clone'))
+  add('Repository', 'New repository…', () => openRepoDialog('init'))
   app.tabs.forEach((t, i) => {
     if (i !== app.active) add('Tabs', `Switch to ${t.name}`, () => app.setActive(i), t.path)
   })
   if (tab) add('Tabs', `Close ${tab.name}`, () => app.closeTab(app.active))
-  for (const recent of app.recent) {
-    if (!app.tabs.some((t) => t.path === recent)) {
+  // Favorites first, then the other recent repositories
+  const known = [...app.favorites, ...app.recent.filter((p) => !app.favorites.includes(p))]
+  for (const path of known) {
+    if (!app.tabs.some((t) => t.path === path)) {
+      const star = app.favorites.includes(path) ? '★ ' : ''
       add(
         'Repository',
-        `Open ${recent.split(/[\\/]/).pop()}`,
-        () => void app.openRepo(recent),
-        recent
+        `Open ${star}${path.split(/[\\/]/).pop()}`,
+        () => void app.openRepo(path),
+        path
       )
     }
   }

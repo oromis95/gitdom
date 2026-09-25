@@ -627,3 +627,52 @@ input {
   justify-content: center;
   color: var(--text-muted);
 }
+
+/* ---------- Welcome: actions and repository list ---------- */
+
+.welcome-actions {
+  display: flex;
+  gap: 10px;
+}
+.recent-heading {
+  padding: 10px 10px 6px;
+}
+.recent .recent-item {
+  flex-direction: row;
+  align-items: center;
+  padding: 0 4px 0 0;
+}
+.recent-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 10px;
+  text-align: left;
+}
+.recent-open span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-action {
+  display: flex;
+  padding: 5px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  opacity: 0;
+}
+.recent-item:hover .recent-action,
+.recent-action.favorite,
+.recent-action:focus-visible {
+  opacity: 1;
+}
+.recent-action:hover {
+  color: var(--text);
+  background: var(--bg-active, var(--bg-hover));
+}
+.recent-action.favorite {
+  color: var(--orange, #f5b454);
+}

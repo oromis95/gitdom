@@ -21,6 +21,10 @@ export interface RunOptions {
   withStderr?: boolean
   /** Extra environment variables */
   env?: Record<string, string>
+  /** Receives stderr as it arrives, e.g. clone progress */
+  onStderr?: (chunk: string) => void
+  /** Aborting kills the process; the promise then rejects */
+  signal?: AbortSignal
 }
 
 // Options forced on every invocation so output is stable and parseable
@@ -43,6 +47,7 @@ export function runGit(cwd: string, args: string[], options: RunOptions = {}): P
     const child = spawn('git', [...BASE_ARGS, ...args], {
       cwd,
       windowsHide: true,
+      signal: options.signal,
       // Read-only commands (status, log) must not take index.lock and block the user's terminal.
       // Prompts can't be answered without a terminal: fail fast instead of hanging.
       env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', ...options.env }
@@ -51,12 +56,20 @@ export function runGit(cwd: string, args: string[], options: RunOptions = {}): P
     const out: Buffer[] = []
     const err: Buffer[] = []
     child.stdout.on('data', (chunk: Buffer) => out.push(chunk))
-    child.stderr.on('data', (chunk: Buffer) => err.push(chunk))
+    child.stderr.on('data', (chunk: Buffer) => {
+      err.push(chunk)
+      options.onStderr?.(chunk.toString('utf8'))
+    })
 
     child.on('error', (e) =>
-      reject(new GitError(`Unable to run git: ${e.message}`, args, null, ''))
+      reject(
+        options.signal?.aborted
+          ? new GitError('Cancelled', args, null, '')
+          : new GitError(`Unable to run git: ${e.message}`, args, null, '')
+      )
     )
     child.on('close', (code) => {
+      if (options.signal?.aborted) return reject(new GitError('Cancelled', args, null, ''))
       const stdout = Buffer.concat(out).toString('utf8')
       const stderr = Buffer.concat(err).toString('utf8')
       if (code === 0 || (code !== null && options.okExitCodes?.includes(code))) {

@@ -26,7 +26,9 @@ Restano da coprire alcuni requisiti P0 (clone, impostazioni) e buona parte dei P
 
 ---
 
-## Step 1 — v0.2: Clone e nuovo repository
+## Step 1 — v0.2: Clone e nuovo repository ✅
+
+> Completato: finestre Clone e Nuovo repository nel menu File, nella schermata iniziale e nella command palette.
 
 Chiude i requisiti P0 mancanti per iniziare a lavorare su un progetto senza usare il terminale.
 

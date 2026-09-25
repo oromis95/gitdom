@@ -9,6 +9,13 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 
 ## Features
 
+**Getting started with a repository**
+
+- Open a local repository, clone one from an HTTPS or SSH URL, or create a new one (**File** menu)
+- Clone with a progress bar and a Cancel button; you can pick a branch, a shallow depth, and whether to clone submodules
+- New repositories can start with a `.gitignore` template, a README and a license, in a first commit
+- Recent repositories on the start screen, with favorites pinned at the top
+
 **Commit graph**
 
 - Virtualized canvas graph that stays smooth on large histories, with colored lanes and branch/tag labels
