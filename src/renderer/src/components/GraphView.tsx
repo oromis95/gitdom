@@ -195,6 +195,7 @@ export default function GraphView({
   selected: string | null
 }): React.JSX.Element {
   const select = useApp((s) => s.select)
+  const compare = useApp((s) => s.compare)
   const scrollRequest = useApp((s) => s.scrollRequest)
   const graphFilter = useApp((s) => s.graphFilters[snapshot.path])
   const setGraphFilter = useApp((s) => s.setGraphFilter)
@@ -338,10 +339,17 @@ export default function GraphView({
         : selected && selected !== WIP_HASH
           ? [selected]
           : []
-      setPicked(start.includes(hash) ? start.filter((h) => h !== hash) : [...start, hash])
-    } else {
-      clearPicked()
+      const next = start.includes(hash) ? start.filter((h) => h !== hash) : [...start, hash]
+      setPicked(next)
+      select(hash)
+      // Two commits picked: show what changed from the older to the newer one
+      if (next.length === 2) {
+        const [newer, older] = [...next].sort((a, b) => rowIndex.get(a)! - rowIndex.get(b)!)
+        compare({ from: older, to: newer })
+      }
+      return
     }
+    clearPicked()
     select(hash)
   }
 

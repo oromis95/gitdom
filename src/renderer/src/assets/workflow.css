@@ -99,6 +99,9 @@
   background: var(--bg-elevated);
   color: var(--text);
 }
+.file-group-header {
+  justify-content: space-between;
+}
 .file-row {
   cursor: pointer;
 }

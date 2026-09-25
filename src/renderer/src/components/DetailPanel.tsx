@@ -59,6 +59,45 @@ const SUMMARY_LIMIT = 72
 const VIEW_KEY = 'gitdom.fileView'
 
 type FileView = 'path' | 'tree'
+
+/** The layout of the file lists, the same in every panel and remembered. */
+function useFileView(): [FileView, (view: FileView) => void] {
+  const [view, setView] = useState<FileView>(() =>
+    localStorage.getItem(VIEW_KEY) === 'tree' ? 'tree' : 'path'
+  )
+  const change = (next: FileView): void => {
+    localStorage.setItem(VIEW_KEY, next)
+    setView(next)
+  }
+  return [view, change]
+}
+
+function ViewToggle({
+  view,
+  onChange
+}: {
+  view: FileView
+  onChange: (view: FileView) => void
+}): React.JSX.Element {
+  return (
+    <div className="view-toggle">
+      <button
+        className={view === 'path' ? 'on' : ''}
+        onClick={() => onChange('path')}
+        title="Path view"
+      >
+        <List size={15} />
+      </button>
+      <button
+        className={view === 'tree' ? 'on' : ''}
+        onClick={() => onChange('tree')}
+        title="Tree view"
+      >
+        <ListTree size={15} />
+      </button>
+    </div>
+  )
+}
 type ListKind = 'conflicted' | 'unstaged' | 'staged' | 'commit' | 'compare'
 
 function sourceFor(
@@ -628,13 +667,7 @@ function WorkingTreePanel({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.E
   const conflicted = snapshot.status.unstaged.filter((f) => f.status === 'U')
   const unstaged = snapshot.status.unstaged.filter((f) => f.status !== 'U')
   const repo = snapshot.path
-  const [view, setView] = useState<FileView>(() =>
-    localStorage.getItem(VIEW_KEY) === 'tree' ? 'tree' : 'path'
-  )
-  const changeView = (next: FileView): void => {
-    localStorage.setItem(VIEW_KEY, next)
-    setView(next)
-  }
+  const [view, changeView] = useFileView()
 
   return (
     <>
@@ -644,22 +677,7 @@ function WorkingTreePanel({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.E
             {staged.length + snapshot.status.unstaged.length} file changes on{' '}
             <span className="link">{snapshot.head.branch ?? 'HEAD'}</span>
           </div>
-          <div className="view-toggle">
-            <button
-              className={view === 'path' ? 'on' : ''}
-              onClick={() => changeView('path')}
-              title="Path view"
-            >
-              <List size={15} />
-            </button>
-            <button
-              className={view === 'tree' ? 'on' : ''}
-              onClick={() => changeView('tree')}
-              title="Tree view"
-            >
-              <ListTree size={15} />
-            </button>
-          </div>
+          <ViewToggle view={view} onChange={changeView} />
         </div>
         {snapshot.operation && (
           <OperationBanner snapshot={snapshot} conflicts={conflicted.length} />
@@ -789,6 +807,7 @@ function CommitPanel({ repoPath, hash }: { repoPath: string; hash: string }): Re
   const [editing, setEditing] = useState<{ hash: string; message: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const head = snapshot?.head.hash
+  const [view, changeView] = useFileView()
 
   useEffect(() => {
     let cancelled = false
@@ -943,11 +962,20 @@ function CommitPanel({ repoPath, hash }: { repoPath: string; hash: string }): Re
         )}
       </dl>
       <div>
-        <div className="file-group-title">
-          {detail.files.length} changed files
-          {detail.parents.length > 1 && <span className="muted"> (vs first parent)</span>}
+        <div className="file-group-title file-group-header">
+          <span>
+            {detail.files.length} changed files
+            {detail.parents.length > 1 && <span className="muted"> (vs first parent)</span>}
+          </span>
+          <ViewToggle view={view} onChange={changeView} />
         </div>
-        <FileList files={detail.files} kind="commit" repo={repoPath} hash={detail.hash} />
+        <FileList
+          files={detail.files}
+          kind="commit"
+          view={view}
+          repo={repoPath}
+          hash={detail.hash}
+        />
       </div>
     </div>
   )
@@ -966,13 +994,7 @@ function ComparePanel({
   const compare = useApp((s) => s.compare)
   const key = JSON.stringify(target)
   const [loaded, setLoaded] = useState<{ key: string; result: Result<FileChange[]> } | null>(null)
-  const [view, setView] = useState<FileView>(() =>
-    localStorage.getItem(VIEW_KEY) === 'tree' ? 'tree' : 'path'
-  )
-  const changeView = (next: FileView): void => {
-    localStorage.setItem(VIEW_KEY, next)
-    setView(next)
-  }
+  const [view, changeView] = useFileView()
 
   useEffect(() => {
     let cancelled = false
@@ -1009,22 +1031,7 @@ function ComparePanel({
     <div className="detail-scroll">
       <div className="detail-title-row">
         <div className="detail-title">Comparing two revisions</div>
-        <div className="view-toggle">
-          <button
-            className={view === 'path' ? 'on' : ''}
-            onClick={() => changeView('path')}
-            title="Path view"
-          >
-            <List size={15} />
-          </button>
-          <button
-            className={view === 'tree' ? 'on' : ''}
-            onClick={() => changeView('tree')}
-            title="Tree view"
-          >
-            <ListTree size={15} />
-          </button>
-        </div>
+        <ViewToggle view={view} onChange={changeView} />
       </div>
       <dl className="detail-meta">
         <dt>from</dt>

@@ -2,6 +2,16 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## 0.7.1 — 2026-09-25
+
+### Added
+
+- The changed files of a commit can be shown as a folder tree, like the local changes (the buttons beside "changed files")
+
+### Fixed
+
+- Selecting two commits with Ctrl+click now compares them and lists every changed file, instead of showing only the last commit clicked
+
 ## 0.7.0 — 2026-09-25
 
 ### Added

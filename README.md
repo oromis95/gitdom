@@ -26,13 +26,13 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Author pictures from Gravatar (or GitHub for its noreply addresses), with initials when offline
 - Stashes drawn as nodes on the commits they were made on
 - Hover a branch label to highlight its line; a minimap beside the graph marks HEAD, the selection and the search matches
-- Commit details, changed files, and diffs with syntax highlighting
+- Commit details, changed files as a list or a folder tree, and diffs with syntax highlighting
 
 **Diffs**
 
 - Unified or split (side by side) view, with the changed words highlighted inside each line
 - Show the whole file with its changes, choose the context lines, ignore whitespace, wrap long lines
-- Compare any two commits (Ctrl+click both in the graph, then right-click), or a branch or tag with the current branch
+- Compare any two commits (Ctrl+click both in the graph), or a branch or tag with the current branch
 - Images compared side by side, overlaid with an opacity slider, or with a swipe
 
 **Everyday workflow**
