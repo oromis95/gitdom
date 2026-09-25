@@ -27,7 +27,8 @@ import {
   loadCommitDetail,
   loadStatus,
   logRevisions,
-  readOperation
+  readOperation,
+  signingProgramArgs
 } from './repository'
 import * as history from './history'
 import * as backups from './backups'
@@ -506,15 +507,84 @@ const ops: OpImpl = {
     return withMarkers
   },
 
-  commit(repo, message, amend) {
+  async commit(repo, message, amend, options = {}) {
     if (!message.trim()) throw new Error('The commit message is empty')
     const args = ['commit', '-F', '-']
     if (amend) args.push('--amend')
-    return runGit(repo, args, { input: message, withStderr: true })
+    if (options.noVerify) args.push('--no-verify')
+    if (options.sign !== undefined) args.push(options.sign ? '-S' : '--no-gpg-sign')
+    const author = options.author?.trim()
+    if (author) {
+      if (!/^[^<>\0\n]+ <[^<>\0\n]+>$/.test(author)) {
+        throw new Error(`The author must be written as Name <email>: ${author}`)
+      }
+      args.push(`--author=${author}`)
+    }
+    return runGit(repo, [...(await signingProgramArgs(repo)), ...args], {
+      input: message,
+      withStderr: true
+    })
   },
 
   async lastCommitMessage(repo) {
     return (await runGit(repo, ['log', '-1', '--format=%B'])).trim()
+  },
+
+  async commitTemplate(repo) {
+    const path = (await tryGit(repo, ['config', '--path', '--get', 'commit.template']))?.trim()
+    if (!path) return null
+    // A template that can't be read is ignored, as git itself would fail the commit
+    return readFile(resolve(repo, path), 'utf8').catch(() => null)
+  },
+
+  async reword(repo, hash, message) {
+    assertHash(hash)
+    if (!message.trim()) throw new Error('The commit message is empty')
+    await assertIdle(repo)
+    await currentBranch(repo)
+    const [head, commit] = await Promise.all(
+      ['HEAD', `${hash}^{commit}`].map(async (rev) =>
+        (await runGit(repo, ['rev-parse', '--verify', rev])).trim()
+      )
+    )
+    if (commit === head) {
+      // --only without paths commits HEAD's tree again: staged changes stay staged.
+      // The content is unchanged, so hooks checking it would only get in the way
+      const output = await runGit(
+        repo,
+        [
+          ...(await signingProgramArgs(repo)),
+          'commit',
+          '--amend',
+          '--only',
+          '--no-verify',
+          '--allow-empty',
+          '-F',
+          '-'
+        ],
+        { input: message.trim() + '\n', withStderr: true }
+      )
+      return { conflicts: false, output }
+    }
+    if (!(await ops.isAncestor(repo, commit, head))) {
+      throw new Error('The commit is not on the current branch: check out its branch first')
+    }
+    const base = (await firstParentOf(repo, commit)) ?? null
+    const { commits, merges } = await ops.rebaseCommits(repo, base)
+    if (merges > 0) {
+      throw new Error(
+        'This commit is, or is followed by, a merge commit: rewording it would flatten the merges'
+      )
+    }
+    return ops.rebaseInteractive(
+      repo,
+      base,
+      commits.map((c) =>
+        c.hash === commit
+          ? { action: 'reword', hash: c.hash, message }
+          : { action: 'pick', hash: c.hash }
+      )
+    )
   },
 
   async continueOperation(repo) {
@@ -579,7 +649,8 @@ const ops: OpImpl = {
       squash: ['--squash']
     }
     if (!(mode in flags)) throw new Error(`Invalid merge mode: ${String(mode)}`)
-    return withConflicts(repo, ['merge', '--no-edit', ...flags[mode], ref])
+    // Local changes are set aside during the merge and restored after it (STASH-06)
+    return withConflicts(repo, ['merge', '--no-edit', '--autostash', ...flags[mode], ref])
   },
 
   async rebase(repo, onto) {
@@ -648,7 +719,7 @@ const ops: OpImpl = {
         await writeFile(file, step.message.trim() + '\n', 'utf8')
         lines.push(
           `pick ${step.hash}`,
-          `exec git commit --amend --allow-empty -q -F ${quote(file)}`
+          `exec git commit --amend --no-verify --allow-empty -q -F ${quote(file)}`
         )
       } else {
         lines.push(`${step.action} ${step.hash}`)
@@ -659,7 +730,8 @@ const ops: OpImpl = {
 
     return withConflicts(
       repo,
-      ['rebase', '-i', '--autostash', base ?? '--root'],
+      // -c options reach the exec'd commits too, through GIT_CONFIG_PARAMETERS
+      [...(await signingProgramArgs(repo)), 'rebase', '-i', '--autostash', base ?? '--root'],
       // git runs the sequence editor with the todo file as argument: replace it with ours
       { GIT_SEQUENCE_EDITOR: `cp ${quote(todoFile)}` }
     )
@@ -874,11 +946,20 @@ const ops: OpImpl = {
     await runGit(repo, ['remote', 'set-url', name, url])
   },
 
-  async stashPush(repo, message, includeUntracked) {
+  async stashPush(repo, message, includeUntracked, options = {}) {
     const args = ['stash', 'push']
-    if (includeUntracked) args.push('--include-untracked')
+    const paths = options.paths ?? []
+    if (options.staged) {
+      if (paths.length) throw new Error('Staged changes are stashed all together, not by file')
+      args.push('--staged')
+    } else if (includeUntracked) args.push('--include-untracked')
     if (message.trim()) args.push('-m', message.trim())
-    await runGit(repo, args)
+    if (!paths.length) {
+      await runGit(repo, args)
+      return
+    }
+    paths.forEach((p) => repoFile(repo, p))
+    await runWithPaths(repo, args, paths)
   },
 
   async stashApply(repo, selector) {
@@ -896,13 +977,17 @@ const ops: OpImpl = {
     await runGit(repo, ['stash', 'drop', selector])
   },
 
-  async createTag(repo, name, target, message) {
+  async createTag(repo, name, target, message, sign) {
     await assertTagName(repo, name)
     assertArg(target, 'tag target')
-    const args = message?.trim()
-      ? ['tag', '-a', '-m', message.trim(), name, target]
-      : ['tag', name, target]
-    await runGit(repo, args)
+    const text = message?.trim()
+    const args = ['tag']
+    // A signed tag is annotated: it needs a message, the name will do
+    if (sign) args.push('-s', '-m', text || name)
+    else if (text) args.push('-a', '-m', text)
+    // With tag.gpgsign even a lightweight tag would be signed, waiting on an editor for its message
+    if (sign === false || (!sign && !text)) args.push('--no-sign')
+    await runGit(repo, [...(await signingProgramArgs(repo)), ...args, name, target])
   },
 
   async deleteTag(repo, name) {
@@ -927,6 +1012,22 @@ const ops: OpImpl = {
     return runGit(repo, ['submodule', 'update', '--init', '--recursive', '--', ...paths], {
       withStderr: true
     })
+  },
+
+  async ignore(repo, pattern, untrack) {
+    if (!pattern.trim() || /[\0\r\n]/.test(pattern)) throw new Error(`Invalid pattern: ${pattern}`)
+    untrack.forEach((p) => repoFile(repo, p))
+    const file = resolve(repo, '.gitignore')
+    const current = await readFile(file, 'utf8').catch(() => '')
+    if (!current.split(/\r?\n/).includes(pattern)) {
+      // Follows the file's line endings, and ends its last line if it wasn't
+      const eol = current.includes('\r\n') ? '\r\n' : '\n'
+      const separator = current && !current.endsWith('\n') ? eol : ''
+      await writeFile(file, current + separator + pattern + eol, 'utf8')
+    }
+    if (untrack.length) {
+      await runWithPaths(repo, ['rm', '--cached', '-r', '-q', '--ignore-unmatch'], untrack)
+    }
   },
 
   async lfsTrack(repo, pattern) {
@@ -955,6 +1056,25 @@ const ops: OpImpl = {
     for (const key of ['user.name', 'user.email']) {
       await runGit(repo, ['config', '--local', '--unset-all', key], { okExitCodes: [5] })
     }
+  },
+
+  async setSigning(repo, signing, scope) {
+    if (!['openpgp', 'ssh', 'x509'].includes(signing.format)) {
+      throw new Error(`Invalid signature format: ${String(signing.format)}`)
+    }
+    const key = signing.key?.trim() ?? ''
+    if (key.startsWith('-') || /[\0\n]/.test(key)) throw new Error(`Invalid signing key: ${key}`)
+    const set = (name: string, value: string): Promise<string> =>
+      runGit(repo, ['config', `--${scope}`, name, value])
+    await set('gpg.format', signing.format)
+    if (key) await set('user.signingkey', key)
+    else {
+      await runGit(repo, ['config', `--${scope}`, '--unset-all', 'user.signingkey'], {
+        okExitCodes: [5]
+      })
+    }
+    await set('commit.gpgsign', String(signing.commits))
+    await set('tag.gpgsign', String(signing.tags))
   }
 }
 
@@ -966,6 +1086,7 @@ const READ_ONLY = new Set<OpName>([
   'fileHistory',
   'blame',
   'lastCommitMessage',
+  'commitTemplate',
   'conflictMarkers',
   'rebaseCommits',
   'readConflictFile',
@@ -1016,6 +1137,8 @@ const shortRef = (ref: string): string => ref.replace(/^refs\/(heads|remotes)\//
 /** Labels of actions in the activity log that aren't undoable, or read better than the undo label. */
 const LABELS: { [K in OpName]?: (...args: OpArgs<K>) => string } = {
   push: (force) => (force ? 'Force push' : 'Push'),
+  ignore: (pattern) => `Ignore ${pattern}`,
+  setSigning: () => 'Set commit signing',
   restoreBackup: (_id, ref) => `Restore ${shortRef(ref)} from a backup`
 }
 
@@ -1049,6 +1172,7 @@ const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise
   reset: (repo) => currentBranchRef(repo),
   rebase: (repo) => currentBranchRef(repo),
   rebaseInteractive: (repo) => currentBranchRef(repo),
+  reword: (repo) => currentBranchRef(repo),
   push: async (repo, force) => (force ? pushTarget(repo) : []),
   // Restoring a backup moves the branch too: where it was is saved first
   restoreBackup: async (_repo, _id, ref) => [ref]
@@ -1079,6 +1203,8 @@ const UNDOABLE: {
   [K in OpName]?: (...args: OpArgs<K>) => { label: string; move?: history.BranchMove }
 } = {
   commit: (_message, amend) => ({ label: amend ? 'Amend commit' : 'Commit', move: 'soft' }),
+  // The files are the same: undo only puts the old message back
+  reword: (hash) => ({ label: `Reword ${short(hash)}`, move: 'soft' }),
   checkout: (branch) => ({ label: `Checkout ${branch}` }),
   checkoutRemote: (_remote, localName) => ({ label: `Checkout ${localName}` }),
   checkoutCommit: (hash) => ({ label: `Checkout ${short(hash)}` }),

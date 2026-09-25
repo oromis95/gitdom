@@ -55,9 +55,22 @@ export interface CommitDraft {
   summary: string
   description: string
   amend: boolean
+  /** Skip the commit hooks (COMMIT-09) */
+  noVerify: boolean
+  /** Sign or not; null follows commit.gpgsign */
+  sign: boolean | null
+  /** Another author, as "Name <email>"; empty for the identity */
+  author: string
 }
 
-const EMPTY_DRAFT: CommitDraft = { summary: '', description: '', amend: false }
+export const EMPTY_DRAFT: CommitDraft = {
+  summary: '',
+  description: '',
+  amend: false,
+  noVerify: false,
+  sign: null,
+  author: ''
+}
 
 export const NO_GRAPH_FILTER: GraphFilter = { hidden: [], solo: null }
 

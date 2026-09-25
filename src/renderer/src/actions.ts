@@ -12,7 +12,9 @@ import type {
   StashMode
 } from '../../shared/api'
 import type { FileChange, Ref, RepoSnapshot, Stash, Submodule } from '../../shared/types'
+import { extensionOf, folderOf, ignorePattern, type IgnoreKind } from '../../shared/ignore'
 import { NO_GRAPH_FILTER, WIP_HASH, useApp } from './store'
+import { useSettings } from './settings'
 import { confirm, notify, openMenuAt, prompt, showForm, useUi, type MenuItem } from './ui'
 
 function call<K extends OpName>(
@@ -75,6 +77,10 @@ async function runBusy<K extends OpName>(
   }
 }
 
+/** The loaded snapshot of an open repository. */
+const snapshotOf = (repo: string): RepoSnapshot | undefined =>
+  useApp.getState().tabs.find((t) => t.path === repo)?.snapshot
+
 const copy = (text: string): void => {
   void navigator.clipboard.writeText(text)
   notify('info', `Copied "${text.length > 40 ? text.slice(0, 40) + '…' : text}"`)
@@ -95,13 +101,16 @@ async function checkoutWith(
   const output = result.ok ? '' : (result.details ?? result.error)
   if (!result.ok && WOULD_OVERWRITE.test(output)) {
     const untracked = UNTRACKED_IN_WAY.test(output)
-    const stash = await confirm(
-      'Local changes',
-      untracked
-        ? `Untracked files would be overwritten by checking out ${target}. Stash all changes, including untracked files, check out, and reapply them?`
-        : `Your changes would be overwritten by checking out ${target}. Stash them, check out, and reapply them?`,
-      'Stash and checkout'
-    )
+    // STASH-06: the preference skips the question
+    const stash =
+      useSettings.getState().autoStash ||
+      (await confirm(
+        'Local changes',
+        untracked
+          ? `Untracked files would be overwritten by checking out ${target}. Stash all changes, including untracked files, check out, and reapply them?`
+          : `Your changes would be overwritten by checking out ${target}. Stash them, check out, and reapply them?`,
+        'Stash and checkout'
+      ))
     if (!stash) return false
     result = await attempt(untracked ? 'all' : 'tracked')
   }
@@ -270,15 +279,39 @@ export async function push(repo: string): Promise<void> {
 // --- Stash ----------------------------------------------------------------------------------
 
 export async function stash(repo: string): Promise<void> {
+  const staged = snapshotOf(repo)?.status.staged.length ?? 0
   const values = await showForm({
     title: 'Stash changes',
     fields: [{ key: 'message', label: 'Message', placeholder: 'WIP', optional: true }],
-    checks: [{ key: 'untracked', label: 'Include untracked files', initial: true }],
+    checks: [
+      { key: 'untracked', label: 'Include untracked files', initial: true },
+      ...(staged > 0
+        ? [{ key: 'staged', label: 'Only the staged changes, keeping the others here' }]
+        : [])
+    ],
     confirmLabel: 'Stash'
   })
   if (!values) return
-  if (await run(repo, 'stashPush', String(values.message), !!values.untracked)) {
-    notify('success', 'Changes stashed')
+  const options = { staged: !!values.staged }
+  if (await run(repo, 'stashPush', String(values.message), !!values.untracked, options)) {
+    notify('success', options.staged ? 'Staged changes stashed' : 'Changes stashed')
+  }
+}
+
+/** Stashes the changes to some files only (STASH-05), untracked ones included. */
+export async function stashFiles(repo: string, files: FileChange[]): Promise<void> {
+  const what = files.length === 1 ? files[0].path : `${files.length} files`
+  const values = await showForm({
+    title: 'Stash changes',
+    message: `Stash the changes to ${what}, staged or not; the other changes stay here.`,
+    fields: [{ key: 'message', label: 'Message', placeholder: 'WIP', optional: true }],
+    confirmLabel: 'Stash'
+  })
+  if (!values) return
+  const paths = files.flatMap((f) => (f.oldPath ? [f.oldPath, f.path] : [f.path]))
+  const untracked = files.some((f) => f.status === '?')
+  if (await run(repo, 'stashPush', String(values.message), untracked, { paths })) {
+    notify('success', `Stashed ${what}`)
   }
 }
 
@@ -306,12 +339,21 @@ export async function createTag(repo: string, target: string, label: string): Pr
       { key: 'name', label: 'Tag name', placeholder: 'v1.0.0' },
       { key: 'message', label: 'Message (makes an annotated tag)', multiline: true, optional: true }
     ],
+    checks: [
+      {
+        key: 'sign',
+        label: 'Sign the tag (annotated)',
+        initial: snapshotOf(repo)?.signing.tags ?? false
+      }
+    ],
     confirmLabel: 'Create tag'
   })
   if (!values) return
   const name = String(values.name).trim()
   const message = String(values.message).trim() || null
-  if (await run(repo, 'createTag', name, target, message)) notify('success', `Created tag ${name}`)
+  if (await run(repo, 'createTag', name, target, message, !!values.sign)) {
+    notify('success', `Created ${values.sign ? 'signed ' : ''}tag ${name}`)
+  }
 }
 
 async function deleteTag(repo: string, name: string): Promise<void> {
@@ -334,6 +376,49 @@ async function deleteRemoteTag(repo: string, remote: string, name: string): Prom
   const result = await runBusy(repo, 'Deleting', 'deleteRemoteTag', remote, name)
   if (result.ok) notify('success', `Deleted tag ${name} from ${remote}`)
   else fail(result)
+}
+
+// --- Ignore ---------------------------------------------------------------------------------
+
+/** Adds a file, its extension or its folder to the root .gitignore (COMMIT-11). */
+export async function ignoreFile(repo: string, file: FileChange): Promise<void> {
+  const tracked = file.status !== '?'
+  const extension = extensionOf(file.path)
+  const folder = folderOf(file.path)
+  const kinds: { value: IgnoreKind; label: string }[] = [
+    { value: 'file', label: `This file: ${ignorePattern(file.path, 'file')}` },
+    ...(extension
+      ? [{ value: 'extension' as const, label: `Every .${extension} file: *.${extension}` }]
+      : []),
+    ...(folder
+      ? [{ value: 'folder' as const, label: `Its folder: ${ignorePattern(file.path, 'folder')}` }]
+      : [])
+  ]
+  const values = await showForm({
+    title: 'Add to .gitignore',
+    message: tracked
+      ? `${file.path} is tracked: .gitignore only affects untracked files, so it must also stop being tracked. It stays on disk, and the next commit removes it from the repository.`
+      : undefined,
+    fields: [
+      { key: 'kind', label: 'Ignore', options: kinds, initial: 'file' },
+      {
+        key: 'custom',
+        label: 'Or a pattern of your own',
+        placeholder: 'e.g. *.log',
+        optional: true
+      }
+    ],
+    confirmLabel: tracked ? 'Stop tracking and ignore' : 'Ignore',
+    danger: tracked
+  })
+  if (!values) return
+  const custom = String(values.custom).trim()
+  const kind = values.kind as IgnoreKind
+  const pattern = custom || ignorePattern(file.path, kind)
+  // A tracked folder stops being tracked as a whole, anything else only this file
+  const untrack = !tracked ? [] : !custom && kind === 'folder' ? [folder!] : [file.path]
+  if (await run(repo, 'ignore', pattern, untrack))
+    notify('success', `Added ${pattern} to .gitignore`)
 }
 
 // --- Remotes --------------------------------------------------------------------------------
@@ -548,6 +633,41 @@ async function runOutcome<K extends OpName>(
   const outcome = result.value as OpOutcome
   reportOutcome(outcome, what, done)
   return outcome
+}
+
+// --- Commit messages ------------------------------------------------------------------------
+
+/** Changes the message of a commit of the current branch (DETAIL-04); resolves whether it did. */
+export async function reword(
+  repo: string,
+  snapshot: RepoSnapshot,
+  hash: string,
+  message: string
+): Promise<boolean> {
+  const branch = snapshot.refs.find((r) => r.type === 'local' && r.name === snapshot.head.branch)
+  const upstream = branch?.upstream && snapshot.refs.find((r) => r.name === branch.upstream)
+  const pushed = upstream && (await call(repo, 'isAncestor', hash, upstream.fullName))
+  const isHead = hash === snapshot.head.hash
+  if (pushed && pushed.ok && pushed.value) {
+    const ok = await confirm(
+      'Reword a pushed commit',
+      `${hash.slice(0, 7)} is already on ${upstream.name}. Rewording it rewrites ${
+        isHead ? 'it' : 'it and the commits after it'
+      }: you will have to force push, and anyone who pulled it must fix their copy.`,
+      'Reword',
+      true
+    )
+    if (!ok) return false
+  }
+  const outcome = await runOutcome(
+    repo,
+    'Reword',
+    'Commit message changed',
+    'reword',
+    hash,
+    message
+  )
+  return outcome !== undefined && !outcome.conflicts
 }
 
 // --- Merge, rebase and history rewriting ----------------------------------------------------

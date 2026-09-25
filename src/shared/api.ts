@@ -11,6 +11,7 @@ import type {
   ImagePair,
   ReflogEntry,
   RepoSnapshot,
+  Signing,
   WorkingTreeStatus
 } from './types'
 
@@ -48,6 +49,24 @@ export interface RebaseCommit {
   subject: string
   message: string
   author: string
+}
+
+/** How a commit is made (COMMIT-09); unset fields follow the git config. */
+export interface CommitOptions {
+  /** Skips the pre-commit and commit-msg hooks (--no-verify) */
+  noVerify?: boolean
+  /** Signs the commit, or not even when commit.gpgsign is set */
+  sign?: boolean
+  /** Someone else as the author, as "Name <email>"; the committer stays the identity */
+  author?: string
+}
+
+/** What a stash saves besides the tracked changes (STASH-05). */
+export interface StashOptions {
+  /** Only the staged changes, leaving the others in the working tree */
+  staged?: boolean
+  /** Only these files */
+  paths?: string[]
 }
 
 /** What changed on disk: `git` needs a full snapshot reload, `worktree` only the status. */
@@ -88,8 +107,15 @@ export interface RepoOps {
   /** Paths among the given ones that still contain conflict markers. */
   conflictMarkers(paths: string[]): string[]
   /** Returns git's output, including hook output. */
-  commit(message: string, amend: boolean): string
+  commit(message: string, amend: boolean, options?: CommitOptions): string
   lastCommitMessage(): string
+  /** Content of the commit message template (commit.template), null when none is set. */
+  commitTemplate(): string | null
+  /**
+   * Changes the message of a commit of the current branch (DETAIL-04): the last one is amended,
+   * older ones are rewritten with the commits after them.
+   */
+  reword(hash: string, message: string): OpOutcome
   /** Finishes the operation in progress once conflicts are resolved; a rebase may stop again. */
   continueOperation(): OpOutcome
   /** Cancels the operation in progress, restoring the state before it started. */
@@ -157,18 +183,21 @@ export interface RepoOps {
   renameRemote(oldName: string, newName: string): void
   setRemoteUrl(name: string, url: string): void
 
-  stashPush(message: string, includeUntracked: boolean): void
+  stashPush(message: string, includeUntracked: boolean, options?: StashOptions): void
   stashApply(selector: string): void
   stashPop(selector: string): void
   stashDrop(selector: string): void
 
-  createTag(name: string, target: string, message: string | null): void
+  /** `sign` signs the tag, which makes it annotated; unset follows tag.gpgsign. */
+  createTag(name: string, target: string, message: string | null, sign?: boolean): void
   deleteTag(name: string): void
   pushTag(remote: string, name: string): void
   deleteRemoteTag(remote: string, name: string): void
 
   /** Clones missing submodules and checks them out at the recorded commits; all when empty. */
   submoduleUpdate(paths: string[]): string
+  /** Adds a pattern to the root .gitignore, and stops tracking the given files (COMMIT-11). */
+  ignore(pattern: string, untrack: string[]): void
   /** Stores files matching the pattern with Git LFS, through the root .gitattributes. */
   lfsTrack(pattern: string): void
   lfsUntrack(pattern: string): void
@@ -176,6 +205,8 @@ export interface RepoOps {
   setIdentity(name: string, email: string, scope: 'local' | 'global'): void
   /** Removes the repository's own identity, falling back to the global one. */
   clearLocalIdentity(): void
+  /** Sets how commits and tags are signed, in the repository or for every repository. */
+  setSigning(signing: Signing, scope: 'local' | 'global'): void
 }
 
 export type OpName = keyof RepoOps

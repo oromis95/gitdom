@@ -20,6 +20,7 @@ import {
   applyProfile,
   describeIdentity,
   editIdentity,
+  editSigning,
   loadProfiles
 } from './identity'
 
@@ -180,6 +181,7 @@ export function buildCommands(): Command[] {
         void adoptGlobalIdentity(repo)
       })
     }
+    add('Identity', 'Commit signing: GPG or SSH key…', () => void editSigning(snapshot))
 
     add('Recovery', 'Reflog: where HEAD and the branches have been', () =>
       app.openRecovery('reflog')

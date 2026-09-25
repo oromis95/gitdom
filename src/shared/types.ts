@@ -126,6 +126,7 @@ export interface RepoSnapshot {
   submodules: Submodule[]
   lfs: LfsInfo
   identity: Identity
+  signing: Signing
 }
 
 export interface CommitDetail {
@@ -138,6 +139,8 @@ export interface CommitDetail {
   committerDate: number
   subject: string
   body: string
+  /** null when the commit isn't signed */
+  signature: Signature | null
   files: FileChange[]
 }
 
@@ -258,4 +261,31 @@ export interface Identity {
   email: string | null
   /** local when the repository overrides the global identity */
   scope: 'local' | 'global' | 'system' | null
+}
+
+/** How commits and tags are signed (COMMIT-09, ADV-09), from the git config. */
+export interface Signing {
+  /** gpg.format: openpgp (GPG), ssh or x509 */
+  format: 'openpgp' | 'ssh' | 'x509'
+  /** user.signingkey: a GPG key id, or an SSH public key or its path; null for the default */
+  key: string | null
+  /** commit.gpgsign: every commit is signed */
+  commits: boolean
+  /** tag.gpgsign: every annotated tag is signed */
+  tags: boolean
+}
+
+/**
+ * Verification of a commit signature (DETAIL-05): good, good but made with a key not known to be
+ * trusted, bad (the commit was changed), expired, made with a revoked key, or not checkable (the
+ * key is missing).
+ */
+export type SignatureStatus = 'good' | 'untrusted' | 'bad' | 'expired' | 'revoked' | 'unknown'
+
+export interface Signature {
+  status: SignatureStatus
+  /** Who signed, when git could tell */
+  signer: string
+  /** Key id or fingerprint */
+  key: string
 }

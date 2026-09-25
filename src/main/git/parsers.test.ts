@@ -9,6 +9,8 @@ import {
   parseNameStatus,
   parseReflog,
   parseRefs,
+  parseSignature,
+  parseSigning,
   parseRemotes,
   parseStatus,
   parseSubmodules
@@ -315,5 +317,44 @@ describe('parseReflog', () => {
         subject: 'two'
       }
     ])
+  })
+})
+
+describe('parseSigning', () => {
+  it('takes the last value of each key, with git booleans', () => {
+    const output = [
+      'gpg.format openpgp',
+      'user.signingkey ',
+      'commit.gpgsign false',
+      'gpg.format ssh',
+      'user.signingkey ~/.ssh/id_ed25519.pub',
+      'commit.gpgsign Yes\r',
+      'tag.gpgsign'
+    ].join('\n')
+    expect(parseSigning(output)).toEqual({
+      format: 'ssh',
+      key: '~/.ssh/id_ed25519.pub',
+      commits: true,
+      tags: true
+    })
+  })
+
+  it('defaults to GPG without signing', () => {
+    expect(parseSigning('')).toEqual({ format: 'openpgp', key: null, commits: false, tags: false })
+    expect(parseSigning('gpg.format weird').format).toBe('openpgp')
+  })
+})
+
+describe('parseSignature', () => {
+  it('maps the verification letter', () => {
+    expect(parseSignature('G', 'Ann <ann@x.it>', 'ABC')).toEqual({
+      status: 'good',
+      signer: 'Ann <ann@x.it>',
+      key: 'ABC'
+    })
+    expect(parseSignature('U', '', 'SHA256:x')?.status).toBe('untrusted')
+    expect(parseSignature('Y', '', '')?.status).toBe('expired')
+    expect(parseSignature('E', '', '')?.status).toBe('unknown')
+    expect(parseSignature('N', '', '')).toBeNull()
   })
 })

@@ -2,6 +2,24 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## 0.7.0 — 2026-09-25
+
+### Added
+
+- **Commit options** (the sliders button above the message): skip the hooks (`--no-verify`), sign or not, and commit on behalf of another author
+- **Signed commits and tags** with GPG, SSH or X.509 keys: set the key and sign by default from the identity menu in the status bar (**Commit signing…**)
+  - The commit details show whether the signature is verified, valid with an untrusted key, or bad
+  - Annotated tags can be signed from the tag form
+- **Edit a commit message** from the commit details (the pencil beside the title), also for older commits on the current branch; the branch is backed up and the change can be undone
+- **Commit template**: the message starts from `commit.template`, with its comment lines as a hint; a button reuses the message of a recent commit
+- **Add to .gitignore** from a file's right-click menu: that file, every file with its extension, or its folder; tracked files are also removed from the index
+- **Stash only some changes**: only the staged ones, or a single file from its right-click menu
+- **Stash automatically on checkout**: a preference to carry the local changes to the other branch without asking; merges now carry them across too, like pull and rebase
+
+### Fixed
+
+- File names starting or ending with a dot (like `.gitignore`) were shown with the dot on the wrong side
+
 ## 0.6.0 — 2026-09-25
 
 ### Added

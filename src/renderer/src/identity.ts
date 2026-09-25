@@ -1,5 +1,5 @@
 // Author identity of each repository, and saved profiles to switch between (e.g. work and personal).
-import type { Identity, RepoSnapshot } from '../../shared/types'
+import type { Identity, RepoSnapshot, Signing } from '../../shared/types'
 import { run } from './actions'
 import { useApp } from './store'
 import { notify, showForm, type MenuItem } from './ui'
@@ -97,6 +97,57 @@ export async function removeProfile(): Promise<void> {
   storeProfiles(profiles.filter((_, i) => i !== Number(values.profile)))
 }
 
+const SIGNING_FORMATS: { value: Signing['format']; label: string }[] = [
+  { value: 'openpgp', label: 'GPG (OpenPGP)' },
+  { value: 'ssh', label: 'SSH key' },
+  { value: 'x509', label: 'X.509 certificate (gpgsm)' }
+]
+
+/** Sets how commits and tags are signed (COMMIT-09, ADV-09). */
+export async function editSigning(snapshot: RepoSnapshot): Promise<void> {
+  const { signing } = snapshot
+  const values = await showForm({
+    title: 'Commit signing',
+    message:
+      'Signed commits and tags prove they come from you. The key is a GPG key id, or for SSH the path of a public key (e.g. ~/.ssh/id_ed25519.pub); empty uses the default key of your email. Single commits can still be signed or not from the commit options.',
+    fields: [
+      { key: 'format', label: 'Sign with', options: SIGNING_FORMATS, initial: signing.format },
+      {
+        key: 'key',
+        label: 'Signing key',
+        initial: signing.key ?? '',
+        placeholder: 'Default key',
+        optional: true
+      },
+      {
+        key: 'scope',
+        label: 'Apply to',
+        options: [
+          { value: 'local', label: 'This repository' },
+          { value: 'global', label: 'Every repository' }
+        ],
+        initial: 'local'
+      }
+    ],
+    checks: [
+      { key: 'commits', label: 'Sign every commit', initial: signing.commits },
+      { key: 'tags', label: 'Sign every annotated tag', initial: signing.tags }
+    ],
+    confirmLabel: 'Save'
+  })
+  if (!values) return
+  const next: Signing = {
+    format: values.format as Signing['format'],
+    key: String(values.key).trim() || null,
+    commits: !!values.commits,
+    tags: !!values.tags
+  }
+  const scope = values.scope === 'global' ? 'global' : 'local'
+  if (!(await run(snapshot.path, 'setSigning', next, scope))) return
+  if (scope === 'global') refreshAll()
+  notify('success', next.commits ? 'Commits will be signed' : 'Signing settings saved')
+}
+
 export function identityMenu(snapshot: RepoSnapshot): MenuItem[] {
   const repo = snapshot.path
   const { identity } = snapshot
@@ -128,6 +179,11 @@ export function identityMenu(snapshot: RepoSnapshot): MenuItem[] {
       disabled: !current || profiles.some((p) => sameProfile(p, current)),
       onClick: () => current && saveProfile(current)
     },
-    { label: 'Remove profile…', disabled: !profiles.length, onClick: () => void removeProfile() }
+    { label: 'Remove profile…', disabled: !profiles.length, onClick: () => void removeProfile() },
+    'separator',
+    {
+      label: snapshot.signing.commits ? 'Commit signing (on)…' : 'Commit signing…',
+      onClick: () => void editSigning(snapshot)
+    }
   ]
 }

@@ -1349,3 +1349,102 @@
   color: var(--text);
   background: var(--bg-hover);
 }
+
+/* --- Complete commits: options, template, reword, signature ----------------------------- */
+
+.commit-box-tool {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  margin-right: 4px;
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+.commit-box-tool:hover,
+.commit-box-tool.on {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.commit-box-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 13px;
+  border-radius: 7px;
+  color: #fff;
+  background: var(--accent);
+}
+.commit-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 4px;
+  background: var(--bg-deep);
+}
+.commit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.commit-chip {
+  padding: 1px 6px;
+  font-size: 11px;
+  border-radius: 8px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reword-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.reword-box textarea {
+  width: 100%;
+  padding: 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  outline: none;
+  resize: vertical;
+}
+.reword-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.signature-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.signature-badge svg {
+  flex-shrink: 0;
+}
+.signature-good {
+  color: var(--green);
+}
+.signature-warn {
+  color: var(--orange);
+}
+.signature-bad {
+  color: var(--red);
+}

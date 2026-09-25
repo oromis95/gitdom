@@ -7,6 +7,7 @@ import type {
   HeadInfo,
   Identity,
   LfsInfo,
+  Signing,
   RepoOperation,
   RepoSnapshot,
   Submodule,
@@ -16,6 +17,7 @@ import {
   FIELD,
   LOG_FORMAT,
   REF_FORMAT,
+  SIGNATURE_FORMAT,
   STASH_FORMAT,
   parseIdentity,
   parseLfsPatterns,
@@ -23,6 +25,8 @@ import {
   parseNameStatus,
   parseRefs,
   parseRemotes,
+  parseSignature,
+  parseSigning,
   parseStashes,
   parseStatus,
   parseSubmodules
@@ -104,6 +108,37 @@ export async function loadIdentity(repo: string): Promise<Identity> {
   return parseIdentity(output ?? '')
 }
 
+export async function loadSigning(repo: string): Promise<Signing> {
+  const output = await tryGit(repo, [
+    'config',
+    '--get-regexp',
+    '^(gpg\\.format|user\\.signingkey|commit\\.gpgsign|tag\\.gpgsign)$'
+  ])
+  return parseSigning(output ?? '')
+}
+
+const SIGNING_PROGRAMS: Record<string, string> = {
+  'gpg.program': 'gpg',
+  'gpg.ssh.program': 'ssh-keygen',
+  'gpg.x509.program': 'gpgsm'
+}
+
+/**
+ * `-c` options restoring the default of signing programs configured as empty: git would fail to
+ * sign, and report every signature as bad.
+ */
+export async function signingProgramArgs(repo: string): Promise<string[]> {
+  const output = await tryGit(repo, ['config', '--get-regexp', '^gpg\\.(ssh\\.|x509\\.)?program$'])
+  const programs = new Map<string, string>()
+  for (const line of (output ?? '').split('\n')) {
+    const [key, ...value] = line.replace(/\r$/, '').split(' ')
+    if (key in SIGNING_PROGRAMS) programs.set(key, value.join(' ').trim())
+  }
+  return [...programs]
+    .filter(([, value]) => !value)
+    .flatMap(([key]) => ['-c', `${key}=${SIGNING_PROGRAMS[key]}`])
+}
+
 /** Revisions for `git log`: every ref but the hidden ones, or the single ref shown alone. */
 export function logRevisions(filter?: GraphFilter): string[] {
   // Whitespace, control characters and '..' never appear in ref names
@@ -121,7 +156,7 @@ export function logRevisions(filter?: GraphFilter): string[] {
 }
 
 export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<RepoSnapshot> {
-  const [head, log, refs, stashes, remotes, status, operation, submodules, lfs, identity] =
+  const [head, log, refs, stashes, remotes, status, operation, submodules, lfs, identity, signing] =
     await Promise.all([
       readHead(repo),
       // An empty repository has no refs, so log may fail: treat it as no commits
@@ -140,7 +175,8 @@ export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<
       readOperation(repo),
       loadSubmodules(repo),
       loadLfs(repo),
-      loadIdentity(repo)
+      loadIdentity(repo),
+      loadSigning(repo)
     ])
 
   const commits = parseLog(log ?? '')
@@ -161,15 +197,25 @@ export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<
     truncated,
     submodules,
     lfs,
-    identity
+    identity,
+    signing
   }
 }
 
 export async function loadCommitDetail(repo: string, hash: string): Promise<CommitDetail> {
   if (!HASH_RE.test(hash)) throw new Error(`Invalid commit hash: ${hash}`)
 
-  const format = ['%H', '%P', '%an', '%ae', '%at', '%cn', '%ct', '%s', '%b'].join('%x1f')
-  const header = await runGit(repo, ['show', '-s', `--format=${format}`, hash])
+  // The signature is verified with the configured program (gpg, ssh-keygen…), before the free text
+  const format = ['%H', '%P', '%an', '%ae', '%at', '%cn', '%ct', SIGNATURE_FORMAT, '%s', '%b'].join(
+    '%x1f'
+  )
+  const header = await runGit(repo, [
+    ...(await signingProgramArgs(repo)),
+    'show',
+    '-s',
+    `--format=${format}`,
+    hash
+  ])
   const [
     fullHash,
     parents,
@@ -178,6 +224,9 @@ export async function loadCommitDetail(repo: string, hash: string): Promise<Comm
     authorDate,
     committerName,
     committerDate,
+    signatureStatus,
+    signer,
+    signingKey,
     subject,
     body
   ] = header.split(FIELD)
@@ -208,6 +257,7 @@ export async function loadCommitDetail(repo: string, hash: string): Promise<Comm
     committerDate: Number(committerDate),
     subject,
     body: (body ?? '').trim(),
+    signature: parseSignature(signatureStatus, signer, signingKey),
     files: parseNameStatus(files)
   }
 }

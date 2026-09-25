@@ -286,6 +286,19 @@ function Git({ s }: { s: Settings }): React.JSX.Element {
           ))}
         </select>
       </Row>
+      <Row
+        label="Local changes"
+        hint="Pull, merge and rebase always set them aside and bring them back"
+      >
+        <label className="modal-check">
+          <input
+            type="checkbox"
+            checked={s.autoStash}
+            onChange={(e) => updateSettings({ autoStash: e.target.checked })}
+          />
+          Stash and reapply them on checkout without asking
+        </label>
+      </Row>
       <Row label="Updates" hint={`GitDom ${__APP_VERSION__}`}>
         <label className="modal-check">
           <input

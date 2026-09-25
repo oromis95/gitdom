@@ -811,3 +811,194 @@ describe('safety net', () => {
     expect(text).toContain('https://***@example.com')
   })
 })
+
+describe('complete commits', () => {
+  beforeEach(async () => {
+    await commitFile('a.txt', '1\n', 'one')
+    await commitFile('a.txt', '2\n', 'two')
+  })
+
+  const subjects = (): string[] => git(repo, 'log', '--format=%s').split('\n')
+
+  it('skips hooks and sets another author', async () => {
+    mkdirSync(join(repo, '.git', 'hooks'), { recursive: true })
+    writeFileSync(join(repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\necho no >&2\nexit 1\n')
+    write('b.txt', 'b\n')
+    await runOp(repo, 'stage', [['b.txt']])
+    await expect(runOp(repo, 'commit', ['blocked', false])).rejects.toThrow()
+    await runOp(repo, 'commit', ['skipped', false, { noVerify: true, author: 'Ann <ann@x.it>' }])
+    expect(git(repo, 'log', '-1', '--format=%s|%an|%ae|%cn')).toBe('skipped|Ann|ann@x.it|T')
+    await expect(
+      runOp(repo, 'commit', ['bad', true, { noVerify: true, author: 'no email' }])
+    ).rejects.toThrow('Name <email>')
+  })
+
+  it('rewords the last commit, leaving staged changes out', async () => {
+    write('a.txt', 'staged\n')
+    await runOp(repo, 'stage', [['a.txt']])
+    await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD'), 'two, reworded\n\nbody'])
+    expect(git(repo, 'log', '-1', '--format=%B')).toBe('two, reworded\n\nbody')
+    expect(git(repo, 'show', 'HEAD:a.txt')).toBe('2')
+    expect((await runOp(repo, 'status', [])).staged).toEqual([{ path: 'a.txt', status: 'M' }])
+  })
+
+  it('rewords an older commit, backed up and undoable', async () => {
+    await commitFile('b.txt', 'b\n', 'three')
+    write('a.txt', 'dirty\n')
+    const tip = git(repo, 'rev-parse', 'HEAD')
+    const outcome = await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD~2'), 'one, reworded'])
+    expect(outcome.conflicts).toBe(false)
+    expect(subjects()).toEqual(['three', 'two', 'one, reworded'])
+    expect(readFileSync(join(repo, 'a.txt'), 'utf8')).toBe('dirty\n')
+    expect((await runOp(repo, 'backups', []))[0].refs[0]).toMatchObject({ hash: tip })
+    await runOp(repo, 'undo', [])
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(tip)
+  })
+
+  it('rewords without running the commit hooks', async () => {
+    await commitFile('b.txt', 'b\n', 'three')
+    mkdirSync(join(repo, '.git', 'hooks'), { recursive: true })
+    writeFileSync(join(repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\nexit 1\n')
+    await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD'), 'three, reworded'])
+    const outcome = await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD~2'), 'one, reworded'])
+    expect(outcome.conflicts).toBe(false)
+    expect(subjects()).toEqual(['three, reworded', 'two', 'one, reworded'])
+  })
+
+  it('refuses to reword across merges or off the current branch', async () => {
+    const one = git(repo, 'rev-parse', 'HEAD~1')
+    git(repo, 'checkout', '-q', '-b', 'side', one)
+    await commitFile('s.txt', 's\n', 'side')
+    const side = git(repo, 'rev-parse', 'HEAD')
+    git(repo, 'checkout', '-q', 'main')
+    await expect(runOp(repo, 'reword', [side, 'x'])).rejects.toThrow('not on the current branch')
+    git(repo, 'merge', '-q', '--no-edit', 'side')
+    await expect(runOp(repo, 'reword', [one, 'x'])).rejects.toThrow('merge')
+    // The merge itself is the last commit: amending it is fine
+    await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD'), 'merged'])
+    expect(git(repo, 'rev-list', '--parents', '-n1', 'HEAD').split(' ')).toHaveLength(3)
+  })
+
+  it('adds patterns to .gitignore and stops tracking files', async () => {
+    write('.gitignore', 'node_modules/\r\n*.tmp')
+    write('app.log', 'x\n')
+    await commitFile('build.log', 'x\n', 'logs')
+    await runOp(repo, 'ignore', ['*.log', ['build.log']])
+    await runOp(repo, 'ignore', ['*.log', []])
+    expect(readFileSync(join(repo, '.gitignore'), 'utf8')).toBe(
+      'node_modules/\r\n*.tmp\r\n*.log\r\n'
+    )
+    const status = await runOp(repo, 'status', [])
+    expect(status.staged).toEqual([{ path: 'build.log', status: 'D' }])
+    expect(status.unstaged.map((f) => f.path)).toEqual(['.gitignore'])
+    expect(existsSync(join(repo, 'build.log'))).toBe(true)
+    await expect(runOp(repo, 'ignore', ['a\nb', []])).rejects.toThrow('Invalid pattern')
+  })
+
+  it('reads the commit message template', async () => {
+    expect(await runOp(repo, 'commitTemplate', [])).toBeNull()
+    writeFileSync(join(root, 'template.txt'), 'Subject\n\n# Why?\n')
+    git(repo, 'config', 'commit.template', join(root, 'template.txt'))
+    expect(await runOp(repo, 'commitTemplate', [])).toBe('Subject\n\n# Why?\n')
+  })
+
+  it('stashes only the staged changes, or only some files', async () => {
+    await commitFile('b.txt', 'b\n', 'three')
+    write('a.txt', 'staged\n')
+    await runOp(repo, 'stage', [['a.txt']])
+    write('b.txt', 'unstaged\n')
+    await runOp(repo, 'stashPush', ['staged only', false, { staged: true }])
+    expect(git(repo, 'stash', 'show', '--name-only', 'stash@{0}')).toBe('a.txt')
+    expect(readFileSync(join(repo, 'b.txt'), 'utf8')).toBe('unstaged\n')
+
+    write('new.txt', 'new\n')
+    await runOp(repo, 'stashPush', ['one file', true, { paths: ['new.txt'] }])
+    expect(existsSync(join(repo, 'new.txt'))).toBe(false)
+    expect(readFileSync(join(repo, 'b.txt'), 'utf8')).toBe('unstaged\n')
+    await expect(
+      runOp(repo, 'stashPush', ['', false, { staged: true, paths: ['b.txt'] }])
+    ).rejects.toThrow('not by file')
+  })
+
+  it('merges with local changes, stashing them around the merge', async () => {
+    git(repo, 'checkout', '-q', '-b', 'side')
+    await commitFile('s.txt', 's\n', 'side')
+    git(repo, 'checkout', '-q', 'main')
+    await commitFile('m.txt', 'm\n', 'main')
+    write('a.txt', 'dirty\n')
+    const outcome = await runOp(repo, 'merge', ['side', 'no-ff'])
+    expect(outcome.conflicts).toBe(false)
+    expect(existsSync(join(repo, 's.txt'))).toBe(true)
+    expect(readFileSync(join(repo, 'a.txt'), 'utf8')).toBe('dirty\n')
+  })
+})
+
+// ssh-keygen comes with Git for Windows and OpenSSH
+const sshKeygen = ((): boolean => {
+  try {
+    execFileSync('ssh-keygen', ['-?'], { stdio: 'ignore' })
+    return true
+  } catch (e) {
+    return (e as NodeJS.ErrnoException).code !== 'ENOENT'
+  }
+})()
+
+describe.skipIf(!sshKeygen)('signing', () => {
+  it('configures SSH signing, signs commits and tags and verifies them', async () => {
+    const key = join(root, 'key').replace(/\\/g, '/')
+    execFileSync('ssh-keygen', ['-q', '-t', 'ed25519', '-N', '', '-C', 't@t.it', '-f', key])
+    // An empty program, as some setups have, would make git fail: the default is used instead
+    git(repo, 'config', 'gpg.ssh.program', '')
+    git(repo, 'config', 'gpg.ssh.allowedSignersFile', '')
+
+    await runOp(repo, 'setSigning', [
+      { format: 'ssh', key: `${key}.pub`, commits: true, tags: false },
+      'local'
+    ])
+    expect((await loadSnapshot(repo)).signing).toEqual({
+      format: 'ssh',
+      key: `${key}.pub`,
+      commits: true,
+      tags: false
+    })
+
+    await commitFile('a.txt', '1\n', 'signed by default')
+    write('a.txt', '2\n')
+    await runOp(repo, 'stage', [['a.txt']])
+    await runOp(repo, 'commit', ['unsigned', false, { sign: false }])
+    const [unsigned, signed] = git(repo, 'rev-list', 'HEAD').split('\n')
+    expect((await runOp(repo, 'commitDetail', [unsigned])).signature).toBeNull()
+    const detail = await runOp(repo, 'commitDetail', [signed])
+    expect(detail.signature?.status).toBe('untrusted')
+    expect(detail.signature?.key).toMatch(/^SHA256:/)
+
+    const allowed = join(root, 'allowed').replace(/\\/g, '/')
+    writeFileSync(allowed, `t@t.it ${readFileSync(`${key}.pub`, 'utf8')}`)
+    git(repo, 'config', 'gpg.ssh.allowedSignersFile', allowed)
+    expect((await runOp(repo, 'commitDetail', [signed])).signature).toMatchObject({
+      status: 'good',
+      signer: 't@t.it'
+    })
+
+    await runOp(repo, 'createTag', ['v1', 'HEAD', null, true])
+    await runOp(repo, 'createTag', ['light', 'HEAD', null, undefined])
+    expect(git(repo, 'cat-file', '-p', 'v1')).toContain('BEGIN SSH SIGNATURE')
+    expect(git(repo, 'cat-file', '-t', 'light')).toBe('commit')
+
+    await runOp(repo, 'setSigning', [
+      { format: 'openpgp', key: null, commits: false, tags: true },
+      'local'
+    ])
+    const signing = (await loadSnapshot(repo)).signing
+    expect(signing).toMatchObject({ format: 'openpgp', commits: false, tags: true })
+    // With tag.gpgsign a tag without message stays lightweight, instead of waiting on an editor
+    await runOp(repo, 'createTag', ['light2', 'HEAD', null, undefined])
+    expect(git(repo, 'cat-file', '-t', 'light2')).toBe('commit')
+    await expect(
+      runOp(repo, 'setSigning', [
+        { format: 'ssh', key: '-x', commits: false, tags: false },
+        'local'
+      ])
+    ).rejects.toThrow('Invalid signing key')
+  })
+})

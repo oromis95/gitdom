@@ -39,6 +39,12 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 
 - Stage and unstage whole files, single hunks or single lines
 - Commit, amend, and a WIP row for your uncommitted changes
+- Commit options: skip the hooks (`--no-verify`), sign, commit as another author
+- Commit message template (`commit.template`) and quick reuse of a recent message
+- Edit the message of any commit on the current branch from its details (reword)
+- Sign commits and tags with GPG, SSH or X.509 keys, and see whether each signature is verified
+- Add a file, its extension or its folder to `.gitignore` from the file's menu
+- Stash everything, only the staged changes, or a single file; optionally stash automatically on checkout
 - Branches, checkout, tags and stashes from the sidebar
 - Pull (merge, fast-forward only or rebase), push, and a periodic background fetch
 
@@ -73,7 +79,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Interface and code fonts, code text size
 - Zoom the whole interface with `Ctrl+=` / `Ctrl+-` / `Ctrl+0` or `Ctrl`+mouse wheel; the status bar shows the level
 - Drag the edges of the side panels to resize them; GitDom remembers the sizes (double-click an edge to reset it)
-- Background fetch interval (or off), default pull strategy
+- Background fetch interval (or off), default pull strategy, automatic stash on checkout
 - Path of the git executable, external editor and merge tool
 - Startup check for new versions
 

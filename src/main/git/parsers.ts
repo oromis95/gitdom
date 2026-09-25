@@ -11,6 +11,9 @@ import type {
   Ref,
   ReflogEntry,
   Remote,
+  Signature,
+  SignatureStatus,
+  Signing,
   Stash,
   Submodule,
   SubmoduleState,
@@ -346,6 +349,58 @@ export function parseIdentity(output: string): Identity {
     }
   }
   return identity
+}
+
+/** git's boolean values; a key without value is true */
+function configBool(value: string | undefined): boolean {
+  return value === undefined || /^(true|yes|on|1)$/i.test(value.trim())
+}
+
+/**
+ * Parses `git config --get-regexp` of gpg.format, user.signingkey, commit.gpgsign and tag.gpgsign:
+ * git lists the levels from system to local, so the last value of a key wins.
+ */
+export function parseSigning(output: string): Signing {
+  const signing: Signing = { format: 'openpgp', key: null, commits: false, tags: false }
+  for (const line of output.split('\n')) {
+    const match = /^(\S+?)(?: (.*))?$/.exec(line.replace(/\r$/, ''))
+    if (!match) continue
+    const [, key, value] = match
+    switch (key.toLowerCase()) {
+      case 'gpg.format':
+        signing.format = value === 'ssh' || value === 'x509' ? value : 'openpgp'
+        break
+      case 'user.signingkey':
+        signing.key = value?.trim() || null
+        break
+      case 'commit.gpgsign':
+        signing.commits = configBool(value)
+        break
+      case 'tag.gpgsign':
+        signing.tags = configBool(value)
+        break
+    }
+  }
+  return signing
+}
+
+/** Format of the signature fields in `git log`, parsed by parseSignature. */
+export const SIGNATURE_FORMAT = ['%G?', '%GS', '%GK'].join('%x1f')
+
+const SIGNATURE_STATUS: Record<string, SignatureStatus> = {
+  G: 'good',
+  U: 'untrusted',
+  B: 'bad',
+  X: 'expired',
+  Y: 'expired',
+  R: 'revoked',
+  E: 'unknown'
+}
+
+/** Reads %G? (verification letter), %GS (signer) and %GK (key); null for unsigned commits. */
+export function parseSignature(letter: string, signer: string, key: string): Signature | null {
+  const status = SIGNATURE_STATUS[letter.trim()]
+  return status ? { status, signer: signer.trim(), key: key.trim() } : null
 }
 
 // Tools that run inside a terminal: GitDom has none to give them

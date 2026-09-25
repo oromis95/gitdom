@@ -35,6 +35,8 @@ export interface Settings extends ToolSettings {
   graphAvatars: boolean
   /** Look for a newer GitDom release on GitHub at startup */
   checkUpdates: boolean
+  /** Stash and reapply local changes in the way of a checkout without asking (STASH-06) */
+  autoStash: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -60,6 +62,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graphShowDate: true,
   graphAvatars: true,
   checkUpdates: true,
+  autoStash: false,
   gitPath: '',
   editor: '',
   mergeTool: ''

@@ -5,14 +5,33 @@ import {
   ChevronRight,
   Copy,
   Folder,
+  History,
   List,
   ListTree,
+  Pencil,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldX,
+  SlidersHorizontal,
   X
 } from 'lucide-react'
-import type { Result } from '../../../shared/api'
+import type { CommitOptions, Result } from '../../../shared/api'
 import { lfsMatcher } from '../../../shared/lfs'
-import type { CommitDetail, DiffSource, FileChange, RepoSnapshot } from '../../../shared/types'
-import { WIP_HASH, useActiveTab, useApp, type CompareTarget, type DiffTarget } from '../store'
+import type {
+  CommitDetail,
+  DiffSource,
+  FileChange,
+  RepoSnapshot,
+  Signature
+} from '../../../shared/types'
+import {
+  EMPTY_DRAFT,
+  WIP_HASH,
+  useActiveTab,
+  useApp,
+  type CompareTarget,
+  type DiffTarget
+} from '../store'
 import { notify, openMenu, type MenuItem } from '../ui'
 import { roomBeside, updateSettings } from '../settings'
 import ResizeHandle from './ResizeHandle'
@@ -21,14 +40,17 @@ import {
   conflictMenu,
   continueOperation,
   discardFiles,
+  ignoreFile,
   lfsPatternFor,
   lfsTrack,
   markResolved,
   openInEditor,
+  reword,
   run,
   showInFolder,
   runValue,
-  skipOperation
+  skipOperation,
+  stashFiles
 } from '../actions'
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
@@ -137,6 +159,17 @@ function FileList({
           }
         ]
       : []),
+    ...(kind === 'unstaged' || kind === 'staged'
+      ? [
+          'separator' as const,
+          { label: 'Stash changes to this file…', onClick: () => void stashFiles(repo, [f]) },
+          {
+            label: f.status === '?' ? 'Add to .gitignore…' : 'Stop tracking and ignore…',
+            disabled: f.status === 'D',
+            onClick: () => void ignoreFile(repo, f)
+          }
+        ]
+      : []),
     'separator' as const,
     {
       label: 'Open in editor',
@@ -201,7 +234,9 @@ function FileList({
         <span className={`file-status status-${f.status}`}>
           {f.status === '?' ? 'A' : f.status}
         </span>
-        <span className="file-path">{label}</span>
+        <span className="file-path">
+          <bdi>{label}</bdi>
+        </span>
         {isLfs(f.path) && (
           <span className="lfs-badge" title="Stored with Git LFS">
             LFS
@@ -243,7 +278,9 @@ function FileList({
         >
           {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
           <Folder size={14} className="muted" />
-          <span className="file-path">{folder.name}</span>
+          <span className="file-path">
+            <bdi>{folder.name}</bdi>
+          </span>
           {action && (
             <button
               className="row-action"
@@ -268,20 +305,96 @@ function FileList({
   return <div>{tree ? folderRows(tree, 0) : files.map((f) => fileRow(f, 0, f.path))}</div>
 }
 
+/** A commit message template (COMMIT-10): its text, and its comment lines as a hint. */
+interface Template {
+  summary: string
+  description: string
+  hint: string
+}
+
+function splitTemplate(template: string): Template {
+  const lines = template.replace(/\r/g, '').split('\n')
+  const comment = (line: string): boolean => line.startsWith('#')
+  const hint = lines
+    .filter(comment)
+    .map((l) => l.replace(/^#\s?/, ''))
+    .join('\n')
+    .trim()
+  const [summary = '', ...rest] = lines
+    .filter((l) => !comment(l))
+    .join('\n')
+    // Keep the spaces ending the summary, e.g. "feat: " to type after
+    .replace(/^\s*\n|\n\s*$/g, '')
+    .split('\n')
+  return { summary, description: rest.join('\n').trim(), hint }
+}
+
+// Repositories whose template has filled the message box once: clearing it keeps it clear
+const templated = new Set<string>()
+
+/** The commit template of a repository, null while loading or when it has none. */
+function useTemplate(repo: string): Template | null {
+  const [loaded, setLoaded] = useState<{ repo: string; template: Template | null } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void window.api.op(repo, 'commitTemplate').then((result) => {
+      if (cancelled) return
+      setLoaded({ repo, template: result.ok && result.value ? splitTemplate(result.value) : null })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [repo])
+  return loaded?.repo === repo ? loaded.template : null
+}
+
+const SUGGESTIONS = 12
+
+/** Latest distinct subjects of the identity's commits, to reuse one (COMMIT-10). */
+function recentSubjects(snapshot: RepoSnapshot): string[] {
+  const email = snapshot.identity.email?.toLowerCase()
+  const subjects = new Set<string>()
+  for (const c of snapshot.commits) {
+    if (subjects.size >= SUGGESTIONS) break
+    if (c.parents.length > 1 || (email && c.authorEmail.toLowerCase() !== email)) continue
+    subjects.add(c.subject)
+  }
+  return [...subjects]
+}
+
 function CommitBox({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
   const tab = useActiveTab()!
   const setDraft = useApp((s) => s.setDraft)
   const repo = snapshot.path
-  const { summary, description, amend } = tab.draft
+  const { summary, description, amend, noVerify, sign, author } = tab.draft
   const [committing, setCommitting] = useState(false)
+  const [showOptions, setShowOptions] = useState(false)
+  const template = useTemplate(repo)
   const staged = snapshot.status.staged.length
   const remaining = SUMMARY_LIMIT - summary.length
   const canCommit = !committing && summary.trim() !== '' && (staged > 0 || amend)
+  const signed = sign ?? snapshot.signing.commits
+  const identity = snapshot.identity.name
+    ? `${snapshot.identity.name} <${snapshot.identity.email ?? ''}>`
+    : 'Name <email>'
+
+  // The template starts the first message, as git does when it opens the editor
+  useEffect(() => {
+    if (!template || templated.has(repo)) return
+    templated.add(repo)
+    const draft = useApp.getState().tabs.find((t) => t.path === repo)?.draft
+    if (draft && !draft.summary && !draft.description && !draft.amend) {
+      setDraft(repo, { summary: template.summary, description: template.description })
+    }
+  }, [repo, template, setDraft])
 
   const toggleAmend = async (checked: boolean): Promise<void> => {
     setDraft(repo, { amend: checked })
     // Start from the previous message, as `git commit --amend` does
-    if (checked && !summary.trim() && !description.trim()) {
+    const untouched =
+      (!summary.trim() && !description.trim()) ||
+      (template && summary === template.summary && description === template.description)
+    if (checked && untouched) {
       const result = await window.api.op(repo, 'lastCommitMessage')
       if (result.ok) {
         const [first, ...rest] = result.value.split('\n')
@@ -296,13 +409,43 @@ function CommitBox({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element 
     const message = description.trim()
       ? `${summary.trim()}\n\n${description.trim()}`
       : summary.trim()
-    const output = await runValue(repo, 'commit', message, amend)
+    const options: CommitOptions = {
+      noVerify: noVerify || undefined,
+      sign: sign ?? undefined,
+      author: author.trim() || undefined
+    }
+    const output = await runValue(repo, 'commit', message, amend, options)
     setCommitting(false)
     if (output !== undefined) {
-      setDraft(repo, { summary: '', description: '', amend: false })
+      // Options apply to one commit: the next one starts over, from the template if any
+      setDraft(repo, {
+        ...EMPTY_DRAFT,
+        summary: template?.summary ?? '',
+        description: template?.description ?? ''
+      })
       notify('success', amend ? 'Commit amended' : 'Committed', output)
     }
   }
+
+  const suggest = (e: React.MouseEvent): void => {
+    const subjects = recentSubjects(snapshot)
+    openMenu(
+      e,
+      subjects.length
+        ? subjects.map((s) => ({
+            label: s.length > 70 ? s.slice(0, 69) + '…' : s,
+            onClick: () => setDraft(repo, { summary: s })
+          }))
+        : [{ label: 'No commits of yours yet', disabled: true, onClick: () => undefined }]
+    )
+  }
+
+  const chips = [
+    ...(noVerify ? ['Hooks skipped'] : []),
+    ...(signed ? ['Signed'] : []),
+    ...(author.trim() ? [`Author: ${author.trim()}`] : [])
+  ]
+  const overrides = Number(noVerify) + Number(sign !== null) + Number(!!author.trim())
 
   const label = committing
     ? 'Committing…'
@@ -332,15 +475,68 @@ function CommitBox({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element 
           />
           Amend previous commit
         </label>
+        <span className="toolbar-spacer" />
+        <button className="commit-box-tool" title="Reuse a recent message" onClick={suggest}>
+          <History size={14} />
+        </button>
+        <button
+          className={`commit-box-tool${showOptions ? ' on' : ''}`}
+          title="Commit options: hooks, signature, author"
+          onClick={() => setShowOptions(!showOptions)}
+        >
+          <SlidersHorizontal size={14} />
+          {overrides > 0 && <span className="commit-box-count">{overrides}</span>}
+        </button>
         <span className={`summary-counter${remaining < 0 ? ' over' : ''}`}>{remaining}</span>
       </div>
+      {showOptions ? (
+        <div className="commit-options">
+          <label className="modal-check">
+            <input
+              type="checkbox"
+              checked={noVerify}
+              onChange={(e) => setDraft(repo, { noVerify: e.target.checked })}
+            />
+            Skip hooks (--no-verify)
+          </label>
+          <label className="modal-check">
+            <input
+              type="checkbox"
+              checked={signed}
+              onChange={(e) =>
+                setDraft(repo, {
+                  sign: e.target.checked === snapshot.signing.commits ? null : e.target.checked
+                })
+              }
+            />
+            Sign the commit
+            {snapshot.signing.commits && <span className="muted"> (on by default)</span>}
+          </label>
+          <input
+            placeholder={`Author: ${identity}`}
+            title="Commit on behalf of someone else, as Name <email>: you stay the committer"
+            value={author}
+            onChange={(e) => setDraft(repo, { author: e.target.value })}
+          />
+        </div>
+      ) : (
+        chips.length > 0 && (
+          <div className="commit-chips">
+            {chips.map((c) => (
+              <span key={c} className="commit-chip">
+                {c}
+              </span>
+            ))}
+          </div>
+        )
+      )}
       <input
         placeholder="Commit summary"
         value={summary}
         onChange={(e) => setDraft(repo, { summary: e.target.value })}
       />
       <textarea
-        placeholder="Description"
+        placeholder={template?.hint || 'Description'}
         rows={4}
         value={description}
         onChange={(e) => setDraft(repo, { description: e.target.value })}
@@ -403,6 +599,28 @@ function OperationBanner({
       </div>
     </div>
   )
+}
+
+/** The repository snapshot once HEAD has moved from `head`: null after a few seconds. */
+function snapshotAfter(repo: string, head: string | null): Promise<RepoSnapshot | null> {
+  const current = (): RepoSnapshot | undefined => {
+    const snapshot = useApp.getState().tabs.find((t) => t.path === repo)?.snapshot
+    return snapshot && snapshot.head.hash !== head ? snapshot : undefined
+  }
+  return new Promise((resolve) => {
+    if (current()) return resolve(current()!)
+    const done = (snapshot: RepoSnapshot | null): void => {
+      clearTimeout(timer)
+      unsubscribe()
+      resolve(snapshot)
+    }
+    const timer = setTimeout(() => done(null), 5000)
+    const unsubscribe = useApp.subscribe(() => {
+      const snapshot = current()
+      if (snapshot) done(snapshot)
+    })
+    void useApp.getState().refreshPath(repo)
+  })
 }
 
 function WorkingTreePanel({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
@@ -523,30 +741,159 @@ function WorkingTreePanel({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.E
   )
 }
 
+const SIGNATURES: Record<
+  Signature['status'],
+  { label: string; tone: 'good' | 'warn' | 'bad'; hint: string }
+> = {
+  good: { label: 'Verified', tone: 'good', hint: 'Signed with a trusted key' },
+  untrusted: {
+    label: 'Signed, key not trusted',
+    tone: 'warn',
+    hint: 'The signature is valid, but the key is not trusted: for SSH keys, list it in gpg.ssh.allowedSignersFile'
+  },
+  bad: { label: 'Bad signature', tone: 'bad', hint: 'The commit was changed after it was signed' },
+  expired: { label: 'Expired signature', tone: 'warn', hint: 'The signature or its key expired' },
+  revoked: { label: 'Revoked key', tone: 'bad', hint: 'The key that signed was revoked' },
+  unknown: {
+    label: 'Signed, cannot verify',
+    tone: 'warn',
+    hint: 'The public key is missing, or the signing program is not available'
+  }
+}
+
+/** Verification of the commit signature (DETAIL-05). */
+function SignatureBadge({ signature }: { signature: Signature }): React.JSX.Element {
+  const { label, tone, hint } = SIGNATURES[signature.status]
+  const Icon = tone === 'good' ? ShieldCheck : tone === 'bad' ? ShieldX : ShieldAlert
+  return (
+    <span
+      className={`signature-badge signature-${tone}`}
+      title={`${hint}${signature.key ? `\nKey: ${signature.key}` : ''}`}
+    >
+      <Icon size={13} /> {label}
+      {signature.signer && <span className="muted"> · {signature.signer}</span>}
+    </span>
+  )
+}
+
 function CommitPanel({ repoPath, hash }: { repoPath: string; hash: string }): React.JSX.Element {
   const select = useApp((s) => s.select)
+  const snapshot = useActiveTab()?.snapshot
   // Keyed by the requested hash so a stale response is never shown for a new selection
-  const [loaded, setLoaded] = useState<{ hash: string; result: Result<CommitDetail> } | null>(null)
+  const [loaded, setLoaded] = useState<{
+    hash: string
+    result: Result<CommitDetail>
+    onBranch: boolean
+  } | null>(null)
+  // The message being edited (DETAIL-04), null when not editing
+  const [editing, setEditing] = useState<{ hash: string; message: string } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const head = snapshot?.head.hash
 
   useEffect(() => {
     let cancelled = false
-    window.api.op(repoPath, 'commitDetail', hash).then((result) => {
-      if (!cancelled) setLoaded({ hash, result })
+    void Promise.all([
+      window.api.op(repoPath, 'commitDetail', hash),
+      head ? window.api.op(repoPath, 'isAncestor', hash, head) : null
+    ]).then(([result, ancestor]) => {
+      if (!cancelled) setLoaded({ hash, result, onBranch: !!ancestor?.ok && ancestor.value })
     })
     return () => {
       cancelled = true
     }
-  }, [repoPath, hash])
+  }, [repoPath, hash, head])
 
   if (!loaded || loaded.hash !== hash) return <div className="center-message">Loading…</div>
   if (!loaded.result.ok)
     return <div className="detail-scroll banner-error">{loaded.result.error}</div>
   const detail = loaded.result.value
+  const message = detail.body ? `${detail.subject}\n\n${detail.body}` : detail.subject
+  const canReword =
+    loaded.onBranch && !!snapshot?.head.branch && !snapshot.operation && !!snapshot.head.hash
+  const draft = editing?.hash === hash ? editing.message : null
+
+  const save = async (): Promise<void> => {
+    if (!snapshot || draft === null || !draft.trim()) return
+    if (draft.trim() === message.trim()) {
+      setEditing(null)
+      return
+    }
+    // The reworded commit gets a new hash, as many first parents below HEAD as the old one
+    let depth = 0
+    const byHash = new Map(snapshot.commits.map((c) => [c.hash, c]))
+    for (let c = byHash.get(snapshot.head.hash!); c && c.hash !== hash; depth++) {
+      c = byHash.get(c.parents[0])
+    }
+    setSaving(true)
+    const ok = await reword(repoPath, snapshot, hash, draft.trim())
+    setSaving(false)
+    if (!ok) return
+    setEditing(null)
+    const updated = await snapshotAfter(repoPath, snapshot.head.hash)
+    const after = new Map(updated?.commits.map((c) => [c.hash, c]))
+    let moved = after.get(updated?.head.hash ?? '')
+    for (let i = 0; i < depth && moved; i++) moved = after.get(moved.parents[0])
+    if (moved) select(moved.hash, true)
+  }
 
   return (
     <div className="detail-scroll">
-      <div className="detail-title">{detail.subject}</div>
-      {detail.body && <div className="detail-body">{detail.body}</div>}
+      {draft !== null ? (
+        <div
+          className="reword-box"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+              e.preventDefault()
+              void save()
+            } else if (e.key === 'Escape') {
+              e.stopPropagation()
+              setEditing(null)
+            }
+          }}
+        >
+          <textarea
+            autoFocus
+            rows={Math.min(12, Math.max(4, draft.split('\n').length + 1))}
+            value={draft}
+            onChange={(e) => setEditing({ hash, message: e.target.value })}
+          />
+          <div className="reword-actions">
+            <span className="muted">
+              {hash === snapshot?.head.hash
+                ? 'Amends the last commit: staged changes are left out'
+                : 'Rewrites this commit and the ones after it'}
+            </span>
+            <span className="toolbar-spacer" />
+            <button className="btn btn-small" onClick={() => setEditing(null)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-small btn-primary"
+              disabled={saving || !draft.trim()}
+              title="Ctrl+Enter"
+              onClick={() => void save()}
+            >
+              {saving ? 'Saving…' : 'Save message'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="detail-title-row">
+            <div className="detail-title">{detail.subject}</div>
+            {canReword && (
+              <button
+                className="commit-box-tool"
+                title="Edit the commit message"
+                onClick={() => setEditing({ hash, message })}
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+          </div>
+          {detail.body && <div className="detail-body">{detail.body}</div>}
+        </>
+      )}
       <dl className="detail-meta">
         <dt>commit</dt>
         <dd className="mono">
@@ -583,6 +930,14 @@ function CommitPanel({ repoPath, hash }: { repoPath: string; hash: string }): Re
             <dt>committer</dt>
             <dd>
               {detail.committerName}, {dateFormat.format(detail.committerDate * 1000)}
+            </dd>
+          </>
+        )}
+        {detail.signature && (
+          <>
+            <dt>signature</dt>
+            <dd>
+              <SignatureBadge signature={detail.signature} />
             </dd>
           </>
         )}

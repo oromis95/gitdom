@@ -1,10 +1,10 @@
 # GitDom — Roadmap
 
-> Versione 0.6.0 pubblicata il 2026-09-25 (Step 1–5 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 0.7.0 pubblicata il 2026-09-25 (Step 1–6 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
-Le milestone 0–5 sono completate:
+Le milestone 0–6 sono completate:
 
 - grafo dei commit virtualizzato;
 - staging per file, hunk e riga;
@@ -19,9 +19,10 @@ Le milestone 0–5 sono completate:
 - preferenze, zoom, pannelli ridimensionabili, editor e merge tool esterni (Step 2);
 - diff affiancato, parole evidenziate, opzioni del diff, confronto tra revisioni e diff delle immagini (Step 3);
 - ricerca nel grafo, colonne configurabili, branch nascosti o isolati, avatar, stash nel grafo e minimap (Step 4);
-- log attività, backup automatici, reflog consultabile, avviso di nuova versione e changelog (Step 5).
+- log attività, backup automatici, reflog consultabile, avviso di nuova versione e changelog (Step 5);
+- firma GPG/SSH di commit e tag, opzioni del commit, reword, template, .gitignore e stash parziali (Step 6).
 
-I requisiti P0 sono coperti; resta buona parte dei P1, a partire dai commit completi: firma, hook, reword (Step 6).
+I requisiti P0 sono coperti; dei P1 restano soprattutto worktree e workspace (Step 7).
 
 ## Principi per l'ordine
 
@@ -88,7 +89,9 @@ Serve a fidarsi dell'app anche nelle operazioni rischiose.
 - **Backup automatico** dei riferimenti prima di reset, rebase e force push, ripristinabile con un clic (NFR-04)
 - **Reflog consultabile**, per recuperare commit "persi" oltre il semplice undo (ADV-05)
 
-## Step 6 — v0.7: Commit completi
+## Step 6 — v0.7: Commit completi ✅
+
+> Completato: opzioni del commit (salta gli hook, firma sì/no, autore alternativo) con un riepilogo sotto il box del messaggio; firma di commit e tag annotati con chiavi GPG, SSH o X.509, configurabile per repository o globale dal menu identità, e badge nel pannello dettagli (verificata, chiave non attendibile, non valida). Se la configurazione globale ha `gpg.ssh.program` vuoto, GitDom usa comunque il programma predefinito. Reword dal pannello dettagli anche per i commit più vecchi, con backup e undo, senza eseguire gli hook; template `commit.template` e riuso dei messaggi recenti; "Aggiungi a .gitignore" per file, estensione o cartella, togliendo dall'indice i file tracciati; stash dei soli file in stage o di un singolo file; preferenza per lo stash automatico al checkout, e merge con `--autostash` come pull e rebase.
 
 - **Firma GPG/SSH** di commit e tag, con indicatore di firma verificata (COMMIT-09, ADV-09, DETAIL-05)
 - Opzione "salta gli hook" (`--no-verify`) (COMMIT-09)
