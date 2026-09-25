@@ -1,0 +1,118 @@
+/* Light theme: the dark one is the default, in main.css. Chosen with data-theme on <html>. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-panel: #f4f5f7;
+  --bg-elevated: #ffffff;
+  --bg-hover: #e9ecf0;
+  --bg-selected: #d3e5fb;
+  --border: #d5d9df;
+  --text: #1f2328;
+  --text-muted: #57606a;
+  --text-dim: #8c959f;
+  --accent: #0969da;
+  --accent-soft: #cfe3fb;
+  --green: #1a7f37;
+  --red: #cf222e;
+  --orange: #bc6c00;
+  --purple: #8250df;
+  --bg-deep: #e8eaee;
+  --scrollbar: #c4c9d0;
+  --code-text: #24292f;
+  --success-bg: #d8f5df;
+  --success-border: #7cc58f;
+  --warning-bg: #fff4d6;
+  --warning-border: #e3b341;
+  --warning-text: #9a5b00;
+  --unstage-bg: #fdebd3;
+  --unstage-border: #e0a458;
+  --danger-bg: #fbdada;
+  --danger-text: #b3262e;
+  --error-bg: #ffebe9;
+  --error-text: #82071e;
+  --error-border: #ff8182;
+  --hunk-bg: #e3edfb;
+  --hunk-text: #3b5a86;
+
+  --syn-comment: #a0a1a7;
+  --syn-keyword: #a626a4;
+  --syn-tag: #e45649;
+  --syn-literal: #0184bb;
+  --syn-string: #50a14f;
+  --syn-number: #986801;
+  --syn-title: #4078f2;
+  --syn-type: #c18401;
+}
+
+:root {
+  color-scheme: dark;
+  /* Syntax colors of the dark theme (Atom One Dark) */
+  --syn-comment: #5c6370;
+  --syn-keyword: #c678dd;
+  --syn-tag: #e06c75;
+  --syn-literal: #56b6c2;
+  --syn-string: #98c379;
+  --syn-number: #d19a66;
+  --syn-title: #61aeee;
+  --syn-type: #e6c07b;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--syn-comment);
+  font-style: italic;
+}
+.hljs-doctag,
+.hljs-keyword,
+.hljs-formula {
+  color: var(--syn-keyword);
+}
+.hljs-section,
+.hljs-name,
+.hljs-selector-tag,
+.hljs-deletion,
+.hljs-subst {
+  color: var(--syn-tag);
+}
+.hljs-literal {
+  color: var(--syn-literal);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-attribute,
+.hljs-meta .hljs-string {
+  color: var(--syn-string);
+}
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-type,
+.hljs-selector-class,
+.hljs-selector-attr,
+.hljs-selector-pseudo,
+.hljs-number {
+  color: var(--syn-number);
+}
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link,
+.hljs-meta,
+.hljs-selector-id,
+.hljs-title {
+  color: var(--syn-title);
+}
+.hljs-built_in,
+.hljs-title.class_,
+.hljs-class .hljs-title {
+  color: var(--syn-type);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: bold;
+}
+.hljs-link {
+  text-decoration: underline;
+}

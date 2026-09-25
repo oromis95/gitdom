@@ -1,0 +1,202 @@
+// Types shared between the main process (git layer) and the renderer.
+
+export interface Commit {
+  hash: string
+  parents: string[]
+  authorName: string
+  authorEmail: string
+  /** Unix timestamp in seconds */
+  authorDate: number
+  subject: string
+}
+
+export type RefType = 'local' | 'remote' | 'tag'
+
+export interface Ref {
+  /** Full ref name, e.g. refs/heads/feature/x */
+  fullName: string
+  /** Display name, e.g. feature/x or origin/feature/x */
+  name: string
+  type: RefType
+  /** Commit the ref points to (peeled for annotated tags) */
+  hash: string
+  /** Remote name, only for remote refs */
+  remote?: string
+  /** Upstream short name, only for local branches */
+  upstream?: string
+  ahead?: number
+  behind?: number
+}
+
+export interface Stash {
+  hash: string
+  /** e.g. stash@{0} */
+  selector: string
+  message: string
+}
+
+export interface Remote {
+  name: string
+  fetchUrl: string
+  pushUrl: string
+}
+
+export type RepoOperation = 'merge' | 'rebase' | 'cherry-pick' | 'revert'
+
+export interface HeadInfo {
+  /** Current branch short name, null when detached or unborn */
+  branch: string | null
+  /** Commit HEAD points to, null in an empty repository */
+  hash: string | null
+}
+
+export type FileStatusCode = 'A' | 'M' | 'D' | 'R' | 'C' | 'U' | '?' | 'T'
+
+export interface FileChange {
+  path: string
+  /** Original path for renames/copies */
+  oldPath?: string
+  status: FileStatusCode
+}
+
+export interface WorkingTreeStatus {
+  staged: FileChange[]
+  unstaged: FileChange[]
+}
+
+export interface RepoSnapshot {
+  path: string
+  name: string
+  head: HeadInfo
+  commits: Commit[]
+  refs: Ref[]
+  stashes: Stash[]
+  remotes: Remote[]
+  status: WorkingTreeStatus
+  /** Operation in progress (merge, rebase…), null when idle */
+  operation: RepoOperation | null
+  /** Labels of the actions GitDom can undo and redo */
+  history: { undo: string | null; redo: string | null }
+  /** True when the commit list was truncated to the load limit */
+  truncated: boolean
+  submodules: Submodule[]
+  lfs: LfsInfo
+  identity: Identity
+}
+
+export interface CommitDetail {
+  hash: string
+  parents: string[]
+  authorName: string
+  authorEmail: string
+  authorDate: number
+  committerName: string
+  committerDate: number
+  subject: string
+  body: string
+  files: FileChange[]
+}
+
+export type DiffLineType = 'context' | 'add' | 'del'
+
+export interface DiffLine {
+  type: DiffLineType
+  text: string
+  oldNo?: number
+  newNo?: number
+  /** Followed by the "\ No newline at end of file" marker */
+  noNewline?: boolean
+}
+
+export interface Hunk {
+  header: string
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
+  lines: DiffLine[]
+}
+
+export interface FileDiff {
+  path: string
+  oldPath?: string
+  binary: boolean
+  /** Set when the whole file is created or deleted: only file-level staging applies */
+  change?: 'added' | 'deleted'
+  /** Unmerged file: compared with HEAD, so the conflict markers show as added lines */
+  conflicted?: boolean
+  hunks: Hunk[]
+}
+
+/** Which version of a file a diff compares. */
+export type DiffSource =
+  | { kind: 'unstaged' }
+  | { kind: 'untracked' }
+  | { kind: 'staged' }
+  | { kind: 'commit'; hash: string }
+
+/** A commit in the history of a file, with the file's path in that commit (renames change it). */
+export interface FileRevision extends Commit {
+  path: string
+  /** Path before a rename in this commit */
+  oldPath?: string
+  /** Undefined for merges, which git logs without a file list */
+  status?: FileStatusCode
+}
+
+export interface BlameCommit {
+  hash: string
+  authorName: string
+  authorEmail: string
+  authorDate: number
+  summary: string
+  /** Path of the file in this commit */
+  path: string
+  /** The version before this commit changed the line: blaming it goes back in time */
+  previous?: { hash: string; path: string }
+  /** Not committed yet: the working tree version of the line */
+  uncommitted: boolean
+}
+
+export interface BlameLine {
+  hash: string
+  /** Line number in the blamed version, starting at 1 */
+  lineNo: number
+  text: string
+}
+
+export interface Blame {
+  path: string
+  commits: Record<string, BlameCommit>
+  lines: BlameLine[]
+}
+
+/**
+ * uninitialized: not cloned yet; clean: at the commit the repository records;
+ * moved: checked out at another commit; conflict: unmerged in a merge
+ */
+export type SubmoduleState = 'uninitialized' | 'clean' | 'moved' | 'conflict'
+
+export interface Submodule {
+  name: string
+  path: string
+  url: string
+  /** Commit checked out, or recorded when not initialized */
+  hash: string
+  state: SubmoduleState
+}
+
+export interface LfsInfo {
+  /** Whether the git-lfs extension is available */
+  installed: boolean
+  /** Patterns tracked in the root .gitattributes */
+  patterns: string[]
+}
+
+/** Author identity for new commits, and the configuration level it comes from. */
+export interface Identity {
+  name: string | null
+  email: string | null
+  /** local when the repository overrides the global identity */
+  scope: 'local' | 'global' | 'system' | null
+}

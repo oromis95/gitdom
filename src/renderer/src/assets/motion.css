@@ -1,0 +1,226 @@
+/* Motion: short transitions that show where things come from, without slowing work down.
+   Everything is turned off when the system asks for reduced motion. */
+
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fast: 120ms;
+  --medium: 200ms;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* --- Hover and selection -------------------------------------------------------------- */
+
+button,
+.tab,
+.tree-item,
+.file-row,
+.graph-row,
+.history-row,
+.menu-item,
+.palette-item,
+.section-header,
+.row-action,
+.status-identity {
+  transition:
+    background-color var(--fast) ease,
+    color var(--fast) ease,
+    border-color var(--fast) ease,
+    opacity var(--fast) ease;
+}
+
+.btn:not(:disabled):active,
+.tool:not(:disabled):active,
+.commit-box .primary:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.tool,
+.btn,
+.commit-box .primary {
+  transition:
+    background-color var(--fast) ease,
+    color var(--fast) ease,
+    transform 80ms ease;
+}
+
+/* --- Overlays --------------------------------------------------------------------------- */
+
+.menu {
+  animation: pop-in var(--fast) var(--ease-out);
+  transform-origin: top left;
+}
+
+.modal-backdrop {
+  animation: fade-in var(--medium) ease;
+}
+
+.modal,
+.palette {
+  animation: pop-in var(--medium) var(--ease-out);
+}
+
+.toast {
+  animation: slide-in-right var(--medium) var(--ease-out);
+}
+
+/* --- Views and panels ------------------------------------------------------------------- */
+
+/* Diff, conflicts, history and blame open over the graph */
+.diff-view {
+  animation: rise-in var(--medium) var(--ease-out);
+}
+
+/* A repository shown, or a tab switched to */
+.workspace .graph,
+.welcome {
+  animation: fade-in 260ms ease;
+}
+
+.welcome > * {
+  animation: rise-in 400ms var(--ease-out) backwards;
+}
+.welcome > :nth-child(2) {
+  animation-delay: 60ms;
+}
+.welcome > :nth-child(3) {
+  animation-delay: 120ms;
+}
+.welcome > :nth-child(4) {
+  animation-delay: 180ms;
+}
+
+.section-body {
+  animation: rise-in var(--medium) var(--ease-out);
+}
+
+/* Showing the terminal (display: none → flex restarts the animation) */
+.terminal-dock {
+  animation: slide-up var(--medium) var(--ease-out);
+}
+
+.detail-scroll {
+  animation: fade-in var(--medium) ease;
+}
+
+.tab {
+  animation: fade-in var(--medium) ease;
+}
+
+/* --- Startup logo ----------------------------------------------------------------------- */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--bg-deep);
+  animation: fade-in 250ms ease;
+  cursor: pointer;
+}
+.splash.leaving {
+  animation: fade-out 350ms ease forwards;
+}
+
+.splash .highway {
+  animation: pop-in 400ms var(--ease-out);
+}
+
+.splash-title {
+  margin-top: 22px;
+  font-size: 34px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  animation: rise-in 500ms var(--ease-out) 1.9s backwards;
+}
+
+.splash-tagline {
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  animation: rise-in 500ms var(--ease-out) 2.1s backwards;
+}
+
+.highway-road {
+  fill: var(--bg-elevated);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.highway-dash {
+  stroke: var(--text-dim);
+  stroke-width: 1.5;
+  stroke-dasharray: 14 12;
+  stroke-linecap: round;
+}
+
+/* The road runs under the cars: they move to the right */
+@keyframes highway-run {
+  to {
+    stroke-dashoffset: 26;
+  }
+}
+.highway.animated .highway-dash {
+  animation: highway-run 320ms linear infinite;
+}
+
+.highway-car {
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+
+/* --- Reduced motion --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

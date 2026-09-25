@@ -1,0 +1,223 @@
+import type {
+  Blame,
+  CommitDetail,
+  DiffSource,
+  FileChange,
+  FileDiff,
+  FileRevision,
+  RepoSnapshot,
+  WorkingTreeStatus
+} from './types'
+
+/**
+ * IPC results carry errors as values: Electron would otherwise mangle the message of thrown errors.
+ * `details` holds the full git output (hook output, rejection hints) when available.
+ */
+export type Result<T> = { ok: true; value: T } | { ok: false; error: string; details?: string }
+
+export type PullMode = 'ff' | 'ff-only' | 'rebase'
+/** Auto-stash around a checkout: none, tracked changes only, or untracked files too. */
+export type StashMode = 'none' | 'tracked' | 'all'
+
+export type MergeMode = 'ff' | 'no-ff' | 'ff-only' | 'squash'
+export type ResetMode = 'soft' | 'mixed' | 'hard'
+
+/** Result of operations that may stop on conflicts, leaving the repository mid-operation. */
+export interface OpOutcome {
+  conflicts: boolean
+  /** git's output */
+  output: string
+}
+
+export type RebaseAction = 'pick' | 'reword' | 'squash' | 'fixup' | 'drop'
+
+export interface RebaseStep {
+  action: RebaseAction
+  hash: string
+  /** New message, for reword */
+  message?: string
+}
+
+export interface RebaseCommit {
+  hash: string
+  subject: string
+  message: string
+  author: string
+}
+
+/** What changed on disk: `git` needs a full snapshot reload, `worktree` only the status. */
+export type ChangeScope = 'git' | 'worktree'
+
+/**
+ * Operations on an open repository, invoked through a single IPC channel.
+ * Signatures describe the renderer's view: each call resolves to a Result of the return type.
+ */
+export interface RepoOps {
+  status(): WorkingTreeStatus
+  diff(source: DiffSource, path: string, oldPath?: string): FileDiff
+  commitDetail(hash: string): CommitDetail
+  /** Commits that changed a file, newest first, following renames. */
+  fileHistory(path: string): FileRevision[]
+  /** Who last changed each line of a file, at a commit or in the working tree (null). */
+  blame(path: string, rev: string | null): Blame
+
+  stage(paths: string[]): void
+  unstage(paths: string[]): void
+  stageAll(): void
+  unstageAll(): void
+  /** Throws away working tree changes; untracked files are deleted. */
+  discard(files: FileChange[]): void
+  /** Applies a patch built with buildPatch, to the index (`cached`) or the working tree. */
+  applyPatch(patch: string, cached: boolean, reverse: boolean): void
+  /** Resolves conflicted files with one side, `ours` being HEAD, and stages them. */
+  resolveConflict(paths: string[], side: 'ours' | 'theirs'): void
+  /** Paths among the given ones that still contain conflict markers. */
+  conflictMarkers(paths: string[]): string[]
+  /** Returns git's output, including hook output. */
+  commit(message: string, amend: boolean): string
+  lastCommitMessage(): string
+  /** Finishes the operation in progress once conflicts are resolved; a rebase may stop again. */
+  continueOperation(): OpOutcome
+  /** Cancels the operation in progress, restoring the state before it started. */
+  abortOperation(): void
+  /** Skips the commit that stopped a rebase, cherry-pick or revert. */
+  skipOperation(): OpOutcome
+  /** Opens the configured external merge tool (`merge.tool`) on a conflicted file. */
+  openMergeTool(path: string): void
+  /** Working tree content of a conflicted file, with its conflict markers. */
+  readConflictFile(path: string): string
+  /** Writes the resolved content of a conflicted file and stages it. */
+  saveResolution(path: string, content: string): void
+
+  /** Merges a branch, tag or commit into the current branch. */
+  merge(ref: string, mode: MergeMode): OpOutcome
+  /** Rebases the current branch onto a branch, tag or commit. */
+  rebase(onto: string): OpOutcome
+  /** Rewrites the commits after `base` (null: from the root) following the edited todo list. */
+  rebaseInteractive(base: string | null, todo: RebaseStep[]): OpOutcome
+  /**
+   * Commits between `base` (exclusive) and HEAD, oldest first, for the interactive rebase editor;
+   * `merges` counts the merge commits in the range, which the rebase flattens.
+   */
+  rebaseCommits(base: string | null): { commits: RebaseCommit[]; merges: number }
+  /** Applies commits on top of HEAD, in the given order. */
+  cherryPick(hashes: string[]): OpOutcome
+  revert(hash: string): OpOutcome
+  /** A hard reset first saves uncommitted changes in a stash: returns its hash, or null. */
+  reset(hash: string, mode: ResetMode): string | null
+
+  /** Undoes the last GitDom action; returns its label. */
+  undo(): string
+  redo(): string
+
+  /** Local changes are stashed before and restored after the checkout, unless `stash` is none. */
+  checkout(branch: string, stash: StashMode): void
+  checkoutRemote(remoteBranch: string, localName: string, stash: StashMode): void
+  checkoutCommit(hash: string, stash: StashMode): void
+  createBranch(name: string, startPoint: string | null, checkout: boolean): void
+  renameBranch(oldName: string, newName: string): void
+  deleteBranch(name: string, force: boolean): void
+  /** Moves a branch forward to `to`, refusing when it has commits `to` doesn't contain. */
+  fastForwardBranch(branch: string, to: string): void
+  /** Whether `ancestor` is reachable from `descendant` (a commit is its own ancestor). */
+  isAncestor(ancestor: string, descendant: string): boolean
+  deleteRemoteBranch(remote: string, branch: string): void
+  setUpstream(branch: string, upstream: string | null): void
+
+  fetch(): void
+  /** Local changes are stashed around the pull. */
+  pull(mode: PullMode): OpOutcome
+  /** Pushes the current branch, setting the upstream on the first push. */
+  push(forceWithLease: boolean): string
+
+  addRemote(name: string, url: string): void
+  removeRemote(name: string): void
+  renameRemote(oldName: string, newName: string): void
+  setRemoteUrl(name: string, url: string): void
+
+  stashPush(message: string, includeUntracked: boolean): void
+  stashApply(selector: string): void
+  stashPop(selector: string): void
+  stashDrop(selector: string): void
+
+  createTag(name: string, target: string, message: string | null): void
+  deleteTag(name: string): void
+  pushTag(remote: string, name: string): void
+  deleteRemoteTag(remote: string, name: string): void
+
+  /** Clones missing submodules and checks them out at the recorded commits; all when empty. */
+  submoduleUpdate(paths: string[]): string
+  /** Stores files matching the pattern with Git LFS, through the root .gitattributes. */
+  lfsTrack(pattern: string): void
+  lfsUntrack(pattern: string): void
+  /** Sets the author identity in the repository (local) or for every repository (global). */
+  setIdentity(name: string, email: string, scope: 'local' | 'global'): void
+  /** Removes the repository's own identity, falling back to the global one. */
+  clearLocalIdentity(): void
+}
+
+export type OpName = keyof RepoOps
+export type OpArgs<K extends OpName> = Parameters<RepoOps[K]>
+export type OpResult<K extends OpName> = ReturnType<RepoOps[K]>
+
+/** A shell the integrated terminal can run. */
+export interface ShellInfo {
+  id: string
+  name: string
+}
+
+/** Integrated terminal sessions, running in the main process; they end with the window. */
+export interface TerminalApi {
+  /** Shells found on this machine, the default first. */
+  shells(): Promise<ShellInfo[]>
+  /** Starts a shell in `cwd`; resolves the session id. */
+  open(cwd: string, shell: string, cols: number, rows: number): Promise<Result<number>>
+  write(id: number, data: string): void
+  resize(id: number, cols: number, rows: number): void
+  close(id: number): void
+  onData(listener: (id: number, data: string) => void): () => void
+  onExit(listener: (id: number, exitCode: number) => void): () => void
+}
+
+/** Themes offered in the app and in the Window menu; 'system' follows Windows' light or dark setting. */
+export type ThemeChoice = 'dark' | 'light' | 'system' | 'studio'
+
+/** The native menu bar, built in the main process. */
+export interface MenuApi {
+  /** Tells the menu which theme is applied, to check it in Window > Theme. */
+  setTheme(theme: ThemeChoice): void
+  /** Subscribes to themes picked from the menu; returns the unsubscribe function. */
+  onTheme(listener: (theme: ThemeChoice) => void): () => void
+}
+
+/** API exposed by the preload script on `window.api`. */
+export interface GitDomApi {
+  /** Shows a folder picker; resolves null when cancelled. */
+  pickRepository(): Promise<string | null>
+  /** Resolves the repository root containing `path` and loads its snapshot. */
+  openRepository(path: string): Promise<Result<RepoSnapshot>>
+  op<K extends OpName>(repoPath: string, name: K, ...args: OpArgs<K>): Promise<Result<OpResult<K>>>
+  /** Replaces the set of repositories watched for changes on disk. */
+  watch(repoPaths: string[]): void
+  /** Subscribes to on-disk changes; returns the unsubscribe function. */
+  onRepoChanged(listener: (repoPath: string, scope: ChangeScope) => void): () => void
+  terminal: TerminalApi
+  menu: MenuApi
+}
+
+export const IPC = {
+  pickRepository: 'repo:pick',
+  openRepository: 'repo:open',
+  op: 'repo:op',
+  watch: 'repo:watch',
+  changed: 'repo:changed',
+  terminalShells: 'term:shells',
+  terminalOpen: 'term:open',
+  terminalWrite: 'term:write',
+  terminalResize: 'term:resize',
+  terminalClose: 'term:close',
+  terminalData: 'term:data',
+  terminalExit: 'term:exit',
+  menuSetTheme: 'menu:set-theme',
+  menuTheme: 'menu:theme'
+} as const

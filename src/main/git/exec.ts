@@ -1,0 +1,85 @@
+import { spawn } from 'child_process'
+
+export class GitError extends Error {
+  constructor(
+    message: string,
+    readonly args: string[],
+    readonly exitCode: number | null,
+    readonly stderr: string
+  ) {
+    super(message)
+    this.name = 'GitError'
+  }
+}
+
+export interface RunOptions {
+  /** Written to the process stdin */
+  input?: string
+  /** Exit codes other than 0 that count as success (e.g. 1 for `git diff --no-index`) */
+  okExitCodes?: number[]
+  /** Appends stderr to the result: push, pull and hooks report their output there */
+  withStderr?: boolean
+  /** Extra environment variables */
+  env?: Record<string, string>
+}
+
+// Options forced on every invocation so output is stable and parseable
+// regardless of the user's configuration.
+const BASE_ARGS = [
+  '-c',
+  'core.quotepath=false',
+  '-c',
+  'i18n.logOutputEncoding=UTF-8',
+  '-c',
+  'color.ui=false'
+]
+
+/**
+ * Runs `git <args>` in `cwd` and resolves with stdout.
+ * Rejects with GitError on a non-zero exit code.
+ */
+export function runGit(cwd: string, args: string[], options: RunOptions = {}): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', [...BASE_ARGS, ...args], {
+      cwd,
+      windowsHide: true,
+      // Read-only commands (status, log) must not take index.lock and block the user's terminal.
+      // Prompts can't be answered without a terminal: fail fast instead of hanging.
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', ...options.env }
+    })
+
+    const out: Buffer[] = []
+    const err: Buffer[] = []
+    child.stdout.on('data', (chunk: Buffer) => out.push(chunk))
+    child.stderr.on('data', (chunk: Buffer) => err.push(chunk))
+
+    child.on('error', (e) =>
+      reject(new GitError(`Unable to run git: ${e.message}`, args, null, ''))
+    )
+    child.on('close', (code) => {
+      const stdout = Buffer.concat(out).toString('utf8')
+      const stderr = Buffer.concat(err).toString('utf8')
+      if (code === 0 || (code !== null && options.okExitCodes?.includes(code))) {
+        resolve(options.withStderr ? (stdout + stderr).trim() : stdout)
+      } else {
+        const text = (stderr.trim() || stdout.trim()).split('\n')
+        // Prefer the line git marks as the actual error over hints and progress output
+        const summary =
+          text.find((l) => /^(error|fatal):/.test(l)) ?? text[0] ?? `git ${args[0]} failed`
+        reject(new GitError(summary, args, code, stderr || stdout))
+      }
+    })
+
+    if (options.input !== undefined) child.stdin.end(options.input)
+    else child.stdin.end()
+  })
+}
+
+/** Like runGit but resolves null instead of rejecting on failure. */
+export async function tryGit(cwd: string, args: string[]): Promise<string | null> {
+  try {
+    return await runGit(cwd, args)
+  } catch {
+    return null
+  }
+}

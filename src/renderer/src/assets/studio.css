@@ -1,0 +1,285 @@
+/* Studio: warm violet and amber, floating rounded panels, actions in a rail on the left.
+   Colours on <html data-theme="studio">; the layout on .app.studio, set by App. */
+
+:root[data-theme='studio'] {
+  color-scheme: dark;
+  --bg: #15121c;
+  --bg-panel: #1e1a27;
+  --bg-elevated: #272131;
+  --bg-hover: #2c2538;
+  --bg-selected: #3a2c57;
+  --border: #2f283b;
+  --text: #ebe6f2;
+  --text-muted: #9d93ad;
+  --text-dim: #685f78;
+  --accent: #b48cff;
+  --accent-soft: #46356b;
+  --green: #5ee6a0;
+  --red: #ff6b8b;
+  --orange: #f5b454;
+  --purple: #c792ea;
+  --bg-deep: #110e17;
+  --scrollbar: #3a3247;
+  --code-text: #ddd6e8;
+  --success-bg: #1f4a3a;
+  --success-border: #2f7a5c;
+  --warning-bg: #4a3717;
+  --warning-border: #8a6a2a;
+  --warning-text: #f5b454;
+  --unstage-bg: #4f3517;
+  --unstage-border: #8f6225;
+  --danger-bg: #5c2236;
+  --danger-text: #ff9db4;
+  --error-bg: #3d1a26;
+  --error-text: #ffb3c4;
+  --error-border: #7a2d45;
+  --hunk-bg: #2a2240;
+  --hunk-text: #b9a8e0;
+
+  --radius: 12px;
+  --gap: 10px;
+  --rail-w: 76px;
+}
+
+:root[data-theme='studio'] body {
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* --- Layout ------------------------------------------------------------------------------ */
+
+.app.studio {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  grid-template-rows: var(--tabbar-h) auto auto minmax(0, 1fr) auto var(--statusbar-h);
+  grid-template-areas:
+    'tabs tabs'
+    'rail header'
+    'rail banner'
+    'rail main'
+    'rail dock'
+    'status status';
+}
+/* Welcome screen: no repository, no rail */
+.app.studio:not(:has(> .rail)) {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.app.studio > .tabbar {
+  grid-area: tabs;
+}
+.app.studio > .rail {
+  grid-area: rail;
+}
+.app.studio > .studio-header {
+  grid-area: header;
+}
+.app.studio > .banner-error {
+  grid-area: banner;
+  margin: 0 var(--gap) var(--gap) 0;
+  border: 1px solid var(--error-border);
+  border-radius: var(--radius);
+}
+.app.studio > .workspace,
+.app.studio > .welcome,
+.app.studio > .center-message {
+  grid-area: main;
+}
+.app.studio > .terminal-dock {
+  grid-area: dock;
+  margin: 0 var(--gap) var(--gap) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.app.studio > .statusbar {
+  grid-area: status;
+}
+
+/* --- Tabs, rail, header ------------------------------------------------------------------ */
+
+.app.studio .tabbar {
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: var(--bg-deep);
+  border-bottom: none;
+}
+.app.studio .tab {
+  height: 32px;
+  min-width: 120px;
+  font-size: 13.5px;
+  border-right: none;
+  border-radius: 10px;
+}
+.app.studio .tab.active {
+  background: var(--bg-elevated);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.app.studio .tab-add {
+  height: 32px;
+  border-radius: 10px;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 0;
+  background: var(--bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.rail .toolbar-spacer {
+  display: none;
+}
+.rail .tool {
+  width: 60px;
+  padding: 8px 2px 6px;
+  font-size: 10.5px;
+  border-radius: 10px;
+}
+.rail .tool.active {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+.rail .tool-split {
+  width: 60px;
+  border-radius: 10px;
+}
+.rail .tool-split .tool {
+  width: 46px;
+}
+.rail .tool-arrow {
+  width: 14px;
+  padding: 0;
+  border-radius: 0 10px 10px 0;
+}
+
+.studio-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px var(--gap) 8px 6px;
+}
+.studio-header .crumb {
+  min-width: 0;
+}
+.studio-header .crumb-value {
+  font-size: 17px;
+}
+.studio-header .crumb-value[title] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Floating panels --------------------------------------------------------------------- */
+
+.app.studio .workspace {
+  gap: var(--gap);
+  padding: 0 var(--gap) var(--gap) 0;
+}
+.app.studio .workspace > * {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+.app.studio .sidebar {
+  width: 260px;
+}
+.app.studio .detail {
+  width: 420px;
+  transition:
+    width 260ms var(--ease-out),
+    margin 260ms var(--ease-out),
+    opacity 180ms ease;
+}
+.app.studio .workspace.detail-hidden .detail {
+  width: 0;
+  margin-left: calc(-1 * var(--gap));
+  opacity: 0;
+  border-width: 0;
+}
+.app.studio .diff-view {
+  background: var(--bg-panel);
+}
+
+.app.studio .graph-header {
+  font-family: inherit;
+  letter-spacing: 0;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+.app.studio .graph-header > div {
+  border-right: none;
+}
+.app.studio .ref-pill {
+  border-radius: 10px;
+}
+
+/* --- Sidebar ----------------------------------------------------------------------------- */
+
+.app.studio .sidebar-filter {
+  border-radius: 10px;
+  background: var(--bg-elevated);
+}
+.app.studio .section-header {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+  border-top: none;
+}
+.app.studio .section-count {
+  padding: 0 7px;
+  font-size: 11px;
+  border-radius: 8px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.app.studio .tree-item {
+  width: calc(100% - 12px);
+  margin: 0 6px;
+  border-radius: 7px;
+}
+.app.studio .tree-item.current {
+  color: var(--orange);
+}
+
+/* --- Controls ---------------------------------------------------------------------------- */
+
+.app.studio .file-row,
+.app.studio .menu-item {
+  border-radius: 7px;
+}
+.app.studio .btn,
+.app.studio .commit-box .primary,
+.app.studio .commit-box input,
+.app.studio .commit-box textarea {
+  border-radius: 9px;
+}
+.app.studio .commit-box {
+  border-top-color: transparent;
+}
+:root[data-theme='studio'] .modal,
+:root[data-theme='studio'] .palette {
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+:root[data-theme='studio'] .menu {
+  padding: 4px;
+  border-radius: 12px;
+}
+:root[data-theme='studio'] .toast {
+  border-radius: 12px;
+}
+:root[data-theme='studio'] .toasts {
+  right: calc(420px + 3 * var(--gap));
+}
+
+.app.studio .statusbar {
+  background: var(--bg-deep);
+  border-top: none;
+}
