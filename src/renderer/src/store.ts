@@ -12,6 +12,8 @@ export interface RepoTab {
   error?: string
   /** Selected commit hash, or WIP_HASH for the working tree */
   selected: string | null
+  /** Two revisions whose changed files replace the commit detail (DIFF-08) */
+  compare?: CompareTarget
   /** File whose diff replaces the graph, when open */
   diff?: DiffTarget
   /** File whose history or blame replaces the graph; an open diff still takes precedence */
@@ -27,6 +29,12 @@ export interface DiffTarget {
   oldPath?: string
   /** Conflicted file shown in the merge tool instead of the diff */
   merge?: boolean
+}
+
+export interface CompareTarget {
+  /** Revisions as the user picked them: hashes, branch or tag names */
+  from: string
+  to: string
 }
 
 export interface FileInspect {
@@ -74,6 +82,8 @@ interface AppState {
   refreshStatus(path: string): Promise<void>
   select(hash: string | null, scrollIntoView?: boolean): void
   openDiff(target: DiffTarget | null): void
+  /** Lists the files changed between two revisions in the detail panel; selecting a commit ends it. */
+  compare(target: CompareTarget | null): void
   /** Shows the history or blame of a file, closing the diff. */
   inspectFile(inspect: FileInspect | null): void
   setDraft(path: string, draft: Partial<CommitDraft>): void
@@ -229,13 +239,18 @@ export const useApp = create<AppState>((set, get) => {
     select(hash, scrollIntoView = false) {
       const tab = get().tabs[get().active]
       if (!tab) return
-      updateTab(tab.path, { selected: hash })
+      updateTab(tab.path, { selected: hash, compare: undefined })
       if (scrollIntoView && hash) set({ scrollRequest: { hash, nonce: Date.now() } })
     },
 
     openDiff(target) {
       const tab = get().tabs[get().active]
       if (tab) updateTab(tab.path, { diff: target ?? undefined })
+    },
+
+    compare(target) {
+      const tab = get().tabs[get().active]
+      if (tab) updateTab(tab.path, { compare: target ?? undefined, diff: undefined })
     },
 
     inspectFile(inspect) {

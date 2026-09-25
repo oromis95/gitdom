@@ -95,6 +95,56 @@ describe('staging and commit', () => {
     expect(unstaged.hunks[0].lines.map((l) => l.type)).toEqual(['context', 'add'])
   })
 
+  it('applies diff options and compares any two revisions', async () => {
+    await commitFile('n.txt', 'a\nb\nc\nd\ne\nf\ng\nh\n', 'one')
+    git(repo, 'tag', 'v1')
+    await commitFile('n.txt', 'a\nb\nc\nd  \ne\nf\ng\nX\n', 'two')
+    await commitFile('m.txt', 'm\n', 'three')
+
+    const compare = { kind: 'compare' as const, from: 'v1', to: 'main' }
+    expect(await runOp(repo, 'compareFiles', ['v1', 'main'])).toEqual([
+      { status: 'A', path: 'm.txt' },
+      { status: 'M', path: 'n.txt' }
+    ])
+    const full = await runOp(repo, 'diff', [compare, 'n.txt'])
+    expect(full.hunks[0].lines.filter((l) => l.type === 'add').map((l) => l.text)).toEqual([
+      'd  ',
+      'X'
+    ])
+    const noSpace = await runOp(repo, 'diff', [
+      compare,
+      'n.txt',
+      undefined,
+      { ignoreWhitespace: true }
+    ])
+    expect(noSpace.hunks[0].lines.filter((l) => l.type === 'add').map((l) => l.text)).toEqual(['X'])
+    const whole = await runOp(repo, 'diff', [compare, 'n.txt', undefined, { context: 100000 }])
+    expect(whole.hunks).toHaveLength(1)
+    expect(whole.hunks[0].lines[0]).toMatchObject({ type: 'context', text: 'a' })
+    const tight = await runOp(repo, 'diff', [compare, 'n.txt', undefined, { context: 0 }])
+    expect(tight.hunks).toHaveLength(2)
+
+    await expect(runOp(repo, 'compareFiles', ['--output=x', 'main'])).rejects.toThrow()
+    await expect(runOp(repo, 'compareFiles', ['v1', 'a b'])).rejects.toThrow()
+  })
+
+  it('loads both versions of an image', async () => {
+    const png = (byte: number): Buffer =>
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, byte])
+    writeFileSync(join(repo, 'i.png'), png(1))
+    await runOp(repo, 'stage', [['i.png']])
+    await runOp(repo, 'commit', ['image', false])
+    const hash = git(repo, 'rev-parse', 'HEAD')
+    const added = await runOp(repo, 'imagePair', [{ kind: 'commit', hash }, 'i.png'])
+    expect(added.before).toBeNull()
+    expect(added.after).toBe(`data:image/png;base64,${png(1).toString('base64')}`)
+
+    writeFileSync(join(repo, 'i.png'), png(2))
+    const changed = await runOp(repo, 'imagePair', [{ kind: 'unstaged' }, 'i.png'])
+    expect(changed.before).toBe(added.after)
+    expect(changed.after).toBe(`data:image/png;base64,${png(2).toString('base64')}`)
+  })
+
   it('reports hook failures with their output', async () => {
     write(join('.git', 'hooks', 'pre-commit'), '#!/bin/sh\necho "lint failed" >&2\nexit 1\n')
     write('a.txt', 'a\n')

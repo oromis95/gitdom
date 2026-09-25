@@ -16,6 +16,12 @@ export interface Settings extends ToolSettings {
   /** Panel widths set by dragging their edge (UI-11, SIDE-10); null for the default */
   sidebarWidth: number | null
   detailWidth: number | null
+  /** Diff viewer options (DIFF-01, DIFF-04, DIFF-05) */
+  diffLayout: 'unified' | 'split'
+  diffWrap: boolean
+  diffIgnoreWhitespace: boolean
+  diffContext: number
+  diffFullFile: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -26,6 +32,11 @@ export const DEFAULT_SETTINGS: Settings = {
   autoFetchMinutes: 10,
   sidebarWidth: null,
   detailWidth: null,
+  diffLayout: 'unified',
+  diffWrap: false,
+  diffIgnoreWhitespace: false,
+  diffContext: 3,
+  diffFullFile: false,
   gitPath: '',
   editor: '',
   mergeTool: ''
@@ -33,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const ZOOM_STEPS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]
 export const CODE_FONT_SIZES = { min: 9, max: 24 }
+export const DIFF_CONTEXT_MAX = 100
 
 const SETTINGS_KEY = 'gitdom.settings'
 
@@ -57,6 +69,8 @@ function load(): Settings {
     }
   }
   settings.zoom = clamp(settings.zoom, ZOOM_STEPS[0], ZOOM_STEPS[ZOOM_STEPS.length - 1])
+  if (settings.diffLayout !== 'split') settings.diffLayout = 'unified'
+  settings.diffContext = clamp(Math.round(settings.diffContext), 0, DIFF_CONTEXT_MAX)
   settings.codeFontSize = clamp(settings.codeFontSize, CODE_FONT_SIZES.min, CODE_FONT_SIZES.max)
   return settings
 }

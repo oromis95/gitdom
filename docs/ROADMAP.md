@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 0.3.0 pubblicata il 2026-09-25 (Step 1 e 2 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 0.4.0 pubblicata il 2026-09-25 (Step 1, 2 e 3 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -16,9 +16,10 @@ Le milestone 0–4 sono completate:
 - temi Scuro, Chiaro e Studio, animazioni e logo all'avvio;
 - exe portable generato da GitHub Actions;
 - clone e nuovo repository, preferiti (Step 1);
-- preferenze, zoom, pannelli ridimensionabili, editor e merge tool esterni (Step 2).
+- preferenze, zoom, pannelli ridimensionabili, editor e merge tool esterni (Step 2);
+- diff affiancato, parole evidenziate, opzioni del diff, confronto tra revisioni e diff delle immagini (Step 3).
 
-I requisiti P0 sono coperti; resta buona parte dei P1, a partire dal diff (Step 3).
+I requisiti P0 sono coperti; resta buona parte dei P1, a partire dal grafo (Step 4).
 
 ## Principi per l'ordine
 
@@ -53,7 +54,9 @@ Oggi molti comportamenti sono fissi nel codice, per esempio il fetch ogni 10 min
 - **Zoom** dell'interfaccia con Ctrl+/Ctrl−, mostrato nella barra di stato (UI-06)
 - **Pannelli ridimensionabili** trascinando i bordi, con dimensioni salvate (UI-11, SIDE-10)
 
-## Step 3 — v0.4: Diff di nuova generazione
+## Step 3 — v0.4: Diff di nuova generazione ✅
+
+> Completato: vista unificata o affiancata, parole cambiate evidenziate, barra delle opzioni (file intero, contesto, ignora spazi, a capo), confronto tra due commit o con un branch/tag dai menu del grafo, diff delle immagini in tre modalità.
 
 - **Vista affiancata** (split) oltre a quella unificata (DIFF-01)
 - **Evidenziazione intra-riga** delle parole cambiate (DIFF-03)

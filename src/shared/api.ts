@@ -1,10 +1,12 @@
 import type {
   Blame,
   CommitDetail,
+  DiffOptions,
   DiffSource,
   FileChange,
   FileDiff,
   FileRevision,
+  ImagePair,
   RepoSnapshot,
   WorkingTreeStatus
 } from './types'
@@ -54,7 +56,11 @@ export type ChangeScope = 'git' | 'worktree'
  */
 export interface RepoOps {
   status(): WorkingTreeStatus
-  diff(source: DiffSource, path: string, oldPath?: string): FileDiff
+  diff(source: DiffSource, path: string, oldPath?: string, options?: DiffOptions): FileDiff
+  /** Both versions of an image file compared by a diff. */
+  imagePair(source: DiffSource, path: string, oldPath?: string): ImagePair
+  /** Files that differ between two revisions (DIFF-08). */
+  compareFiles(from: string, to: string): FileChange[]
   commitDetail(hash: string): CommitDetail
   /** Commits that changed a file, newest first, following renames. */
   fileHistory(path: string): FileRevision[]

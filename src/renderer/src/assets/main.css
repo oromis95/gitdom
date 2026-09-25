@@ -488,6 +488,13 @@ input {
   text-decoration: underline;
 }
 
+.compare-actions {
+  display: flex;
+  gap: 6px;
+}
+.compare-actions svg {
+  vertical-align: -2px;
+}
 .file-group-title {
   display: flex;
   align-items: center;

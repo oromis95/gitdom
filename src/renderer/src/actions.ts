@@ -744,6 +744,17 @@ function integrationItems(snapshot: RepoSnapshot, name: string): MenuItem[] {
   ]
 }
 
+/** Shows the files changed between two revisions in the detail panel (DIFF-08). */
+function compareItem(label: string, from: string, to: string, disabled = false): MenuItem {
+  return { label, disabled, onClick: () => useApp.getState().compare({ from, to }) }
+}
+
+/** Compares the current branch with a branch or tag: what `ref` has that HEAD doesn't. */
+function compareWithHead(snapshot: RepoSnapshot, ref: string): MenuItem {
+  const current = snapshot.head.branch ?? 'HEAD'
+  return compareItem(`Compare with ${current}`, current, ref, ref === snapshot.head.branch)
+}
+
 export function localBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
   const repo = snapshot.path
   const isCurrent = ref.name === snapshot.head.branch
@@ -763,6 +774,7 @@ export function localBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
     { label: `Create branch here`, onClick: () => void createBranch(repo, ref.name, ref.name) },
     { label: 'Create tag here', onClick: () => void createTag(repo, ref.hash, ref.name) },
     { label: 'Set upstream…', onClick: () => void setUpstream(repo, snapshot, ref) },
+    compareWithHead(snapshot, ref.name),
     'separator',
     { label: 'Rename…', onClick: () => void renameBranch(repo, ref.name) },
     {
@@ -785,6 +797,7 @@ export function remoteBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
     },
     ...integrationItems(snapshot, ref.name),
     { label: 'Create branch here', onClick: () => void createBranch(repo, ref.name, ref.name) },
+    compareWithHead(snapshot, ref.name),
     'separator',
     {
       label: `Delete from ${ref.remote}`,
@@ -799,6 +812,8 @@ export function remoteBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
 export function tagMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
   const repo = snapshot.path
   return [
+    compareWithHead(snapshot, ref.name),
+    'separator',
     ...snapshot.remotes.map((r): MenuItem => ({
       label: `Push to ${r.name}`,
       onClick: () => void pushTag(repo, r.name, ref.name)
@@ -860,6 +875,7 @@ export function commitMenu(snapshot: RepoSnapshot, hash: string, subject: string
       disabled: isHead || !snapshot.head.branch,
       onClick: () => void interactiveRebase(repo, hash)
     },
+    compareItem(`Compare with ${branch}`, hash, branch, isHead),
     'separator',
     ...(['soft', 'mixed', 'hard'] as const).map((mode): MenuItem => ({
       label: `Reset ${branch} here: ${mode} (${RESET_HELP[mode]})`,
@@ -880,6 +896,15 @@ export function commitsMenu(
   clear: () => void
 ): MenuItem[] {
   return [
+    ...(hashes.length === 2
+      ? [
+          compareItem(
+            `Compare ${hashes[0].slice(0, 7)} with ${hashes[1].slice(0, 7)}`,
+            hashes[0],
+            hashes[1]
+          )
+        ]
+      : []),
     {
       label: `Cherry-pick ${hashes.length} commits`,
       onClick: () => {

@@ -210,7 +210,7 @@ function App(): React.JSX.Element {
               ) : (
                 <GraphView snapshot={snapshot} selected={tab.selected} />
               )}
-              <DetailPanel snapshot={snapshot} selected={tab.selected} />
+              <DetailPanel snapshot={snapshot} selected={tab.selected} compare={tab.compare} />
             </div>
           ) : (
             <div className="center-message">{tab.loading ? 'Loading repository…' : ''}</div>

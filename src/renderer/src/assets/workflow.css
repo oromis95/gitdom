@@ -268,6 +268,147 @@
   padding-left: 4px;
 }
 
+/* Diff options, split layout, changed words (DIFF-01, DIFF-03, DIFF-04) */
+.diff-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.diff-options label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.diff-options .segmented button {
+  padding: 2px 10px;
+}
+.diff-options select {
+  padding: 1px 4px;
+}
+.diff-code mark.word {
+  color: inherit;
+  border-radius: 2px;
+}
+.diff-line.add mark.word {
+  background: rgba(76, 191, 107, 0.38);
+}
+.diff-line.del mark.word {
+  background: rgba(226, 85, 85, 0.38);
+}
+.hunk.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.hunk.split .hunk-header {
+  grid-column: 1 / -1;
+}
+.split-row {
+  display: contents;
+}
+.hunk.split .diff-line + .diff-line {
+  border-left: 1px solid var(--border);
+}
+.diff-line.empty {
+  background: var(--bg-panel);
+}
+.diff-body.wrap .hunk {
+  min-width: 0;
+}
+.diff-body.wrap .diff-line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diff-body.wrap .diff-code {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Image diff (DIFF-06) */
+.image-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+}
+.image-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-muted);
+}
+.image-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.image-pair {
+  display: flex;
+  gap: 16px;
+}
+.image-side {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.image-side figcaption {
+  color: var(--text-muted);
+}
+.image-side img,
+.image-stack img {
+  max-width: 100%;
+  object-fit: contain;
+}
+.image-side img,
+.image-missing,
+.checkerboard {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #ddd 25%, transparent 25%),
+    linear-gradient(-45deg, #ddd 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ddd 75%),
+    linear-gradient(-45deg, transparent 75%, #ddd 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+}
+.image-missing {
+  padding: 40px 60px;
+  color: #666;
+}
+.image-stack {
+  position: relative;
+  display: grid;
+  align-self: center;
+  max-width: 100%;
+}
+.image-stack img {
+  grid-area: 1 / 1;
+}
+.image-swipe-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
 /* --- Toasts --------------------------------------------------------------------------- */
 .toasts {
   position: fixed;

@@ -1,9 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Copy, Folder, List, ListTree } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Folder,
+  List,
+  ListTree,
+  X
+} from 'lucide-react'
 import type { Result } from '../../../shared/api'
 import { lfsMatcher } from '../../../shared/lfs'
 import type { CommitDetail, DiffSource, FileChange, RepoSnapshot } from '../../../shared/types'
-import { WIP_HASH, useActiveTab, useApp, type DiffTarget } from '../store'
+import { WIP_HASH, useActiveTab, useApp, type CompareTarget, type DiffTarget } from '../store'
 import { notify, openMenu, type MenuItem } from '../ui'
 import { roomBeside, updateSettings } from '../settings'
 import ResizeHandle from './ResizeHandle'
@@ -28,10 +37,16 @@ const SUMMARY_LIMIT = 72
 const VIEW_KEY = 'gitdom.fileView'
 
 type FileView = 'path' | 'tree'
-type ListKind = 'conflicted' | 'unstaged' | 'staged' | 'commit'
+type ListKind = 'conflicted' | 'unstaged' | 'staged' | 'commit' | 'compare'
 
-function sourceFor(kind: ListKind, file: FileChange, hash?: string): DiffSource {
+function sourceFor(
+  kind: ListKind,
+  file: FileChange,
+  hash?: string,
+  compare?: CompareTarget
+): DiffSource {
   if (kind === 'commit') return { kind: 'commit', hash: hash! }
+  if (kind === 'compare') return { kind: 'compare', ...compare! }
   if (kind === 'unstaged' && file.status === '?') return { kind: 'untracked' }
   if (kind === 'conflicted') return { kind: 'unstaged' }
   return { kind }
@@ -82,6 +97,7 @@ function FileList({
   view = 'path',
   repo,
   hash,
+  compare,
   action
 }: {
   files: FileChange[]
@@ -89,6 +105,7 @@ function FileList({
   view?: FileView
   repo: string
   hash?: string
+  compare?: CompareTarget
   /** Hover button, e.g. Stage: applies to one file or to a whole folder */
   action?: { label: string; run: (files: FileChange[]) => void }
 }): React.JSX.Element {
@@ -104,7 +121,7 @@ function FileList({
   const tree = useMemo(() => (view === 'tree' ? buildFolders(files) : null), [files, view])
 
   const isActive = (f: FileChange): boolean =>
-    activeDiff?.path === f.path && activeDiff.source.kind === sourceFor(kind, f, hash).kind
+    activeDiff?.path === f.path && activeDiff.source.kind === sourceFor(kind, f, hash, compare).kind
 
   const menuFor = (f: FileChange): MenuItem[] => [
     ...(kind === 'conflicted' ? conflictMenu(repo, [f.path]) : []),
@@ -140,7 +157,7 @@ function FileList({
           },
           {
             label: 'Blame',
-            disabled: f.status === 'D' || kind === 'conflicted',
+            disabled: f.status === 'D' || kind === 'conflicted' || kind === 'compare',
             onClick: () =>
               inspectFile({ path: f.path, mode: 'blame', rev: kind === 'commit' ? hash! : null })
           },
@@ -167,7 +184,7 @@ function FileList({
 
   const fileRow = (f: FileChange, depth: number, label: string): React.JSX.Element => {
     const target: DiffTarget = {
-      source: sourceFor(kind, f, hash),
+      source: sourceFor(kind, f, hash, compare),
       path: f.path,
       oldPath: f.oldPath,
       merge: kind === 'conflicted' || undefined
@@ -581,15 +598,117 @@ function CommitPanel({ repoPath, hash }: { repoPath: string; hash: string }): Re
   )
 }
 
+const shortRev = (rev: string): string => (/^[0-9a-f]{40,64}$/i.test(rev) ? rev.slice(0, 7) : rev)
+
+/** Files changed between two revisions picked in the graph or the sidebar (DIFF-08). */
+function ComparePanel({
+  repoPath,
+  target
+}: {
+  repoPath: string
+  target: CompareTarget
+}): React.JSX.Element {
+  const compare = useApp((s) => s.compare)
+  const key = JSON.stringify(target)
+  const [loaded, setLoaded] = useState<{ key: string; result: Result<FileChange[]> } | null>(null)
+  const [view, setView] = useState<FileView>(() =>
+    localStorage.getItem(VIEW_KEY) === 'tree' ? 'tree' : 'path'
+  )
+  const changeView = (next: FileView): void => {
+    localStorage.setItem(VIEW_KEY, next)
+    setView(next)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    void window.api.op(repoPath, 'compareFiles', target.from, target.to).then((result) => {
+      if (!cancelled) setLoaded({ key, result })
+    })
+    return () => {
+      cancelled = true
+    }
+    // target is covered by key
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repoPath, key])
+
+  let files: React.ReactNode
+  if (!loaded || loaded.key !== key) files = <div className="center-message">Loading…</div>
+  else if (!loaded.result.ok) files = <div className="banner-error">{loaded.result.error}</div>
+  else if (!loaded.result.value.length)
+    files = <div className="center-message">No differences between the two</div>
+  else
+    files = (
+      <div>
+        <div className="file-group-title">{loaded.result.value.length} changed files</div>
+        <FileList
+          files={loaded.result.value}
+          kind="compare"
+          view={view}
+          repo={repoPath}
+          compare={target}
+        />
+      </div>
+    )
+
+  return (
+    <div className="detail-scroll">
+      <div className="detail-title-row">
+        <div className="detail-title">Comparing two revisions</div>
+        <div className="view-toggle">
+          <button
+            className={view === 'path' ? 'on' : ''}
+            onClick={() => changeView('path')}
+            title="Path view"
+          >
+            <List size={15} />
+          </button>
+          <button
+            className={view === 'tree' ? 'on' : ''}
+            onClick={() => changeView('tree')}
+            title="Tree view"
+          >
+            <ListTree size={15} />
+          </button>
+        </div>
+      </div>
+      <dl className="detail-meta">
+        <dt>from</dt>
+        <dd className="mono" title={target.from}>
+          {shortRev(target.from)}
+        </dd>
+        <dt>to</dt>
+        <dd className="mono" title={target.to}>
+          {shortRev(target.to)}
+        </dd>
+      </dl>
+      <div className="compare-actions">
+        <button
+          className="btn btn-small"
+          onClick={() => compare({ from: target.to, to: target.from })}
+        >
+          <ArrowLeftRight size={13} /> Swap
+        </button>
+        <button className="btn btn-small" onClick={() => compare(null)}>
+          <X size={13} /> Close
+        </button>
+      </div>
+      {files}
+    </div>
+  )
+}
+
 export default function DetailPanel({
   snapshot,
-  selected
+  selected,
+  compare
 }: {
   snapshot: RepoSnapshot
   selected: string | null
+  compare?: CompareTarget
 }): React.JSX.Element {
   let content: React.JSX.Element
-  if (selected === WIP_HASH) content = <WorkingTreePanel snapshot={snapshot} />
+  if (compare) content = <ComparePanel repoPath={snapshot.path} target={compare} />
+  else if (selected === WIP_HASH) content = <WorkingTreePanel snapshot={snapshot} />
   else if (selected) content = <CommitPanel repoPath={snapshot.path} hash={selected} />
   else content = <div className="center-message">Select a commit</div>
 

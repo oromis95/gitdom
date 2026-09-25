@@ -26,6 +26,8 @@ export interface RunOptions {
   onStderr?: (chunk: string) => void
   /** Aborting kills the process; the promise then rejects */
   signal?: AbortSignal
+  /** How stdout is decoded: base64 for binary content such as images */
+  encoding?: 'utf8' | 'base64'
 }
 
 // Options forced on every invocation so output is stable and parseable
@@ -71,7 +73,7 @@ export function runGit(cwd: string, args: string[], options: RunOptions = {}): P
     )
     child.on('close', (code) => {
       if (options.signal?.aborted) return reject(new GitError('Cancelled', args, null, ''))
-      const stdout = Buffer.concat(out).toString('utf8')
+      const stdout = Buffer.concat(out).toString(options.encoding ?? 'utf8')
       const stderr = Buffer.concat(err).toString('utf8')
       if (code === 0 || (code !== null && options.okExitCodes?.includes(code))) {
         resolve(options.withStderr ? (stdout + stderr).trim() : stdout)

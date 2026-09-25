@@ -22,6 +22,13 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Local and remote branches that point to the same commit share one label
 - Commit details, changed files, and diffs with syntax highlighting
 
+**Diffs**
+
+- Unified or split (side by side) view, with the changed words highlighted inside each line
+- Show the whole file with its changes, choose the context lines, ignore whitespace, wrap long lines
+- Compare any two commits (Ctrl+click both in the graph, then right-click), or a branch or tag with the current branch
+- Images compared side by side, overlaid with an opacity slider, or with a swipe
+
 **Everyday workflow**
 
 - Stage and unstage whole files, single hunks or single lines
@@ -119,7 +126,7 @@ docs/         Requirements (Italian) and screenshots
 
 ## Status
 
-GitDom is a personal project under active development (version 0.3.0).
+GitDom is a personal project under active development (version 0.4.0).
 The full list of requirements is in [docs/REQUISITI.md](docs/REQUISITI.md), and the plan for the next versions is in [docs/ROADMAP.md](docs/ROADMAP.md) (both in Italian).
 
 ## License

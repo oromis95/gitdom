@@ -2,21 +2,80 @@ import { useEffect, useMemo, useState } from 'react'
 import { History, ScanText, X } from 'lucide-react'
 import type { Result } from '../../../shared/api'
 import { buildPatch } from '../../../shared/diff'
-import type { FileChange, FileDiff, Hunk, RepoSnapshot } from '../../../shared/types'
+import type {
+  DiffLine,
+  DiffSource,
+  FileChange,
+  FileDiff,
+  Hunk,
+  RepoSnapshot
+} from '../../../shared/types'
+import { hunkWordRanges, markHtml } from '../../../shared/wordDiff'
 import { useApp, type DiffTarget } from '../store'
 import { highlightLines } from '../highlight'
+import { DIFF_CONTEXT_MAX, updateSettings, useSettings } from '../settings'
 import { confirm, fromTerminal } from '../ui'
 import { discardFiles, markResolved, resolveWith, run } from '../actions'
+import ImageDiff from './ImageDiff'
 
-/** Highlights the lines of all hunks, keeping them grouped by hunk. */
+/** Highlights the lines of all hunks, grouped by hunk, with the changed words marked (DIFF-03). */
 function highlightHunks(diff: FileDiff): string[][] {
   const html = highlightLines(
     diff.path,
     diff.hunks.flatMap((hunk) => hunk.lines.map((line) => line.text))
   )
   let next = 0
-  return diff.hunks.map((hunk) => hunk.lines.map(() => html[next++]))
+  return diff.hunks.map((hunk) => {
+    const words = hunkWordRanges(hunk.lines)
+    return hunk.lines.map((_, l) => {
+      const line = html[next++]
+      const ranges = words.get(l)
+      return ranges ? markHtml(line, ranges) : line
+    })
+  })
 }
+
+/** Line indexes shown side by side (DIFF-01): removed lines on the left, facing the added ones. */
+function splitRows(lines: DiffLine[]): [number | null, number | null][] {
+  const rows: [number | null, number | null][] = []
+  let i = 0
+  while (i < lines.length) {
+    if (lines[i].type === 'context') {
+      rows.push([i, i])
+      i++
+      continue
+    }
+    const dels: number[] = []
+    const adds: number[] = []
+    while (i < lines.length && lines[i].type === 'del') dels.push(i++)
+    while (i < lines.length && lines[i].type === 'add') adds.push(i++)
+    for (let k = 0; k < Math.max(dels.length, adds.length); k++)
+      rows.push([dels[k] ?? null, adds[k] ?? null])
+  }
+  return rows
+}
+
+const shortRev = (rev: string): string => (/^[0-9a-f]{40,64}$/i.test(rev) ? rev.slice(0, 7) : rev)
+
+function sourceLabel(source: DiffSource): string {
+  switch (source.kind) {
+    case 'commit':
+      return `commit ${source.hash.slice(0, 7)}`
+    case 'compare':
+      return `${shortRev(source.from)} → ${shortRev(source.to)}`
+    case 'untracked':
+      return 'new file'
+    default:
+      return source.kind
+  }
+}
+
+const isImagePath = (path: string): boolean =>
+  /\.(png|jpe?g|gif|webp|bmp|ico|svg|avif)$/i.test(path)
+
+const CONTEXT_CHOICES = [0, 1, 3, 5, 10, 25]
+/** Context large enough to include every line of the file (DIFF-05) */
+const WHOLE_FILE = 1_000_000
 
 type Selection = Map<number, Set<number>>
 
@@ -37,11 +96,17 @@ export default function DiffView({
 }): React.JSX.Element {
   const openDiff = useApp((s) => s.openDiff)
   const inspectFile = useApp((s) => s.inspectFile)
+  const layout = useSettings((s) => s.diffLayout)
+  const wrap = useSettings((s) => s.diffWrap)
+  const ignoreWhitespace = useSettings((s) => s.diffIgnoreWhitespace)
+  const contextSetting = useSettings((s) => s.diffContext)
+  const fullFile = useSettings((s) => s.diffFullFile)
   const repo = snapshot.path
   const { source } = target
-  const key = JSON.stringify(target)
+  const context = fullFile ? WHOLE_FILE : contextSetting
+  const key = JSON.stringify([target, ignoreWhitespace, context])
   // Working tree diffs change as files are staged or edited: reload with every status update
-  const reloadToken = source.kind === 'commit' ? null : snapshot.status
+  const reloadToken = source.kind === 'commit' || source.kind === 'compare' ? null : snapshot.status
 
   const [loaded, setLoaded] = useState<LoadedDiff | null>(null)
   const [selection, setSelection] = useState<{ diff: FileDiff | null; lines: Selection }>({
@@ -52,13 +117,15 @@ export default function DiffView({
 
   useEffect(() => {
     let cancelled = false
-    void window.api.op(repo, 'diff', source, target.path, target.oldPath).then((result) => {
-      if (!cancelled) setLoaded({ key, result })
-    })
+    void window.api
+      .op(repo, 'diff', source, target.path, target.oldPath, { ignoreWhitespace, context })
+      .then((result) => {
+        if (!cancelled) setLoaded({ key, result })
+      })
     return () => {
       cancelled = true
     }
-    // reloadToken is a deliberate trigger; source/path are covered by key
+    // reloadToken is a deliberate trigger; source, path and options are covered by key
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repo, key, reloadToken])
 
@@ -79,12 +146,16 @@ export default function DiffView({
 
   const editable =
     source.kind === 'unstaged' || source.kind === 'staged' || source.kind === 'untracked'
-  const lineLevel =
+  const partial =
     !!diff &&
     !diff.binary &&
     !diff.change &&
     !diff.conflicted &&
     (source.kind === 'unstaged' || source.kind === 'staged')
+  // A patch built without the whitespace changes or without context would not apply cleanly
+  const patchable = !ignoreWhitespace && context > 0
+  const lineLevel = partial && patchable
+  const image = !!diff?.binary && (isImagePath(target.path) || isImagePath(target.oldPath ?? ''))
 
   const file: FileChange = {
     path: target.path,
@@ -140,11 +211,60 @@ export default function DiffView({
     if (patch) await run(repo, 'applyPatch', patch, action !== 'discard', reverse)
   }
 
+  /** One line of a hunk; in the split layout each side shows only its own line number. */
+  const renderLine = (h: number, l: number | null, side?: 'left' | 'right'): React.ReactNode => {
+    if (l === null) return <div key={side} className="diff-line empty" />
+    const line = diff!.hunks[h].lines[l]
+    return (
+      <div
+        key={side ?? l}
+        className={`diff-line ${line.type}${selected.get(h)?.has(l) ? ' selected' : ''}${
+          lineLevel && line.type !== 'context' ? ' selectable' : ''
+        }`}
+        onMouseDown={(e) => {
+          if (line.type === 'context') return
+          e.preventDefault()
+          toggleLine(h, l, e.shiftKey)
+        }}
+      >
+        {side !== 'right' && <span className="diff-no">{line.oldNo ?? ''}</span>}
+        {side !== 'left' && <span className="diff-no">{line.newNo ?? ''}</span>}
+        <span className="diff-marker">
+          {line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' '}
+        </span>
+        <span
+          className="diff-code"
+          dangerouslySetInnerHTML={{ __html: highlighted[h][l] || ' ' }}
+        />
+        {line.noNewline && (
+          <span className="diff-eof" title="No newline at end of file">
+            ⏎̸
+          </span>
+        )}
+      </div>
+    )
+  }
+
   let body: React.ReactNode
   if (!loaded || loaded.key !== key) body = <div className="center-message">Loading…</div>
   else if (!loaded.result.ok) body = <div className="banner-error">{loaded.result.error}</div>
+  else if (image)
+    body = (
+      <ImageDiff
+        repo={repo}
+        source={source}
+        path={target.path}
+        oldPath={target.oldPath}
+        reloadToken={reloadToken}
+      />
+    )
   else if (diff!.binary) body = <div className="center-message">Binary file</div>
-  else if (diff!.hunks.length === 0) body = <div className="center-message">No changes</div>
+  else if (diff!.hunks.length === 0)
+    body = (
+      <div className="center-message">
+        {ignoreWhitespace ? 'Only whitespace changed' : 'No changes'}
+      </div>
+    )
   else {
     body = diff!.hunks.map((hunk, h) => {
       const hunkSelection = selected.get(h)
@@ -152,7 +272,7 @@ export default function DiffView({
       const unit = count ? 'lines' : 'hunk'
       const suffix = count ? ` (${count})` : ''
       return (
-        <div key={h} className="hunk">
+        <div key={h} className={`hunk${layout === 'split' ? ' split' : ''}`}>
           <div className="hunk-header">
             <span className="mono">{hunk.header}</span>
             {editable && lineLevel && (
@@ -195,45 +315,18 @@ export default function DiffView({
               </span>
             )}
           </div>
-          {hunk.lines.map((line, l) => (
-            <div
-              key={l}
-              className={`diff-line ${line.type}${hunkSelection?.has(l) ? ' selected' : ''}${
-                lineLevel && line.type !== 'context' ? ' selectable' : ''
-              }`}
-              onMouseDown={(e) => {
-                if (line.type === 'context') return
-                e.preventDefault()
-                toggleLine(h, l, e.shiftKey)
-              }}
-            >
-              <span className="diff-no">{line.oldNo ?? ''}</span>
-              <span className="diff-no">{line.newNo ?? ''}</span>
-              <span className="diff-marker">
-                {line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' '}
-              </span>
-              <span
-                className="diff-code"
-                dangerouslySetInnerHTML={{ __html: highlighted[h][l] || ' ' }}
-              />
-              {line.noNewline && (
-                <span className="diff-eof" title="No newline at end of file">
-                  ⏎̸
-                </span>
-              )}
-            </div>
-          ))}
+          {layout === 'split'
+            ? splitRows(hunk.lines).map(([left, right], r) => (
+                <div key={r} className="split-row">
+                  {renderLine(h, left, 'left')}
+                  {renderLine(h, right, 'right')}
+                </div>
+              ))
+            : hunk.lines.map((_, l) => renderLine(h, l))}
         </div>
       )
     })
   }
-
-  const sourceLabel =
-    source.kind === 'commit'
-      ? `commit ${source.hash.slice(0, 7)}`
-      : source.kind === 'untracked'
-        ? 'new file'
-        : source.kind
 
   return (
     <div className="diff-view">
@@ -244,7 +337,7 @@ export default function DiffView({
           )}
           {target.path}
         </span>
-        <span className="diff-source">{sourceLabel}</span>
+        <span className="diff-source">{sourceLabel(source)}</span>
         <span className="toolbar-spacer" />
         {diff?.conflicted && (
           <>
@@ -307,19 +400,21 @@ export default function DiffView({
             >
               <History size={14} /> History
             </button>
-            <button
-              className="btn"
-              title="Who last changed each line"
-              onClick={() =>
-                inspectFile({
-                  path: target.path,
-                  mode: 'blame',
-                  rev: source.kind === 'commit' ? source.hash : null
-                })
-              }
-            >
-              <ScanText size={14} /> Blame
-            </button>
+            {source.kind !== 'compare' && (
+              <button
+                className="btn"
+                title="Who last changed each line"
+                onClick={() =>
+                  inspectFile({
+                    path: target.path,
+                    mode: 'blame',
+                    rev: source.kind === 'commit' ? source.hash : null
+                  })
+                }
+              >
+                <ScanText size={14} /> Blame
+              </button>
+            )}
           </>
         )}
         <button
@@ -330,8 +425,71 @@ export default function DiffView({
           <X size={18} />
         </button>
       </div>
+      {diff && !diff.binary && (
+        <div className="diff-options">
+          <span className="segmented">
+            {(['unified', 'split'] as const).map((value) => (
+              <button
+                key={value}
+                className={layout === value ? 'active' : ''}
+                onClick={() => updateSettings({ diffLayout: value })}
+              >
+                {value === 'unified' ? 'Unified' : 'Split'}
+              </button>
+            ))}
+          </span>
+          <label title="Show every line of the file, not only the changed parts">
+            <input
+              type="checkbox"
+              checked={fullFile}
+              onChange={(e) => updateSettings({ diffFullFile: e.target.checked })}
+            />
+            Whole file
+          </label>
+          <label title="Unchanged lines shown around each change">
+            Context
+            <select
+              value={contextSetting}
+              disabled={fullFile}
+              onChange={(e) =>
+                updateSettings({ diffContext: Math.min(DIFF_CONTEXT_MAX, Number(e.target.value)) })
+              }
+            >
+              {[...new Set([...CONTEXT_CHOICES, contextSetting])]
+                .sort((a, b) => a - b)
+                .map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={ignoreWhitespace}
+              onChange={(e) => updateSettings({ diffIgnoreWhitespace: e.target.checked })}
+            />
+            Ignore whitespace
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={wrap}
+              onChange={(e) => updateSettings({ diffWrap: e.target.checked })}
+            />
+            Wrap lines
+          </label>
+        </div>
+      )}
       {lineLevel && (
         <div className="diff-hint">Click lines to select them, Shift+click to select a range.</div>
+      )}
+      {partial && !patchable && (
+        <div className="diff-hint">
+          To stage hunks or lines,{' '}
+          {ignoreWhitespace ? 'show whitespace changes' : 'set the context to at least 1 line'}.
+        </div>
       )}
       {diff?.conflicted && (
         <div className="diff-hint conflict-hint">
@@ -339,7 +497,7 @@ export default function DiffView({
           resolved, or keep one side.
         </div>
       )}
-      <div className="diff-body">{body}</div>
+      <div className={`diff-body${wrap ? ' wrap' : ''}`}>{body}</div>
     </div>
   )
 }

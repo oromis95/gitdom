@@ -134,6 +134,21 @@ export type DiffSource =
   | { kind: 'untracked' }
   | { kind: 'staged' }
   | { kind: 'commit'; hash: string }
+  /** Any two revisions (commits, branches, tags), from `from` to `to` (DIFF-08) */
+  | { kind: 'compare'; from: string; to: string }
+
+/** How a diff is computed (DIFF-04, DIFF-05). */
+export interface DiffOptions {
+  ignoreWhitespace?: boolean
+  /** Lines of context around changes; a huge value shows the whole file */
+  context?: number
+}
+
+/** The two versions of an image, as data URLs; null where the file doesn't exist (DIFF-06). */
+export interface ImagePair {
+  before: string | null
+  after: string | null
+}
 
 /** A commit in the history of a file, with the file's path in that commit (renames change it). */
 export interface FileRevision extends Commit {
