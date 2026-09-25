@@ -1,5 +1,7 @@
-appId: com.electron.app
-productName: gitdom
+appId: com.gitdom.app
+productName: GitDom
+# The Electron already in node_modules: no download, which the corporate network makes unreliable
+electronDist: node_modules/electron/dist
 directories:
   buildResources: build
 files:
@@ -9,8 +11,11 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{docs/*,LICENSE}'
 asarUnpack:
   - resources/**
+  # The terminal's native module and the console helpers it starts must be real files
+  - node_modules/@lydell/node-pty*/**
 win:
   executableName: gitdom
 nsis:
