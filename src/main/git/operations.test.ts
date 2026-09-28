@@ -1002,3 +1002,34 @@ describe.skipIf(!sshKeygen)('signing', () => {
     ).rejects.toThrow('Invalid signing key')
   })
 })
+
+describe('hover previews', () => {
+  it('previews a commit with its body and line counts, and a merge against its first parent', async () => {
+    await commitFile('a.txt', 'one\ntwo\n', 'first')
+    write('a.txt', 'one\n2\nthree\n')
+    write('b.txt', 'b\n')
+    await runOp(repo, 'stage', [['a.txt', 'b.txt']])
+    await runOp(repo, 'commit', ['second\n\nwhy it changed', false])
+    const preview = await runOp(repo, 'commitPreview', [git(repo, 'rev-parse', 'HEAD')])
+    expect(preview.body).toBe('why it changed')
+    expect(preview.files).toEqual([
+      { status: 'M', path: 'a.txt', additions: 2, deletions: 1 },
+      { status: 'A', path: 'b.txt', additions: 1, deletions: 0 }
+    ])
+    const root = await runOp(repo, 'commitPreview', [git(repo, 'rev-parse', 'HEAD~1')])
+    expect(root.files).toEqual([{ status: 'A', path: 'a.txt', additions: 2, deletions: 0 }])
+  })
+
+  it('reads annotated tags, and null for lightweight ones', async () => {
+    await commitFile('a.txt', '1\n', 'one')
+    git(repo, 'tag', '-a', 'v1', '-m', 'Release one', '-m', 'Notes')
+    git(repo, 'tag', 'light')
+    expect(await runOp(repo, 'tagInfo', ['v1'])).toMatchObject({
+      tagger: 'T',
+      subject: 'Release one',
+      body: 'Notes'
+    })
+    expect(await runOp(repo, 'tagInfo', ['light'])).toBeNull()
+    await expect(runOp(repo, 'tagInfo', ['-x'])).rejects.toThrow('Invalid tag name')
+  })
+})

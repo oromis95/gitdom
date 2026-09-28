@@ -2,6 +2,7 @@ import type {
   Backup,
   Blame,
   CommitDetail,
+  CommitPreview,
   DiffOptions,
   DiffSource,
   FileChange,
@@ -12,6 +13,7 @@ import type {
   ReflogEntry,
   RepoSnapshot,
   Signing,
+  TagInfo,
   WorkingTreeStatus
 } from './types'
 
@@ -89,6 +91,10 @@ export interface RepoOps {
    */
   searchCommits(field: 'message' | 'file', text: string, filter?: GraphFilter): string[]
   commitDetail(hash: string): CommitDetail
+  /** Message body and changed files with line counts, for the hover cards (UI-13). */
+  commitPreview(hash: string): CommitPreview
+  /** Message and tagger of an annotated tag, null for a lightweight one. */
+  tagInfo(name: string): TagInfo | null
   /** Commits that changed a file, newest first, following renames. */
   fileHistory(path: string): FileRevision[]
   /** Who last changed each line of a file, at a commit or in the working tree (null). */

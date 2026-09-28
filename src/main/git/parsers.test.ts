@@ -13,7 +13,8 @@ import {
   parseSigning,
   parseRemotes,
   parseStatus,
-  parseSubmodules
+  parseSubmodules,
+  withNumstat
 } from './parsers'
 
 const F = '\x1f'
@@ -316,6 +317,18 @@ describe('parseReflog', () => {
         message: 'Created from HEAD',
         subject: 'two'
       }
+    ])
+  })
+})
+
+describe('withNumstat', () => {
+  it('adds the line counts, following renames and binary files', () => {
+    const files = parseNameStatus('M\0a.txt\0R090\0old.txt\0new.txt\0A\0img.png\0')
+    const numstat = '3\t1\ta.txt\0' + '2\t0\t\0old.txt\0new.txt\0' + '-\t-\timg.png\0'
+    expect(withNumstat(files, numstat)).toEqual([
+      { status: 'M', path: 'a.txt', additions: 3, deletions: 1 },
+      { status: 'R', oldPath: 'old.txt', path: 'new.txt', additions: 2, deletions: 0 },
+      { status: 'A', path: 'img.png', additions: null, deletions: null }
     ])
   })
 })

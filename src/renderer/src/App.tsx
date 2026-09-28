@@ -19,6 +19,7 @@ import DiffView from './components/DiffView'
 import ConflictView from './components/ConflictView'
 import FileInspector from './components/FileInspector'
 import Overlays from './components/Overlays'
+import { HoverLayer } from './components/HoverCards'
 import TerminalDock from './components/TerminalDock'
 import ActivityDock from './components/ActivityDock'
 import RecoveryView from './components/RecoveryView'
@@ -275,6 +276,7 @@ function App(): React.JSX.Element {
         <span>GitDom {__APP_VERSION__}</span>
       </div>
       <Overlays />
+      <HoverLayer />
       <Updates />
       {splash && <Splash onDone={() => setSplash(false)} />}
     </div>

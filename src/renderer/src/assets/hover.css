@@ -1,0 +1,205 @@
+/* Hover cards (UI-13): details beside the hovered author, commit, branch or stash */
+.hover-card {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 900;
+  width: 340px;
+  max-height: calc(100vh - 16px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.4;
+  pointer-events: none;
+  animation: pop-in var(--fast) var(--ease-out);
+  transform-origin: top left;
+}
+
+.hover-head,
+.hover-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hover-who {
+  flex: 1;
+  min-width: 0;
+}
+
+.hover-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hover-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.hover-avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 600;
+  object-fit: cover;
+}
+
+.hover-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.hover-hash,
+.hover-when {
+  flex: none;
+  margin-left: auto;
+}
+
+.hover-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hover-subject {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.hover-body {
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hover-note,
+.hover-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+.hover-hint {
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.hover-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hover-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.hover-ref-tag {
+  color: var(--orange);
+}
+
+.hover-tag,
+.hover-tip {
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.hover-files {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.hover-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hover-file-status {
+  flex: none;
+  width: 12px;
+  font-weight: 700;
+  font-size: 11px;
+  text-align: center;
+}
+
+.hover-file-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* The start of a long path is cut, so the file name stays visible */
+  direction: rtl;
+  text-align: left;
+}
+
+.hover-counts {
+  flex: none;
+  display: flex;
+  gap: 5px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 11px;
+}
+
+.hover-add {
+  color: var(--green);
+}
+
+.hover-del {
+  color: var(--red);
+}
+
+.hover-stats {
+  margin-top: 3px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+/* The circle of a commit node in the graph: hovering it shows the author */
+.graph-node-hover {
+  position: absolute;
+  border-radius: 50%;
+}

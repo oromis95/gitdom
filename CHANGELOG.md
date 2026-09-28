@@ -2,6 +2,17 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## 0.7.2 — 2026-09-28
+
+### Added
+
+- **Hover cards**: rest the mouse on something in the graph or the sidebar to see its details (they can be turned off in Preferences)
+  - **Authors** (the graph node, the author column, the commit details): picture, name, email, how many commits they made, and when
+  - **Commits** (the message): the full message, the branches and tags on it, and the changed files with added and removed lines
+  - **Branches and tags**: the upstream branch with the commits to push or pull, the latest commit, and the message of annotated tags
+  - **Stashes**: message, date, the commit they were made on, and their files
+- Resting the mouse on a date shows how long ago it was
+
 ## 0.7.1 — 2026-09-25
 
 ### Added

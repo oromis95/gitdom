@@ -34,7 +34,10 @@ import {
 } from '../store'
 import { notify, openMenu, type MenuItem } from '../ui'
 import { roomBeside, updateSettings } from '../settings'
+import { hoverCard } from '../hover'
+import { relativeTime } from '../time'
 import ResizeHandle from './ResizeHandle'
+import { AuthorCard } from './HoverCards'
 import {
   abortOperation,
   conflictMenu,
@@ -939,10 +942,23 @@ function CommitPanel({ repoPath, hash }: { repoPath: string; hash: string }): Re
         </dd>
         <dt>author</dt>
         <dd>
-          {detail.authorName} &lt;{detail.authorEmail}&gt;
+          <span
+            {...(snapshot &&
+              hoverCard(() => (
+                <AuthorCard
+                  snapshot={snapshot}
+                  name={detail.authorName}
+                  email={detail.authorEmail}
+                />
+              )))}
+          >
+            {detail.authorName} &lt;{detail.authorEmail}&gt;
+          </span>
         </dd>
         <dt>authored</dt>
-        <dd>{dateFormat.format(detail.authorDate * 1000)}</dd>
+        <dd title={relativeTime(detail.authorDate)}>
+          {dateFormat.format(detail.authorDate * 1000)}
+        </dd>
         {(detail.committerName !== detail.authorName ||
           detail.committerDate !== detail.authorDate) && (
           <>

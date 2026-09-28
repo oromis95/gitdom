@@ -6,6 +6,7 @@ import type {
   Commit,
   FileChange,
   FileRevision,
+  FileStat,
   FileStatusCode,
   Identity,
   Ref,
@@ -173,6 +174,30 @@ export function parseNameStatus(output: string): FileChange[] {
     }
   }
   return files
+}
+
+/**
+ * Adds the line counts of `git diff --numstat -z` to the files of `--name-status -z`. Renames
+ * are written "added<TAB>deleted<TAB>" then the old and new paths as separate fields.
+ */
+export function withNumstat(files: FileChange[], numstat: string): FileStat[] {
+  const counts = new Map<string, [number | null, number | null]>()
+  const parts = numstat.split('\0')
+  const count = (value: string): number | null => (value === '-' ? null : Number(value))
+  for (let i = 0; i < parts.length; i++) {
+    const match = /^(-|\d+)\t(-|\d+)\t([^]*)$/.exec(parts[i])
+    if (!match) continue
+    let path = match[3]
+    if (path === '') {
+      path = parts[i + 2] ?? ''
+      i += 2
+    }
+    counts.set(path, [count(match[1]), count(match[2])])
+  }
+  return files.map((f) => {
+    const [additions, deletions] = counts.get(f.path) ?? [null, null]
+    return { ...f, additions, deletions }
+  })
 }
 
 /** Parses `git remote -v` ("origin\thttps://… (fetch)"). */

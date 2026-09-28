@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 0.7.1 pubblicata il 2026-09-25 (Step 1–6 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 0.7.2 pubblicata il 2026-09-28 (Step 1–6 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -99,6 +99,7 @@ Serve a fidarsi dell'app anche nelle operazioni rischiose.
 - **Modifica del messaggio (reword)** direttamente dal pannello dettagli (DETAIL-04)
 - Template del messaggio e suggerimenti dai commit precedenti (COMMIT-10)
 - Stash con i file untracked, stash solo dei file selezionati, auto-stash prima di checkout, pull e rebase (STASH-05, STASH-06)
+- v0.7.2: **schede al passaggio del mouse** su autori, commit (con i file modificati), branch, tag e stash, disattivabili dalle Preferenze (UI-13)
 
 ## Step 7 — v0.8: Worktree e workspace
 

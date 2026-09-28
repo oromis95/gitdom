@@ -206,6 +206,7 @@ Ogni requisito ha un ID (`AREA-NN`) per poterlo tracciare in issue, commit e tes
 | UI-10 | Barra menu File / Edit / View / Help                                                                               | P0                 |
 | UI-11 | Layout a 3 pannelli ridimensionabili con persistenza dimensioni                                                    | P0                 |
 | UI-12 | Internazionalizzazione (IT / EN)                                                                                   | P2                 |
+| UI-13 | Schede al passaggio del mouse: autore, commit con file modificati, branch/tag, stash                               | P1                 |
 
 ## 14. Autenticazione e profili (AUTH)
 

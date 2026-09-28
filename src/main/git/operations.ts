@@ -17,7 +17,8 @@ import {
   parseBlame,
   parseFileLog,
   parseNameStatus,
-  parseReflog
+  parseReflog,
+  withNumstat
 } from './parsers'
 import type { DiffOptions, FileDiff, ImagePair } from '../../shared/types'
 import { GitError, runGit, tryGit } from './exec'
@@ -418,6 +419,36 @@ const ops: OpImpl = {
   },
 
   commitDetail: (repo, hash) => loadCommitDetail(repo, hash),
+
+  async commitPreview(repo, hash) {
+    assertHash(hash)
+    const [header, body] = (await runGit(repo, ['show', '-s', '--format=%P%x1f%b', hash])).split(
+      '\x1f'
+    )
+    const parents = header.trim().split(' ').filter(Boolean)
+    // Merges and stashes are shown against their first parent, like the commit detail
+    const diff = (format: string): Promise<string> =>
+      runGit(
+        repo,
+        parents.length > 1
+          ? ['diff', '--no-ext-diff', format, '-z', '-M', parents[0], hash]
+          : ['diff-tree', '--no-commit-id', '-r', '--root', format, '-z', '-M', hash]
+      )
+    const [names, numbers] = await Promise.all([diff('--name-status'), diff('--numstat')])
+    return { body: body.trim(), files: withNumstat(parseNameStatus(names), numbers) }
+  },
+
+  async tagInfo(repo, name) {
+    await assertTagName(repo, name)
+    const output = await runGit(repo, [
+      'for-each-ref',
+      '--format=%(objecttype)%1f%(taggername)%1f%(taggeremail:trim)%1f%(taggerdate:unix)%1f%(contents:subject)%1f%(contents:body)',
+      `refs/tags/${name}`
+    ])
+    const [type, tagger, email, date, subject, body] = output.split('\x1f')
+    if (type !== 'tag') return null
+    return { tagger, email, date: Number(date), subject, body: (body ?? '').trim() }
+  },
 
   async fileHistory(repo, path) {
     assertArg(path, 'path')
@@ -1083,6 +1114,8 @@ const READ_ONLY = new Set<OpName>([
   'status',
   'diff',
   'commitDetail',
+  'commitPreview',
+  'tagInfo',
   'fileHistory',
   'blame',
   'lastCommitMessage',

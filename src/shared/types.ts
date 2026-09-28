@@ -103,6 +103,29 @@ export interface FileChange {
   status: FileStatusCode
 }
 
+/** A changed file with its line counts: null for binary files. */
+export interface FileStat extends FileChange {
+  additions: number | null
+  deletions: number | null
+}
+
+/** What a hover card shows of a commit or a stash (UI-13). */
+export interface CommitPreview {
+  body: string
+  /** Changes against the first parent */
+  files: FileStat[]
+}
+
+/** The message and author of an annotated tag. */
+export interface TagInfo {
+  tagger: string
+  email: string
+  /** Unix timestamp in seconds */
+  date: number
+  subject: string
+  body: string
+}
+
 export interface WorkingTreeStatus {
   staged: FileChange[]
   unstaged: FileChange[]

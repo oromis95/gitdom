@@ -33,6 +33,8 @@ export interface Settings extends ToolSettings {
   graphShowDate: boolean
   /** Author pictures from Gravatar in the graph nodes, initials otherwise (GRAPH-04) */
   graphAvatars: boolean
+  /** Details of authors, commits, branches and stashes when resting the mouse on them (UI-13) */
+  hoverCards: boolean
   /** Look for a newer GitDom release on GitHub at startup */
   checkUpdates: boolean
   /** Stash and reapply local changes in the way of a checkout without asking (STASH-06) */
@@ -61,6 +63,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graphShowAuthor: true,
   graphShowDate: true,
   graphAvatars: true,
+  hoverCards: true,
   checkUpdates: true,
   autoStash: false,
   gitPath: '',

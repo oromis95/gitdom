@@ -208,6 +208,16 @@ function Appearance({ s }: { s: Settings }): React.JSX.Element {
           Show author pictures in the graph
         </label>
       </Row>
+      <Row label="Hover cards" hint="Appear after a short pause and never take the mouse">
+        <label className="modal-check">
+          <input
+            type="checkbox"
+            checked={s.hoverCards}
+            onChange={(e) => updateSettings({ hoverCards: e.target.checked })}
+          />
+          Show details when resting the mouse on authors, commits, branches and stashes
+        </label>
+      </Row>
       <datalist id="pref-ui-fonts">
         {UI_FONTS.map((f) => (
           <option key={f} value={f} />

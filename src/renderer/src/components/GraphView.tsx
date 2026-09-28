@@ -13,9 +13,12 @@ import {
   Tag,
   X
 } from 'lucide-react'
-import type { Commit, RepoSnapshot } from '../../../shared/types'
+import type { Commit, RepoSnapshot, Stash } from '../../../shared/types'
 import { computeLayout, type LayoutInput } from '../graph/layout'
-import { ROW_HEIGHT, drawGraph, graphWidth, laneX, type NodeInfo } from '../graph/draw'
+import { NODE_RADIUS, ROW_HEIGHT, drawGraph, graphWidth, laneX, type NodeInfo } from '../graph/draw'
+import { hoverCard } from '../hover'
+import { describeDate } from '../time'
+import { AuthorCard, CommitCard, RefCard, StashCard } from './HoverCards'
 import { laneColor } from '../graph/colors'
 import { buildRows, type GraphItem } from '../graph/rows'
 import { markMatches, matchesCommit, nextMatch, searchKey, type SearchMode } from '../graph/search'
@@ -128,15 +131,34 @@ function RefPill({
   const isBranch = ref?.type === 'local' || ref?.type === 'remote'
   const dragging = (e: React.DragEvent): boolean =>
     isBranch && e.dataTransfer.types.includes(REF_MIME)
+  const card = hoverCard(() =>
+    ref ? (
+      <RefCard
+        snapshot={snapshot}
+        refInfo={ref}
+        hint={
+          isBranch
+            ? `${label.current ? '' : 'Double-click to check out · '}Drag onto another branch to merge or rebase`
+            : undefined
+        }
+      />
+    ) : null
+  )
 
   return (
     <div
       className={`ref-pill${over ? ' drop-target' : ''}`}
       style={{ background: color }}
-      title={isBranch ? `${label.name}\nDrag onto another branch to merge or rebase` : label.name}
+      title={ref ? undefined : label.name}
       draggable={isBranch}
-      onMouseEnter={() => onHover(true)}
-      onMouseLeave={() => onHover(false)}
+      onMouseEnter={(e) => {
+        onHover(true)
+        card.onMouseEnter(e)
+      }}
+      onMouseLeave={() => {
+        onHover(false)
+        card.onMouseLeave()
+      }}
       onDragStart={(e) => {
         if (!ref) return
         e.dataTransfer.setData(REF_MIME, ref.fullName)
@@ -502,6 +524,14 @@ export default function GraphView({
     Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN
   )
   const visible: React.JSX.Element[] = []
+  const commitCard = (commit: Commit): ReturnType<typeof hoverCard> =>
+    hoverCard(() => <CommitCard snapshot={snapshot} commit={commit} />)
+  const authorCard = (commit: Commit): ReturnType<typeof hoverCard> =>
+    hoverCard(() => (
+      <AuthorCard snapshot={snapshot} name={commit.authorName} email={commit.authorEmail} />
+    ))
+  const stashCard = (stash: Stash): ReturnType<typeof hoverCard> =>
+    hoverCard(() => <StashCard snapshot={snapshot} stash={stash} />)
 
   for (let i = first; i < last; i++) {
     const row = rows[i]
@@ -554,7 +584,7 @@ export default function GraphView({
           )}
           {settings.graphShowRefs && row.kind === 'stash' && (
             <>
-              <div className="ref-pill stash-pill" title={row.stash.message}>
+              <div className="ref-pill stash-pill" {...stashCard(row.stash)}>
                 <Archive size={12} />
                 <span>{row.stash.selector}</span>
               </div>
@@ -563,6 +593,18 @@ export default function GraphView({
           )}
         </div>
         <div style={{ width: width - laneX(lane), flexShrink: 0 }} />
+        {row.kind === 'commit' && (
+          <div
+            className="graph-node-hover"
+            style={{
+              left: refsWidth + laneX(lane) - NODE_RADIUS,
+              top: ROW_HEIGHT / 2 - NODE_RADIUS,
+              width: NODE_RADIUS * 2,
+              height: NODE_RADIUS * 2
+            }}
+            {...authorCard(row.commit)}
+          />
+        )}
         {row.kind === 'wip' ? (
           <div className="cell-message wip-message">
             {'// WIP'} &nbsp;
@@ -572,7 +614,7 @@ export default function GraphView({
           <>
             <div
               className={`cell-message${row.kind === 'stash' ? ' stash-message' : ''}`}
-              title={row.kind === 'commit' ? row.commit.subject : row.stash.message}
+              {...(row.kind === 'commit' ? commitCard(row.commit) : stashCard(row.stash))}
             >
               <Marked
                 text={row.kind === 'commit' ? row.commit.subject : row.stash.message}
@@ -588,12 +630,20 @@ export default function GraphView({
               </div>
             )}
             {settings.graphShowAuthor && (
-              <div className="cell-author" style={{ width: settings.graphAuthorWidth }}>
+              <div
+                className="cell-author"
+                style={{ width: settings.graphAuthorWidth }}
+                {...(row.kind === 'commit' ? authorCard(row.commit) : {})}
+              >
                 {row.kind === 'commit' && <Marked text={row.commit.authorName} mark={commitKey} />}
               </div>
             )}
             {settings.graphShowDate && (
-              <div className="cell-date" style={{ width: settings.graphDateWidth }}>
+              <div
+                className="cell-date"
+                style={{ width: settings.graphDateWidth }}
+                title={describeDate(row.kind === 'commit' ? row.commit.authorDate : row.stash.date)}
+              >
                 {dateFormat.format(
                   (row.kind === 'commit' ? row.commit.authorDate : row.stash.date) * 1000
                 )}

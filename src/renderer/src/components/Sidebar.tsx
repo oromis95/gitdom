@@ -23,7 +23,9 @@ import { useApp } from '../store'
 import { openMenu } from '../ui'
 import * as actions from '../actions'
 import { roomBeside, updateSettings } from '../settings'
+import { hoverCard } from '../hover'
 import ResizeHandle from './ResizeHandle'
+import { RefCard, StashCard } from './HoverCards'
 
 const SUBMODULE_STATES: Record<SubmoduleState, string> = {
   uninitialized: 'not initialized',
@@ -121,7 +123,13 @@ function Tree({
             key={child.name}
             className={`tree-item${isCurrent ? ' current' : ''}${hidden ? ' hidden-in-graph' : ''}`}
             style={pad}
-            title={ref.name}
+            {...hoverCard(() => (
+              <RefCard
+                snapshot={snapshot}
+                refInfo={ref}
+                hint={ref.type === 'tag' || isCurrent ? undefined : 'Double-click to check out'}
+              />
+            ))}
             onClick={() => select(ref.hash, true)}
             onDoubleClick={() => {
               if (ref.type === 'local' && !isCurrent)
@@ -283,7 +291,7 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
             <button
               key={s.selector}
               className="tree-item"
-              title={s.message}
+              {...hoverCard(() => <StashCard snapshot={snapshot} stash={s} />)}
               onClick={() => select(s.hash, true)}
               onContextMenu={(e) => openMenu(e, actions.stashMenu(snapshot, s))}
             >

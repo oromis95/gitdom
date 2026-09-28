@@ -5,7 +5,7 @@ import { segmentKey, type ChainHighlight } from './highlight'
 export const ROW_HEIGHT = 36
 export const LANE_WIDTH = 22
 export const GRAPH_PADDING = 16
-const NODE_RADIUS = 12
+export const NODE_RADIUS = 12
 const MERGE_RADIUS = 5
 const LINE_WIDTH = 2
 
