@@ -2,16 +2,19 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { basename, resolve } from 'path'
 import type {
+  Commit,
   CommitDetail,
   GraphFilter,
   HeadInfo,
   Identity,
   LfsInfo,
+  Ref,
   Signing,
   RepoOperation,
   RepoSnapshot,
   Submodule,
-  WorkingTreeStatus
+  WorkingTreeStatus,
+  Worktree
 } from '../../shared/types'
 import {
   FIELD,
@@ -34,14 +37,29 @@ import {
 } from './parsers'
 import { GitError, runGit, tryGit } from './exec'
 import { historyLabels } from './history'
+import { gitDirs } from './gitdir'
 
-/** Commits loaded per snapshot; incremental loading comes later (GRAPH-08). */
+/** Commits loaded at first, and per page as the graph scrolls down (GRAPH-08). */
+export const COMMIT_PAGE = 10000
+/** Commits searched by the graph search, beyond the loaded ones. */
 export const COMMIT_LIMIT = 10000
 
 const HASH_RE = /^[0-9a-f]{4,64}$/i
 
-/** Resolves the top-level directory of the repository containing `path`. */
-export async function resolveRepoRoot(path: string): Promise<string> {
+const roots = new Map<string, Promise<string>>()
+
+/** Resolves the top-level directory of the repository containing `path`; asked once per path. */
+export function resolveRepoRoot(path: string): Promise<string> {
+  let root = roots.get(path)
+  if (!root) {
+    root = findRepoRoot(path)
+    roots.set(path, root)
+    root.catch(() => roots.delete(path))
+  }
+  return root
+}
+
+async function findRepoRoot(path: string): Promise<string> {
   try {
     const root = await runGit(path, ['rev-parse', '--show-toplevel'])
     return root.trim()
@@ -55,7 +73,17 @@ export async function resolveRepoRoot(path: string): Promise<string> {
   }
 }
 
-async function readHead(repo: string): Promise<HeadInfo> {
+/** HEAD, read from its file: two git processes less on every refresh. */
+async function readHead(repo: string, refs: Ref[]): Promise<HeadInfo> {
+  const { gitDir } = await gitDirs(repo)
+  const head = (await readFile(resolve(gitDir, 'HEAD'), 'utf8').catch(() => '')).trim()
+  const symbolic = /^ref: refs\/heads\/(.+)$/.exec(head)
+  // Reftable repositories keep a placeholder there
+  if (symbolic && symbolic[1] !== '.invalid') {
+    const hash = refs.find((r) => r.fullName === `refs/heads/${symbolic[1]}`)?.hash ?? null
+    return { branch: symbolic[1], hash }
+  }
+  if (/^[0-9a-f]{40,64}$/.test(head)) return { branch: null, hash: head }
   const [branch, hash] = await Promise.all([
     tryGit(repo, ['symbolic-ref', '-q', '--short', 'HEAD']),
     tryGit(repo, ['rev-parse', '--verify', '-q', 'HEAD'])
@@ -71,7 +99,7 @@ export async function loadStatus(repo: string): Promise<WorkingTreeStatus> {
 
 /** Detects a merge/rebase/cherry-pick/revert left in progress, from the marker files in the git dir. */
 export async function readOperation(repo: string): Promise<RepoOperation | null> {
-  const gitDir = resolve(repo, (await runGit(repo, ['rev-parse', '--git-dir'])).trim())
+  const { gitDir } = await gitDirs(repo)
   const has = (name: string): boolean => existsSync(resolve(gitDir, name))
   if (has('rebase-merge') || has('rebase-apply')) return 'rebase'
   if (has('MERGE_HEAD')) return 'merge'
@@ -109,13 +137,35 @@ export async function loadIdentity(repo: string): Promise<Identity> {
   return parseIdentity(output ?? '')
 }
 
-export async function loadSigning(repo: string): Promise<Signing> {
+/** Identity and signing settings with one git process. */
+async function loadIdentityAndSigning(repo: string): Promise<[Identity, Signing]> {
   const output = await tryGit(repo, [
     'config',
+    '--show-scope',
     '--get-regexp',
-    '^(gpg\\.format|user\\.signingkey|commit\\.gpgsign|tag\\.gpgsign)$'
+    '^(user\\.(name|email|signingkey)|gpg\\.format|commit\\.gpgsign|tag\\.gpgsign)$'
   ])
-  return parseSigning(output ?? '')
+  const lines = (output ?? '').split('\n')
+  // parseSigning reads "key value" lines: drop the scope
+  const signing = lines.map((line) => line.slice(line.indexOf('\t') + 1)).join('\n')
+  return [parseIdentity(output ?? ''), parseSigning(signing)]
+}
+
+/** Stashes, when refs/stash exists: most repositories have none. */
+async function loadStashes(repo: string, refs: Promise<string>): Promise<string> {
+  if (!(await refs).split('\n').some((line) => line.startsWith(`refs/stash${FIELD}`))) return ''
+  return (await tryGit(repo, ['stash', 'list', `--format=${STASH_FORMAT}`])) ?? ''
+}
+
+/** Worktrees; without linked ones, the main one alone, without asking git. */
+async function loadWorktrees(repo: string, head: Promise<HeadInfo>): Promise<Worktree[]> {
+  const { commonDir } = await gitDirs(repo)
+  if (!existsSync(resolve(commonDir, 'worktrees'))) {
+    const { branch, hash } = await head
+    const main = { path: repo.replace(/\\/g, '/'), head: hash, branch, main: true, bare: false }
+    return [{ ...main, locked: null, prunable: null }]
+  }
+  return parseWorktrees((await tryGit(repo, ['worktree', 'list', '--porcelain'])) ?? '')
 }
 
 const SIGNING_PROGRAMS: Record<string, string> = {
@@ -156,10 +206,66 @@ export function logRevisions(filter?: GraphFilter): string[] {
   return ['--exclude=refs/stash', '--exclude=refs/gitdom/*', ...exclude, '--all']
 }
 
-export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<RepoSnapshot> {
+/** The graph's commits from `skip` on, newest first; `more` when there are older ones. */
+export async function loadCommits(
+  repo: string,
+  filter: GraphFilter | undefined,
+  skip: number,
+  count: number
+): Promise<{ commits: Commit[]; more: boolean }> {
+  // An empty repository has no refs, so log may fail: treat it as no commits
+  const log = await tryGit(repo, [
+    'log',
+    '--date-order',
+    `--skip=${Math.max(0, Math.floor(skip))}`,
+    `-n${Math.floor(count) + 1}`,
+    `--format=${LOG_FORMAT}`,
+    ...logRevisions(filter),
+    '--'
+  ])
+  const commits = parseLog(log ?? '')
+  const more = commits.length > count
+  if (more) commits.length = count
+  return { commits, more }
+}
+
+const commitGraphChecked = new Set<string>()
+
+/**
+ * Writes git's commit-graph file when a big repository lacks one (NFR-03): without it, sorting
+ * the history for the graph reads every commit, some seconds on a million of them. Git writes it
+ * itself only on gc. Once per repository and session, in the background.
+ */
+export async function ensureCommitGraph(repo: string): Promise<void> {
+  if (commitGraphChecked.has(repo)) return
+  commitGraphChecked.add(repo)
+  const [single, chain] = (
+    await runGit(repo, [
+      'rev-parse',
+      '--git-path',
+      'objects/info/commit-graph',
+      '--git-path',
+      'objects/info/commit-graphs/commit-graph-chain'
+    ])
+  )
+    .split('\n')
+    .map((p) => resolve(repo, p.trim()))
+  if (existsSync(single) || existsSync(chain)) return
+  await tryGit(repo, ['commit-graph', 'write', '--reachable'])
+}
+
+export async function loadSnapshot(
+  repo: string,
+  filter?: GraphFilter,
+  limit = COMMIT_PAGE
+): Promise<RepoSnapshot> {
+  // Starting git is slow on some machines: every process spared counts (NFR-02)
+  const refsOutput = runGit(repo, ['for-each-ref', `--format=${REF_FORMAT}`])
+  const parsedRefs = refsOutput.then(parseRefs)
+  const headInfo = parsedRefs.then((refs) => readHead(repo, refs))
   const [
     head,
-    log,
+    page,
     refs,
     stashes,
     remotes,
@@ -167,50 +273,38 @@ export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<
     operation,
     submodules,
     lfs,
-    identity,
-    signing,
-    worktrees
+    [identity, signing],
+    worktrees,
+    history
   ] = await Promise.all([
-    readHead(repo),
-    // An empty repository has no refs, so log may fail: treat it as no commits
-    tryGit(repo, [
-      'log',
-      '--date-order',
-      `-n${COMMIT_LIMIT + 1}`,
-      `--format=${LOG_FORMAT}`,
-      ...logRevisions(filter),
-      '--'
-    ]),
-    runGit(repo, ['for-each-ref', `--format=${REF_FORMAT}`]),
-    tryGit(repo, ['stash', 'list', `--format=${STASH_FORMAT}`]),
+    headInfo,
+    loadCommits(repo, filter, 0, Math.max(COMMIT_PAGE, limit)),
+    parsedRefs,
+    loadStashes(repo, refsOutput),
     runGit(repo, ['remote', '-v']),
     loadStatus(repo),
     readOperation(repo),
     loadSubmodules(repo),
     loadLfs(repo),
-    loadIdentity(repo),
-    loadSigning(repo),
-    tryGit(repo, ['worktree', 'list', '--porcelain'])
+    loadIdentityAndSigning(repo),
+    loadWorktrees(repo, headInfo),
+    historyLabels(repo)
   ])
-
-  const commits = parseLog(log ?? '')
-  const truncated = commits.length > COMMIT_LIMIT
-  if (truncated) commits.length = COMMIT_LIMIT
 
   return {
     path: repo,
     name: basename(repo),
     head,
-    commits,
-    refs: parseRefs(refs),
-    stashes: parseStashes(stashes ?? ''),
+    commits: page.commits,
+    refs,
+    stashes: parseStashes(stashes),
     remotes: parseRemotes(remotes),
     status,
     operation,
-    history: await historyLabels(repo),
-    truncated,
+    history,
+    truncated: page.more,
     submodules,
-    worktrees: parseWorktrees(worktrees ?? ''),
+    worktrees,
     lfs,
     identity,
     signing

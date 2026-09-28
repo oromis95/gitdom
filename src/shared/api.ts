@@ -1,6 +1,7 @@
 import type {
   Backup,
   Blame,
+  Commit,
   CommitDetail,
   CommitPreview,
   DiffOptions,
@@ -90,6 +91,8 @@ export interface RepoOps {
    * (GRAPH-17); author, subject and hash are matched in the renderer.
    */
   searchCommits(field: 'message' | 'file', text: string, filter?: GraphFilter): string[]
+  /** The next page of the graph's commits, from `skip` on (GRAPH-08). */
+  moreCommits(skip: number, filter?: GraphFilter): { commits: Commit[]; more: boolean }
   commitDetail(hash: string): CommitDetail
   /** Message body and changed files with line counts, for the hover cards (UI-13). */
   commitPreview(hash: string): CommitPreview
@@ -426,8 +429,11 @@ export type MenuCommand =
 export interface GitDomApi {
   /** Shows a folder picker; resolves null when cancelled. */
   pickRepository(): Promise<string | null>
-  /** Resolves the repository root containing `path` and loads its snapshot. */
-  openRepository(path: string, filter?: GraphFilter): Promise<Result<RepoSnapshot>>
+  /**
+   * Resolves the repository root containing `path` and loads its snapshot, with at least `limit`
+   * commits when the graph has loaded more pages.
+   */
+  openRepository(path: string, filter?: GraphFilter, limit?: number): Promise<Result<RepoSnapshot>>
   op<K extends OpName>(repoPath: string, name: K, ...args: OpArgs<K>): Promise<Result<OpResult<K>>>
   /** Replaces the set of repositories watched for changes on disk. */
   watch(repoPaths: string[]): void

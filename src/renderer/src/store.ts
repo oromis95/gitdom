@@ -22,6 +22,8 @@ export interface RepoTab {
   recovery?: RecoveryView
   /** Label of the long-running operation in progress (fetch, push…) */
   busy?: string
+  /** The next page of commits is being loaded (GRAPH-08) */
+  loadingMore?: boolean
   draft: CommitDraft
 }
 
@@ -103,6 +105,8 @@ interface AppState {
   refreshPath(path: string): Promise<void>
   /** Reloads only the working tree status: cheap, for file edits. */
   refreshStatus(path: string): Promise<void>
+  /** Appends the next page of commits to the graph, when there are older ones (GRAPH-08). */
+  loadMoreCommits(path: string): Promise<void>
   select(hash: string | null, scrollIntoView?: boolean): void
   openDiff(target: DiffTarget | null): void
   /** Lists the files changed between two revisions in the detail panel; selecting a commit ends it. */
@@ -147,6 +151,8 @@ export const useApp = create<AppState>((set, get) => {
   // A reload requested while one is running is queued, not dropped: the running one may miss the change
   const loading = new Set<string>()
   const pending = new Set<string>()
+  // Commits the graph has loaded per tab, beyond the first page: reloads keep them all
+  const limits = new Map<string, number>()
 
   const load = async (path: string): Promise<void> => {
     if (loading.has(path)) {
@@ -158,7 +164,11 @@ export const useApp = create<AppState>((set, get) => {
     try {
       // Filters are saved under the repository root, which a tab's path may spell differently
       const root = get().tabs.find((t) => t.path === path)?.snapshot?.path ?? path
-      const result = await window.api.openRepository(path, get().graphFilters[root])
+      const result = await window.api.openRepository(
+        path,
+        get().graphFilters[root],
+        limits.get(path)
+      )
       if (result.ok) {
         updateTab(path, { loading: false, error: undefined, snapshot: result.value })
       } else {
@@ -253,6 +263,8 @@ export const useApp = create<AppState>((set, get) => {
     },
 
     closeTab(index) {
+      const closed = get().tabs[index]
+      if (closed) limits.delete(closed.path)
       const tabs = get().tabs.filter((_, i) => i !== index)
       const active = Math.max(
         0,
@@ -274,6 +286,33 @@ export const useApp = create<AppState>((set, get) => {
 
     async refreshPath(path) {
       if (get().tabs.some((t) => t.path === path)) await load(path)
+    },
+
+    async loadMoreCommits(path) {
+      const tab = get().tabs.find((t) => t.path === path)
+      const before = tab?.snapshot
+      if (!tab || !before?.truncated || tab.loadingMore) return
+      updateTab(path, { loadingMore: true })
+      try {
+        const filter = get().graphFilters[before.path]
+        const result = await window.api.op(path, 'moreCommits', before.commits.length, filter)
+        if (!result.ok) {
+          notify('error', result.error, result.details)
+          return
+        }
+        const current = get().tabs.find((t) => t.path === path)?.snapshot
+        // A reload in the meantime may have brought these commits already
+        if (!current || current.commits.length > before.commits.length) return
+        const known = new Set(current.commits.map((c) => c.hash))
+        const commits = [
+          ...current.commits,
+          ...result.value.commits.filter((c) => !known.has(c.hash))
+        ]
+        limits.set(path, commits.length)
+        updateTab(path, { snapshot: { ...current, commits, truncated: result.value.more } })
+      } finally {
+        updateTab(path, { loadingMore: false })
+      }
     },
 
     async refreshStatus(path) {
@@ -332,8 +371,12 @@ export const useApp = create<AppState>((set, get) => {
       else delete graphFilters[path]
       localStorage.setItem(GRAPH_FILTERS_KEY, JSON.stringify(graphFilters))
       set({ graphFilters })
-      for (const tab of get().tabs)
-        if (tab.path === path || tab.snapshot?.path === path) void load(tab.path)
+      for (const tab of get().tabs) {
+        if (tab.path !== path && tab.snapshot?.path !== path) continue
+        // Another set of branches starts again from the first page
+        limits.delete(tab.path)
+        void load(tab.path)
+      }
     }
   }
 })
@@ -349,8 +392,13 @@ export function restoreSession(): void {
     selected: null,
     draft: EMPTY_DRAFT
   }))
-  useApp.setState({ tabs, active: Math.min(saved.active, tabs.length - 1) })
-  tabs.forEach((_, i) => void useApp.getState().refresh(i))
+  const active = Math.min(saved.active, tabs.length - 1)
+  useApp.setState({ tabs, active })
+  // The tab on screen first: loading all of them at once would slow it down
+  const { refresh } = useApp.getState()
+  void refresh(active).finally(() => {
+    tabs.forEach((_, i) => void (i !== active && refresh(i)))
+  })
 }
 
 export function useActiveTab(): RepoTab | undefined {

@@ -18,7 +18,8 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 
 **Commit graph**
 
-- Virtualized canvas graph that stays smooth on large histories, with colored lanes and branch/tag labels
+- Virtualized canvas graph with colored lanes and branch/tag labels, smooth at 60fps
+- Histories of any size: the latest 10,000 commits load at once, older ones as you scroll (tested on a million commits)
 - Local and remote branches that point to the same commit share one label
 - Search by message, author, SHA or changed file (Ctrl+F), with matches highlighted, Enter to step through them, and an option to list only the matches
 - Hide a branch from the graph, or show only one branch, from its right-click menu
@@ -68,6 +69,9 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Integrated terminal (`` Ctrl+` ``) that opens in the repository
 - Blame and file history
 - Several repositories open side by side in tabs
+- Quick switcher on the repository name in the toolbar: open tabs, favorites and recent repositories, with search
+- Workspaces: save the open tabs under a name and reopen them together
+- Worktrees: check out a branch in its own folder, listed in the sidebar, to work on two branches at once
 - Submodules: status, initialize and update
 - Git LFS: tracked patterns, LFS badges on files, track or untrack from the file list
 - Author identity per repository or global, with saved profiles to switch between
@@ -137,7 +141,7 @@ npm run dev
 - **Canvas 2D** for the commit graph
 - **highlight.js** for diffs
 - **xterm.js** + **node-pty** for the integrated terminal
-- **Vitest** tests, run against real temporary repositories
+- **Vitest** tests, run against real temporary repositories; `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository
 
 ```
 src/
@@ -150,7 +154,7 @@ docs/         Requirements (Italian) and screenshots
 
 ## Status
 
-GitDom is a personal project under active development (version 0.6.0).
+GitDom is a personal project under active development (version 0.9.0).
 The full list of requirements is in [docs/REQUISITI.md](docs/REQUISITI.md), and the plan for the next versions is in [docs/ROADMAP.md](docs/ROADMAP.md) (both in Italian).
 
 ## License

@@ -1,10 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react'
 import { useUi, type FormValues } from '../ui'
-import RebaseEditor from './RebaseEditor'
 import CommandPalette from './CommandPalette'
 import RepoDialogs from './RepoDialogs'
-import Preferences from './Preferences'
+
+// Loaded on first use, to keep the startup bundle small
+const RebaseEditor = lazy(() => import('./RebaseEditor'))
+const Preferences = lazy(() => import('./Preferences'))
 
 function Toasts(): React.JSX.Element {
   const toasts = useUi((s) => s.toasts)
@@ -235,10 +237,12 @@ export default function Overlays(): React.JSX.Element {
   return (
     <>
       <ContextMenu />
-      <RebaseEditor />
+      <Suspense>
+        <RebaseEditor />
+        <Preferences />
+      </Suspense>
       <CommandPalette />
       <RepoDialogs />
-      <Preferences />
       <FormDialog />
       <Toasts />
     </>

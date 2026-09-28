@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 0.8.0 pubblicata il 2026-09-28 (Step 1–7 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 0.9.0 pubblicata il 2026-09-28 (Step 1–8 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -21,9 +21,10 @@ Le milestone 0–6 sono completate:
 - ricerca nel grafo, colonne configurabili, branch nascosti o isolati, avatar, stash nel grafo e minimap (Step 4);
 - log attività, backup automatici, reflog consultabile, avviso di nuova versione e changelog (Step 5);
 - firma GPG/SSH di commit e tag, opzioni del commit, reword, template, .gitignore e stash parziali (Step 6);
-- worktree, selettore rapido dei repository e workspace (Step 7).
+- worktree, selettore rapido dei repository e workspace (Step 7);
+- caricamento a pagine per storie di ogni dimensione, aperture più rapide e bundle diviso (Step 8).
 
-I requisiti P0 e i P1 principali sono coperti; il prossimo passo sono le prestazioni sui repository enormi (Step 8).
+I requisiti P0 e i P1 principali sono coperti; il prossimo passo è la v1.0: tastiera, accessibilità e rifinitura (Step 9).
 
 ## Principi per l'ordine
 
@@ -110,7 +111,9 @@ Serve a fidarsi dell'app anche nelle operazioni rischiose.
 - **Selettore rapido** dei repository dalla toolbar (REPO-06)
 - **Workspace**: gruppi di repository che si riaprono insieme, per esempio "lavoro" e "personale" (REPO-07)
 
-## Step 8 — v0.9: Prestazioni e repository enormi
+## Step 8 — v0.9: Prestazioni e repository enormi ✅
+
+> Completato: il grafo carica 10.000 commit e i successivi a pagine durante lo scroll; se un repository grande non ha il file commit-graph di git, GitDom lo scrive in background. Ogni apertura avvia la metà dei processi git: HEAD e cartelle git vengono letti dal disco, identità e firma arrivano da una sola chiamata, stash e worktree si chiedono solo se esistono. Il bundle è diviso: diff, terminale, editor del rebase e preferenze si caricano al primo uso (avvio da 1,8 MB a 400 kB, ora minificato). Misure su questo PC, con un repository sintetico da 1.000.000 di commit: apertura in 1,3 s con commit-graph (circa 5 s senza, solo la prima volta); scroll a 60 fps (16,7 ms per frame); ogni pagina da 10.000 commit in 0,9 s. Un repository piccolo si apre in 0,65 s invece di 1,2 s. Memoria con 5 repository aperti (quello da un milione compreso): circa 590 MB in totale, sotto il limite di 800 MB. Benchmark ripetibile con `GITDOM_BENCH=<percorso> npx vitest run bench`.
 
 - Benchmark su repository molto grandi, come il kernel Linux con oltre un milione di commit (NFR-02, NFR-03)
 - **Caricamento incrementale** oltre il limite attuale di commit caricati (GRAPH-08)

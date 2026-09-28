@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import {
   Download,
   FolderOpen,
@@ -15,14 +15,10 @@ import Toolbar from './components/Toolbar'
 import Sidebar from './components/Sidebar'
 import GraphView from './components/GraphView'
 import DetailPanel from './components/DetailPanel'
-import DiffView from './components/DiffView'
-import ConflictView from './components/ConflictView'
-import FileInspector from './components/FileInspector'
 import Overlays from './components/Overlays'
 import { HoverLayer } from './components/HoverCards'
 import TerminalDock from './components/TerminalDock'
 import ActivityDock from './components/ActivityDock'
-import RecoveryView from './components/RecoveryView'
 import Updates from './components/Updates'
 import Splash, { HighwayLogo } from './components/Splash'
 import { restoreSession, useActiveTab, useApp } from './store'
@@ -33,6 +29,12 @@ import { stepZoom, useSettings } from './settings'
 import { splashEnabled, useTheme } from './theme'
 import { startActivityLog, toggleActivity, useActivity } from './activity'
 import { checkForUpdates, showWhatsNew, startupChecks } from './updates'
+
+// Loaded on first use, to keep the startup bundle small (NFR-02)
+const DiffView = lazy(() => import('./components/DiffView'))
+const ConflictView = lazy(() => import('./components/ConflictView'))
+const FileInspector = lazy(() => import('./components/FileInspector'))
+const RecoveryView = lazy(() => import('./components/RecoveryView'))
 
 function IdentityButton({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
   const { name, email, scope } = snapshot.identity
@@ -124,6 +126,7 @@ function Welcome(): React.JSX.Element {
 function App(): React.JSX.Element {
   const tab = useActiveTab()
   const refresh = useApp((s) => s.refresh)
+  const loadMoreCommits = useApp((s) => s.loadMoreCommits)
   const studio = useTheme((s) => s.studio)
   const detailHidden = useTheme((s) => s.detailHidden)
   const [splash, setSplash] = useState(splashEnabled)
@@ -227,17 +230,24 @@ function App(): React.JSX.Element {
               className={`workspace${studio && detailHidden ? ' detail-hidden' : ''}`}
             >
               <Sidebar snapshot={snapshot} />
-              {tab.diff?.merge ? (
-                <ConflictView snapshot={snapshot} target={tab.diff} />
-              ) : tab.diff ? (
-                <DiffView snapshot={snapshot} target={tab.diff} />
-              ) : tab.inspect ? (
-                <FileInspector snapshot={snapshot} inspect={tab.inspect} />
-              ) : tab.recovery ? (
-                <RecoveryView snapshot={snapshot} view={tab.recovery} />
-              ) : (
-                <GraphView snapshot={snapshot} selected={tab.selected} />
-              )}
+              <Suspense fallback={<div className="center-message">Loading…</div>}>
+                {tab.diff?.merge ? (
+                  <ConflictView snapshot={snapshot} target={tab.diff} />
+                ) : tab.diff ? (
+                  <DiffView snapshot={snapshot} target={tab.diff} />
+                ) : tab.inspect ? (
+                  <FileInspector snapshot={snapshot} inspect={tab.inspect} />
+                ) : tab.recovery ? (
+                  <RecoveryView snapshot={snapshot} view={tab.recovery} />
+                ) : (
+                  <GraphView
+                    snapshot={snapshot}
+                    selected={tab.selected}
+                    loadingMore={!!tab.loadingMore}
+                    onLoadMore={() => void loadMoreCommits(tab.path)}
+                  />
+                )}
+              </Suspense>
               <DetailPanel snapshot={snapshot} selected={tab.selected} compare={tab.compare} />
             </div>
           ) : (
@@ -254,7 +264,8 @@ function App(): React.JSX.Element {
           <>
             <span>{snapshot.path}</span>
             <span>
-              {snapshot.commits.length} commits{snapshot.truncated ? ' (truncated)' : ''}
+              {snapshot.commits.length.toLocaleString('en-US')} commits
+              {snapshot.truncated ? ', older ones load as you scroll' : ''}
             </span>
           </>
         )}

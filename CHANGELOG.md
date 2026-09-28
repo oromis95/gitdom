@@ -2,6 +2,20 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## 0.9.0 — 2026-09-28
+
+### Added
+
+- **Histories of any size**: the graph loads the latest 10,000 commits, and older ones as you scroll down, instead of stopping there
+  - The status bar shows how many commits are loaded
+  - A refresh keeps the commits already loaded
+
+### Improved
+
+- **Big repositories open much faster**: GitDom writes git's commit-graph file when a big repository lacks one, in the background; a repository with a million commits then opens in about a second instead of five
+- **Every repository opens faster**: GitDom starts half as many git processes to read a repository, which matters where starting a program is slow (antivirus). Restored tabs load the one on screen first
+- **Faster startup**: the diff view, the terminal, the interactive rebase editor and the preferences load the first time they're opened
+
 ## 0.8.0 — 2026-09-28
 
 ### Added

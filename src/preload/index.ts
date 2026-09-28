@@ -11,7 +11,8 @@ import {
 
 const api: GitDomApi = {
   pickRepository: () => ipcRenderer.invoke(IPC.pickRepository),
-  openRepository: (path, filter) => ipcRenderer.invoke(IPC.openRepository, path, filter),
+  openRepository: (path, filter, limit) =>
+    ipcRenderer.invoke(IPC.openRepository, path, filter, limit),
   op: (repoPath, name, ...args) => ipcRenderer.invoke(IPC.op, repoPath, name, args),
   watch: (repoPaths) => ipcRenderer.send(IPC.watch, repoPaths),
   onRepoChanged: (listener) => {

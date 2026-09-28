@@ -3,6 +3,7 @@
 import { readFile, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 import { runGit, tryGit } from './exec'
+import { gitDirs } from './gitdir'
 
 export interface RefState {
   /** Checked out branch, null when detached */
@@ -45,8 +46,9 @@ const MAX_ENTRIES = 50
 const FILE = 'gitdom-history.json'
 const histories = new Map<string, History>()
 
+/** In the worktree's own git dir, as `git rev-parse --git-path` would place it. */
 async function historyFile(repo: string): Promise<string> {
-  return resolve(repo, (await runGit(repo, ['rev-parse', '--git-path', FILE])).trim())
+  return resolve((await gitDirs(repo)).gitDir, FILE)
 }
 
 async function historyOf(repo: string): Promise<History> {

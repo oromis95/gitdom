@@ -15,6 +15,8 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [react()]
+    plugins: [react()],
+    // Less JavaScript to parse at startup; main and preload stay readable for stack traces
+    build: { minify: true }
   }
 })

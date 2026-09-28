@@ -4,7 +4,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runOp } from './operations'
-import { loadIdentity, loadSnapshot } from './repository'
+import { ensureCommitGraph, loadCommits, loadIdentity, loadSnapshot } from './repository'
 
 // Git on Windows is slow to spawn: remote scenarios run dozens of commands
 vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })
@@ -38,6 +38,64 @@ async function commitFile(name: string, content: string, message: string): Promi
   await runOp(repo, 'stage', [[name]])
   await runOp(repo, 'commit', [message, false])
 }
+
+describe('big histories (GRAPH-08, NFR-03)', () => {
+  it('loads the commits page by page', async () => {
+    for (let i = 1; i <= 5; i++) git(repo, 'commit', '-q', '--allow-empty', '-m', `c${i}`)
+    const subjects = (page: { commits: { subject: string }[] }): string[] =>
+      page.commits.map((c) => c.subject)
+    const first = await loadCommits(repo, undefined, 0, 2)
+    expect([subjects(first), first.more]).toEqual([['c5', 'c4'], true])
+    const last = await loadCommits(repo, undefined, 4, 2)
+    expect([subjects(last), last.more]).toEqual([['c1'], false])
+    const exact = await loadCommits(repo, undefined, 3, 2)
+    expect([subjects(exact), exact.more]).toEqual([['c2', 'c1'], false])
+    // An empty repository has no refs to walk: an empty page, not an error
+    const empty = join(root, 'empty')
+    mkdirSync(empty)
+    init(empty)
+    expect(await loadCommits(empty, undefined, 0, 2)).toEqual({ commits: [], more: false })
+  })
+
+  it('writes the commit-graph file once when it is missing', async () => {
+    git(repo, 'commit', '-q', '--allow-empty', '-m', 'one')
+    const file = join(repo, '.git', 'objects', 'info', 'commit-graph')
+    expect(existsSync(file)).toBe(false)
+    await ensureCommitGraph(repo)
+    expect(existsSync(file)).toBe(true)
+  })
+
+  it('reads HEAD, stashes and worktrees without asking git when it can', async () => {
+    // Unborn branch: no commit yet
+    expect((await loadSnapshot(repo)).head).toEqual({ branch: 'main', hash: null })
+    await commitFile('a.txt', 'a\n', 'first')
+    const first = git(repo, 'rev-parse', 'HEAD')
+    let snapshot = await loadSnapshot(repo)
+    expect(snapshot.head).toEqual({ branch: 'main', hash: first })
+    expect(snapshot.stashes).toEqual([])
+    expect(snapshot.worktrees).toEqual([
+      {
+        path: repo.replace(/\\/g, '/'),
+        head: first,
+        branch: 'main',
+        main: true,
+        bare: false,
+        locked: null,
+        prunable: null
+      }
+    ])
+
+    git(repo, 'checkout', '-q', '--detach')
+    write('a.txt', 'changed\n')
+    git(repo, 'stash', '-q')
+    const linked = join(root, 'linked')
+    git(repo, 'worktree', 'add', '-q', '-b', 'side', linked)
+    snapshot = await loadSnapshot(repo)
+    expect(snapshot.head).toEqual({ branch: null, hash: first })
+    expect(snapshot.stashes).toHaveLength(1)
+    expect(snapshot.worktrees.map((w) => w.branch)).toEqual([null, 'side'])
+  })
+})
 
 describe('staging and commit', () => {
   it('stages, unstages and unstages in an empty repository', async () => {

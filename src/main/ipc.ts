@@ -12,7 +12,7 @@ import { cancelClone, cloneRepository, initRepository } from './git/clone'
 import { GitError } from './git/exec'
 import { runOp } from './git/operations'
 import type { GraphFilter } from '../shared/types'
-import { loadSnapshot, resolveRepoRoot } from './git/repository'
+import { ensureCommitGraph, loadSnapshot, resolveRepoRoot } from './git/repository'
 import { setWatchedRepos } from './watcher'
 import { registerTerminalHandlers } from './terminal'
 import { registerToolHandlers } from './tools'
@@ -69,8 +69,13 @@ export function registerIpcHandlers(): void {
     toResult(() => inAction('New repository', () => initRepository(options)))
   )
 
-  ipcMain.handle(IPC.openRepository, (_event, path: string, filter?: GraphFilter) =>
-    toResult(async () => loadSnapshot(await resolveRepoRoot(path), filter))
+  ipcMain.handle(IPC.openRepository, (_event, path: string, filter?: GraphFilter, limit?: number) =>
+    toResult(async () => {
+      const snapshot = await loadSnapshot(await resolveRepoRoot(path), filter, limit)
+      // Only big histories are slow to sort: small ones don't need the file
+      if (snapshot.truncated) void ensureCommitGraph(snapshot.path).catch(() => undefined)
+      return snapshot
+    })
   )
 
   ipcMain.handle(IPC.op, (_event, repoPath: string, name: OpName, args: OpArgs<OpName>) =>

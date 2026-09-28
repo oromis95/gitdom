@@ -8,6 +8,7 @@ import {
   Columns3,
   EyeOff,
   Laptop,
+  LoaderCircle,
   Pencil,
   Search,
   Tag,
@@ -44,6 +45,8 @@ const OVERSCAN = 6
 const REF_MIME = 'application/x-gitdom-ref'
 /** Pause in typing before git searches messages or files */
 const SEARCH_DELAY = 250
+/** Rows before the end of the loaded commits at which the next page is requested (GRAPH-08) */
+const LOAD_AHEAD = 400
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' })
 
@@ -211,10 +214,15 @@ function openRefsMenu(e: React.MouseEvent, snapshot: RepoSnapshot, labels: RefLa
 
 export default function GraphView({
   snapshot,
-  selected
+  selected,
+  loadingMore,
+  onLoadMore
 }: {
   snapshot: RepoSnapshot
   selected: string | null
+  loadingMore: boolean
+  /** Loads the next page of older commits */
+  onLoadMore: () => void
 }): React.JSX.Element {
   const select = useApp((s) => s.select)
   const compare = useApp((s) => s.compare)
@@ -524,6 +532,12 @@ export default function GraphView({
     Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN
   )
   const visible: React.JSX.Element[] = []
+  // Older commits load before the end comes into view; not while only matches are listed
+  const loadsMore = snapshot.truncated && !filtering
+  const nearEnd = last >= rows.length - LOAD_AHEAD
+  useEffect(() => {
+    if (loadsMore && nearEnd && !loadingMore) onLoadMore()
+  }, [loadsMore, nearEnd, loadingMore, onLoadMore])
   const commitCard = (commit: Commit): ReturnType<typeof hoverCard> =>
     hoverCard(() => <CommitCard snapshot={snapshot} commit={commit} />)
   const authorCard = (commit: Commit): ReturnType<typeof hoverCard> =>
@@ -775,7 +789,22 @@ export default function GraphView({
             setHoverRow(null)
           }}
         >
-          <div style={{ position: 'relative', height: rows.length * ROW_HEIGHT }}>{visible}</div>
+          <div
+            style={{
+              position: 'relative',
+              height: (rows.length + (loadsMore ? 1 : 0)) * ROW_HEIGHT
+            }}
+          >
+            {visible}
+            {loadsMore && (
+              <div
+                className="graph-more"
+                style={{ top: rows.length * ROW_HEIGHT, height: ROW_HEIGHT }}
+              >
+                <LoaderCircle size={14} className="spin" /> Loading older commits…
+              </div>
+            )}
+          </div>
           {filtering && rows.length === 0 && (
             <div className="graph-empty">{searching ? 'Searching…' : 'No matching commits'}</div>
           )}

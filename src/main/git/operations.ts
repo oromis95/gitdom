@@ -25,6 +25,8 @@ import { GitError, runGit, tryGit } from './exec'
 import { toolSettings } from '../settings'
 import {
   COMMIT_LIMIT,
+  COMMIT_PAGE,
+  loadCommits,
   loadCommitDetail,
   loadStatus,
   logRevisions,
@@ -408,6 +410,10 @@ const ops: OpImpl = {
       ...match
     ])
     return output.split('\n').filter(Boolean)
+  },
+
+  moreCommits(repo, skip, filter) {
+    return loadCommits(repo, filter, skip, COMMIT_PAGE)
   },
 
   async compareFiles(repo, from, to) {
@@ -1144,6 +1150,7 @@ const ops: OpImpl = {
 /** Operations that only read: they skip the queue so a slow fetch doesn't delay diffs. */
 const READ_ONLY = new Set<OpName>([
   'status',
+  'moreCommits',
   'diff',
   'commitDetail',
   'commitPreview',
