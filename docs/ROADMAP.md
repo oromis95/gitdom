@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 0.7.2 pubblicata il 2026-09-28 (Step 1–6 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 0.8.0 pubblicata il 2026-09-28 (Step 1–7 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -20,9 +20,10 @@ Le milestone 0–6 sono completate:
 - diff affiancato, parole evidenziate, opzioni del diff, confronto tra revisioni e diff delle immagini (Step 3);
 - ricerca nel grafo, colonne configurabili, branch nascosti o isolati, avatar, stash nel grafo e minimap (Step 4);
 - log attività, backup automatici, reflog consultabile, avviso di nuova versione e changelog (Step 5);
-- firma GPG/SSH di commit e tag, opzioni del commit, reword, template, .gitignore e stash parziali (Step 6).
+- firma GPG/SSH di commit e tag, opzioni del commit, reword, template, .gitignore e stash parziali (Step 6);
+- worktree, selettore rapido dei repository e workspace (Step 7).
 
-I requisiti P0 sono coperti; dei P1 restano soprattutto worktree e workspace (Step 7).
+I requisiti P0 e i P1 principali sono coperti; il prossimo passo sono le prestazioni sui repository enormi (Step 8).
 
 ## Principi per l'ordine
 
@@ -101,7 +102,9 @@ Serve a fidarsi dell'app anche nelle operazioni rischiose.
 - Stash con i file untracked, stash solo dei file selezionati, auto-stash prima di checkout, pull e rebase (STASH-05, STASH-06)
 - v0.7.2: **schede al passaggio del mouse** su autori, commit (con i file modificati), branch, tag e stash, disattivabili dalle Preferenze (UI-13)
 
-## Step 7 — v0.8: Worktree e workspace
+## Step 7 — v0.8: Worktree e workspace ✅
+
+> Completato: "Check out in a new worktree…" dai menu dei branch (anche remoti) e "Create worktree here…" dai commit, con la cartella proposta accanto al repository e il pulsante Sfoglia; sezione WORKTREES nella barra laterale con scheda al passaggio del mouse, blocco/sblocco, rimozione (chiudendo prima la scheda, con conferma se ci sono modifiche) e pulizia di quelli con la cartella mancante; il checkout di un branch già aperto in un altro worktree propone di aprire quello. Il watcher segue anche i worktree collegati, quindi i commit fatti da terminale compaiono subito. Selettore rapido sul nome del repository nella toolbar, con ricerca tra schede aperte, preferiti e recenti; workspace salvati dalle schede aperte e riaperti accanto a quelle esistenti o al loro posto, anche dalla palette.
 
 - **Worktree**: aggiunta, elenco, rimozione, e una sezione nella barra laterale (REPO-09, SIDE-06)
 - **Selettore rapido** dei repository dalla toolbar (REPO-06)

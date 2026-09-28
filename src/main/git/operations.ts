@@ -1061,6 +1061,38 @@ const ops: OpImpl = {
     }
   },
 
+  async worktreeAdd(repo, { path, branch, newBranch, start }) {
+    assertArg(path, 'folder')
+    const target = resolve(repo, path)
+    if (start) assertRev(start)
+    const args = ['worktree', 'add']
+    if (newBranch) {
+      await assertBranchName(repo, newBranch)
+      args.push('-b', newBranch, target, ...(start ? [start] : []))
+    } else if (branch) {
+      assertRev(branch)
+      args.push(target, branch)
+    } else {
+      args.push('--detach', target, ...(start ? [start] : []))
+    }
+    await runGit(repo, args)
+    return target.replace(/\\/g, '/')
+  },
+
+  async worktreeRemove(repo, path, force) {
+    assertArg(path, 'folder')
+    await runGit(repo, ['worktree', 'remove', ...(force ? ['--force'] : []), path])
+  },
+
+  async worktreePrune(repo) {
+    await runGit(repo, ['worktree', 'prune'])
+  },
+
+  async worktreeLock(repo, path, locked) {
+    assertArg(path, 'folder')
+    await runGit(repo, ['worktree', locked ? 'lock' : 'unlock', path])
+  },
+
   async lfsTrack(repo, pattern) {
     assertArg(pattern, 'pattern')
     await runGit(repo, ['lfs', 'track', pattern])
@@ -1172,6 +1204,9 @@ const LABELS: { [K in OpName]?: (...args: OpArgs<K>) => string } = {
   push: (force) => (force ? 'Force push' : 'Push'),
   ignore: (pattern) => `Ignore ${pattern}`,
   setSigning: () => 'Set commit signing',
+  worktreeAdd: ({ path }) => `Add worktree ${path}`,
+  worktreeRemove: (path) => `Remove worktree ${path}`,
+  worktreeLock: (path, locked) => `${locked ? 'Lock' : 'Unlock'} worktree ${path}`,
   restoreBackup: (_id, ref) => `Restore ${shortRef(ref)} from a backup`
 }
 

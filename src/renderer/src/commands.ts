@@ -12,6 +12,8 @@ import {
   type ThemeChoice
 } from './theme'
 import * as actions from './actions'
+import { createWorktree, folderName, openWorktree, samePath } from './worktrees'
+import { openWorkspace, saveWorkspace, useWorkspaces } from './workspaces'
 import { toggleTerminal, useTerminal } from './terminal'
 import { toggleActivity, useActivity } from './activity'
 import { checkForUpdates, showWhatsNew } from './updates'
@@ -157,6 +159,15 @@ export function buildCommands(): Command[] {
         })
       }
     }
+    if (head.hash) add('Worktree', 'New worktree…', () => void createWorktree(snapshot, null))
+    for (const wt of snapshot.worktrees) {
+      if (!samePath(wt.path, repo) && wt.prunable === null) {
+        const on = wt.branch ?? 'detached'
+        add('Worktree', `Open worktree ${folderName(wt.path)} (${on})`, () => {
+          void openWorktree(wt.path)
+        })
+      }
+    }
     if (snapshot.lfs.installed) {
       add('LFS', 'Track files with LFS…', () => void actions.lfsTrack(repo))
       for (const pattern of snapshot.lfs.patterns) {
@@ -197,6 +208,19 @@ export function buildCommands(): Command[] {
   add('Repository', 'Open repository…', () => void app.pickAndOpen(), 'Ctrl+O')
   add('Repository', 'Clone repository…', () => openRepoDialog('clone'))
   add('Repository', 'New repository…', () => openRepoDialog('init'))
+  for (const workspace of useWorkspaces.getState().list) {
+    const names = workspace.paths.map((p) => p.split(/[\\/]/).pop()).join(', ')
+    add(
+      'Workspace',
+      `Open workspace ${workspace.name}`,
+      () => openWorkspace(workspace, false),
+      names
+    )
+    add('Workspace', `Switch to workspace ${workspace.name} (closes the other tabs)`, () => {
+      openWorkspace(workspace, true)
+    })
+  }
+  if (app.tabs.length) add('Workspace', 'Save open tabs as workspace…', () => void saveWorkspace())
   app.tabs.forEach((t, i) => {
     if (i !== app.active) add('Tabs', `Switch to ${t.name}`, () => app.setActive(i), t.path)
   })

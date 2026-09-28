@@ -147,6 +147,8 @@ export interface RepoSnapshot {
   /** True when the commit list was truncated to the load limit */
   truncated: boolean
   submodules: Submodule[]
+  /** Every working tree of the repository, the main one first */
+  worktrees: Worktree[]
   lfs: LfsInfo
   identity: Identity
   signing: Signing
@@ -269,6 +271,23 @@ export interface Submodule {
   /** Commit checked out, or recorded when not initialized */
   hash: string
   state: SubmoduleState
+}
+
+/** A working tree of the repository (REPO-09): the main one, or one added with `git worktree add`. */
+export interface Worktree {
+  /** Absolute path, with forward slashes */
+  path: string
+  /** Commit checked out, null in an empty repository */
+  head: string | null
+  /** Branch checked out, null when detached */
+  branch: string | null
+  /** The repository's own working tree, which can't be removed */
+  main: boolean
+  bare: boolean
+  /** Why it's locked against pruning and removal; '' when locked without a reason, null when not */
+  locked: string | null
+  /** Why git would prune it, e.g. its folder was deleted; null when it's fine */
+  prunable: string | null
 }
 
 export interface LfsInfo {

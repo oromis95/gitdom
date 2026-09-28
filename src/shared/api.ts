@@ -205,6 +205,17 @@ export interface RepoOps {
   /** Adds a pattern to the root .gitignore, and stops tracking the given files (COMMIT-11). */
   ignore(pattern: string, untrack: string[]): void
   /** Stores files matching the pattern with Git LFS, through the root .gitattributes. */
+  /**
+   * Adds a working tree at `path` (REPO-09): checking out `branch`, creating `newBranch` from
+   * `start`, or detached at `start` when neither is given. Resolves the path git used.
+   */
+  worktreeAdd(options: WorktreeAddOptions): string
+  /** Removes a working tree and its folder; `force` also discards its changes. */
+  worktreeRemove(path: string, force: boolean): void
+  /** Forgets the working trees whose folder is gone. */
+  worktreePrune(): void
+  /** Locks a working tree against pruning and removal, or unlocks it. */
+  worktreeLock(path: string, locked: boolean): void
   lfsTrack(pattern: string): void
   lfsUntrack(pattern: string): void
   /** Sets the author identity in the repository (local) or for every repository (global). */
@@ -275,6 +286,16 @@ export interface InitOutcome {
   path: string
   /** Whether the starter files were committed; it fails without an author identity */
   committed: boolean
+}
+
+export interface WorktreeAddOptions {
+  /** Folder of the new working tree; it must not exist or be empty */
+  path: string
+  /** Existing branch to check out; a remote branch name creates a local tracking branch */
+  branch?: string
+  newBranch?: string
+  /** Where `newBranch`, or the detached HEAD, starts; HEAD when omitted */
+  start?: string
 }
 
 /** Getting repositories onto the machine: cloning and creating them. */

@@ -16,6 +16,7 @@ import { extensionOf, folderOf, ignorePattern, type IgnoreKind } from '../../sha
 import { NO_GRAPH_FILTER, WIP_HASH, useApp } from './store'
 import { useSettings } from './settings'
 import { confirm, notify, openMenuAt, prompt, showForm, useUi, type MenuItem } from './ui'
+import { checkoutInWorktree, createWorktree, openWorktree, worktreeOf } from './worktrees'
 
 function call<K extends OpName>(
   repo: string,
@@ -81,7 +82,7 @@ async function runBusy<K extends OpName>(
 const snapshotOf = (repo: string): RepoSnapshot | undefined =>
   useApp.getState().tabs.find((t) => t.path === repo)?.snapshot
 
-const copy = (text: string): void => {
+export const copy = (text: string): void => {
   void navigator.clipboard.writeText(text)
   notify('info', `Copied "${text.length > 40 ? text.slice(0, 40) + '…' : text}"`)
 }
@@ -123,8 +124,21 @@ async function checkoutWith(
   return true
 }
 
-export const checkoutBranch = (repo: string, branch: string): Promise<boolean> =>
-  checkoutWith(repo, branch, (stash) => call(repo, 'checkout', branch, stash))
+export async function checkoutBranch(repo: string, branch: string): Promise<boolean> {
+  // Git refuses to check out a branch that another worktree has: offer to open that one instead
+  const snapshot = snapshotOf(repo)
+  const elsewhere = snapshot && worktreeOf(snapshot, branch)
+  if (elsewhere) {
+    const open = await confirm(
+      'Branch is in another worktree',
+      `${branch} is checked out in ${elsewhere.path}. Open that worktree in a tab?`,
+      'Open worktree'
+    )
+    if (open) await openWorktree(elsewhere.path)
+    return false
+  }
+  return checkoutWith(repo, branch, (stash) => call(repo, 'checkout', branch, stash))
+}
 
 export const checkoutCommit = (repo: string, hash: string): Promise<boolean> =>
   checkoutWith(repo, hash.slice(0, 7), (stash) => call(repo, 'checkoutCommit', hash, stash))
@@ -929,6 +943,11 @@ export function localBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
     'separator',
     { label: `Create branch here`, onClick: () => void createBranch(repo, ref.name, ref.name) },
     { label: 'Create tag here', onClick: () => void createTag(repo, ref.hash, ref.name) },
+    {
+      label: worktreeOf(snapshot, ref.name) ? 'Open its worktree' : 'Check out in a new worktree…',
+      disabled: isCurrent,
+      onClick: () => void checkoutInWorktree(snapshot, ref)
+    },
     { label: 'Set upstream…', onClick: () => void setUpstream(repo, snapshot, ref) },
     compareWithHead(snapshot, ref.name),
     'separator',
@@ -955,6 +974,10 @@ export function remoteBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
     },
     ...integrationItems(snapshot, ref.name),
     { label: 'Create branch here', onClick: () => void createBranch(repo, ref.name, ref.name) },
+    {
+      label: 'Check out in a new worktree…',
+      onClick: () => void checkoutInWorktree(snapshot, ref)
+    },
     compareWithHead(snapshot, ref.name),
     'separator',
     {
@@ -1027,6 +1050,7 @@ export function commitMenu(snapshot: RepoSnapshot, hash: string, subject: string
     { label: 'Checkout this commit (detached)', onClick: () => void checkoutCommit(repo, hash) },
     { label: 'Create branch here', onClick: () => void createBranch(repo, hash, short) },
     { label: 'Create tag here', onClick: () => void createTag(repo, hash, short) },
+    { label: 'Create worktree here…', onClick: () => void createWorktree(snapshot, hash, short) },
     'separator',
     { label: 'Cherry-pick commit', disabled: isHead, onClick: () => void cherryPick(repo, [hash]) },
     { label: 'Revert commit', onClick: () => void revert(repo, hash) },

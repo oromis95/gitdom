@@ -22,6 +22,11 @@ export interface FormField {
   optional?: boolean
   /** Makes the field a drop-down list */
   options?: { value: string; label: string }[]
+  /**
+   * Adds a Browse button to a folder path: the folder picked, titled with this, replaces the
+   * parent and keeps the last name
+   */
+  browseParent?: string
 }
 
 export interface FormCheck {

@@ -14,6 +14,7 @@ import {
   parseRemotes,
   parseStatus,
   parseSubmodules,
+  parseWorktrees,
   withNumstat
 } from './parsers'
 
@@ -369,5 +370,61 @@ describe('parseSignature', () => {
     expect(parseSignature('Y', '', '')?.status).toBe('expired')
     expect(parseSignature('E', '', '')?.status).toBe('unknown')
     expect(parseSignature('N', '', '')).toBeNull()
+  })
+})
+
+describe('parseWorktrees', () => {
+  it('reads the main worktree first, branches, detached, bare, locked and prunable ones', () => {
+    const output = [
+      'worktree C:/src/app',
+      'HEAD 1111111111111111111111111111111111111111',
+      'branch refs/heads/main',
+      '',
+      'worktree C:/src/app-fix',
+      'HEAD 2222222222222222222222222222222222222222',
+      'detached',
+      'locked on a USB drive',
+      '',
+      'worktree C:/src/gone',
+      'HEAD 3333333333333333333333333333333333333333',
+      'branch refs/heads/feature/x',
+      'locked',
+      'prunable gitdir file points to non-existent location',
+      ''
+    ].join('\n')
+    expect(parseWorktrees(output)).toEqual([
+      {
+        path: 'C:/src/app',
+        head: '1111111111111111111111111111111111111111',
+        branch: 'main',
+        main: true,
+        bare: false,
+        locked: null,
+        prunable: null
+      },
+      {
+        path: 'C:/src/app-fix',
+        head: '2222222222222222222222222222222222222222',
+        branch: null,
+        main: false,
+        bare: false,
+        locked: 'on a USB drive',
+        prunable: null
+      },
+      {
+        path: 'C:/src/gone',
+        head: '3333333333333333333333333333333333333333',
+        branch: 'feature/x',
+        main: false,
+        bare: false,
+        locked: '',
+        prunable: 'gitdir file points to non-existent location'
+      }
+    ])
+    expect(parseWorktrees('worktree /srv/repo.git\nbare\n')[0]).toMatchObject({
+      bare: true,
+      head: null,
+      branch: null
+    })
   })
 })

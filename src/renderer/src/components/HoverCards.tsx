@@ -1,6 +1,6 @@
 // The contents of the hover cards (UI-13) and the layer that places them beside the hovered element.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Archive, Check, Cloud, GitBranch, GitMerge, Tag } from 'lucide-react'
+import { Archive, Check, Cloud, FolderGit2, GitBranch, GitMerge, Tag } from 'lucide-react'
 import type { Result } from '../../../shared/api'
 import type {
   Commit,
@@ -8,13 +8,15 @@ import type {
   Ref,
   RepoSnapshot,
   Stash,
-  TagInfo
+  TagInfo,
+  Worktree
 } from '../../../shared/types'
 import { avatarUrl } from '../graph/avatars'
 import { avatarColor, initials } from '../graph/colors'
 import { hideHover, useHover } from '../hover'
 import { useSettings } from '../settings'
 import { describeDate } from '../time'
+import { folderName, samePath, worktreeOf } from '../worktrees'
 
 const MARGIN = 8
 const GAP = 6
@@ -285,6 +287,74 @@ export function StashCard({
   )
 }
 
+export function WorktreeCard({
+  snapshot,
+  worktree
+}: {
+  snapshot: RepoSnapshot
+  worktree: Worktree
+}): React.JSX.Element {
+  const head = snapshot.commits.find((c) => c.hash === worktree.head)
+  const here = samePath(worktree.path, snapshot.path)
+  return (
+    <>
+      <div className="hover-title">
+        <FolderGit2 size={14} /> <span className="hover-name">{folderName(worktree.path)}</span>
+        {here && (
+          <span className="hover-badge">
+            <Check size={11} /> this tab
+          </span>
+        )}
+      </div>
+      <div className="muted">{worktree.main ? 'Main worktree' : 'Linked worktree'}</div>
+      <div className="hover-facts">
+        <div className="mono">{worktree.path}</div>
+        <div>
+          {worktree.bare ? (
+            <span className="muted">Bare repository: no checkout</span>
+          ) : worktree.branch ? (
+            <>
+              <span className="muted">On </span>
+              {worktree.branch}
+            </>
+          ) : (
+            <span className="muted">Detached HEAD</span>
+          )}
+        </div>
+      </div>
+      {worktree.locked !== null && (
+        <div className="hover-note">Locked{worktree.locked ? `: ${worktree.locked}` : ''}</div>
+      )}
+      {worktree.prunable !== null && (
+        <div className="hover-note">
+          The folder is missing{worktree.prunable ? `: ${worktree.prunable}` : ''}
+        </div>
+      )}
+      {worktree.head && (
+        <div className="hover-tip">
+          {head ? (
+            <>
+              <div className="hover-subject">{head.subject}</div>
+              <div className="muted">
+                <span className="mono">{head.hash.slice(0, 7)}</span> · {head.authorName} ·{' '}
+                {describeDate(head.authorDate)}
+              </div>
+            </>
+          ) : (
+            <div className="muted">
+              <span className="mono">{worktree.head.slice(0, 7)}</span>, not among the loaded
+              commits
+            </div>
+          )}
+        </div>
+      )}
+      {!here && worktree.prunable === null && (
+        <div className="hover-hint">Double-click to open it in a tab</div>
+      )}
+    </>
+  )
+}
+
 const tags = new Map<string, Promise<Result<TagInfo | null>>>()
 
 function useTagInfo(repo: string, name: string | null): TagInfo | null | undefined {
@@ -322,6 +392,7 @@ export function RefCard({
   const tip = snapshot.commits.find((c) => c.hash === refInfo.hash)
   const tag = useTagInfo(snapshot.path, refInfo.type === 'tag' ? refInfo.name : null)
   const current = refInfo.type === 'local' && refInfo.name === snapshot.head.branch
+  const elsewhere = refInfo.type === 'local' ? worktreeOf(snapshot, refInfo.name) : undefined
   const Icon = REF_ICONS[refInfo.type]
   const { ahead = 0, behind = 0 } = refInfo
 
@@ -336,6 +407,9 @@ export function RefCard({
         )}
       </div>
       <div className="muted">{REF_KINDS[refInfo.type]}</div>
+      {elsewhere && (
+        <div className="hover-note">Checked out in the worktree {folderName(elsewhere.path)}</div>
+      )}
       {refInfo.type === 'local' && (
         <div className="hover-facts">
           {refInfo.upstream ? (

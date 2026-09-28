@@ -1033,3 +1033,56 @@ describe('hover previews', () => {
     await expect(runOp(repo, 'tagInfo', ['-x'])).rejects.toThrow('Invalid tag name')
   })
 })
+
+describe('worktrees', () => {
+  const norm = (p: string): string => p.replace(/[\\/]+/g, '/').toLowerCase()
+
+  it('adds worktrees for a branch, a new branch and detached, lists and removes them', async () => {
+    await commitFile('a.txt', '1\n', 'one')
+    git(repo, 'branch', 'feature')
+    const feature = await runOp(repo, 'worktreeAdd', [{ path: '../wt-feature', branch: 'feature' }])
+    expect(norm(feature)).toBe(norm(join(root, 'wt-feature')))
+    await runOp(repo, 'worktreeAdd', [
+      { path: join(root, 'wt-new'), newBranch: 'fix', start: 'main' }
+    ])
+    await runOp(repo, 'worktreeAdd', [{ path: join(root, 'wt-detached'), start: 'HEAD' }])
+
+    const { worktrees } = await loadSnapshot(repo)
+    expect(worktrees.map((w) => w.main)).toEqual([true, false, false, false])
+    expect(worktrees[0].branch).toBe('main')
+    expect(worktrees.slice(1).map((w) => w.branch ?? 'detached')).toEqual(
+      expect.arrayContaining(['feature', 'fix', 'detached'])
+    )
+    expect(norm(worktrees[0].path)).toBe(norm(git(repo, 'rev-parse', '--show-toplevel')))
+
+    // A worktree with changes is only removed when forced
+    writeFileSync(join(root, 'wt-new', 'a.txt'), 'changed\n')
+    await expect(runOp(repo, 'worktreeRemove', [join(root, 'wt-new'), false])).rejects.toThrow()
+    await runOp(repo, 'worktreeRemove', [join(root, 'wt-new'), true])
+    expect(existsSync(join(root, 'wt-new'))).toBe(false)
+    expect((await loadSnapshot(repo)).worktrees).toHaveLength(3)
+  })
+
+  it('locks, unlocks and prunes worktrees whose folder is gone', async () => {
+    await commitFile('a.txt', '1\n', 'one')
+    const path = join(root, 'wt')
+    await runOp(repo, 'worktreeAdd', [{ path, newBranch: 'side' }])
+    await runOp(repo, 'worktreeLock', [path, true])
+    expect((await loadSnapshot(repo)).worktrees[1].locked).toBe('')
+    await expect(runOp(repo, 'worktreeRemove', [path, false])).rejects.toThrow()
+    await runOp(repo, 'worktreeLock', [path, false])
+
+    rmSync(path, { recursive: true, force: true })
+    expect((await loadSnapshot(repo)).worktrees[1].prunable).not.toBeNull()
+    await runOp(repo, 'worktreePrune', [])
+    expect((await loadSnapshot(repo)).worktrees).toHaveLength(1)
+  })
+
+  it('rejects folders and branches that look like options', async () => {
+    await commitFile('a.txt', '1\n', 'one')
+    await expect(runOp(repo, 'worktreeAdd', [{ path: '-x' }])).rejects.toThrow('Invalid folder')
+    await expect(
+      runOp(repo, 'worktreeAdd', [{ path: join(root, 'wt'), branch: '--orphan' }])
+    ).rejects.toThrow('Invalid revision')
+  })
+})

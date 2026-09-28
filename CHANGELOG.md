@@ -2,6 +2,19 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## 0.8.0 — 2026-09-28
+
+### Added
+
+- **Worktrees**: check out another branch in its own folder and work on both at once, without stashing
+  - **Check out in a new worktree…** on a local or remote branch, and **Create worktree here…** on a commit (detached, or on a new branch)
+  - A **Worktrees** section in the sidebar, once there's more than one: branch, locked or missing folder, and a hover card; double-click opens it in a tab
+  - Lock, unlock, remove (the tab is closed first, and GitDom asks before throwing away changes), and forget the ones whose folder is gone
+  - Checking out a branch that another worktree has offers to open that worktree instead
+  - Commits made from a terminal in a worktree show up right away
+- **Repository switcher**: click the repository name in the toolbar to jump to an open tab, a favorite or a recent repository, with search and the keyboard
+- **Workspaces**: save the open tabs under a name and reopen them together, alongside the open tabs or in their place (from the switcher or the command palette)
+
 ## 0.7.2 — 2026-09-28
 
 ### Added

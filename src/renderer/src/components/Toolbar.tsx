@@ -23,6 +23,7 @@ import { openMenu, useUi } from '../ui'
 import * as actions from '../actions'
 import { toggleTerminal, useTerminal } from '../terminal'
 import { toggleDetail, useTheme } from '../theme'
+import RepoSwitcher from './RepoSwitcher'
 
 const LATER = 'Available in a later milestone'
 
@@ -118,9 +119,7 @@ export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
     <>
       <div className="crumb">
         <span className="crumb-label">repository</span>
-        <span className="crumb-value" title={tab.name}>
-          {tab.name}
-        </span>
+        <RepoSwitcher name={tab.name} />
       </div>
       <ChevronRight size={20} className="crumb-sep" />
       <div className="crumb">

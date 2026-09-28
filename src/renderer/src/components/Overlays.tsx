@@ -105,6 +105,31 @@ function FormDialog(): React.JSX.Element | null {
                 value={String(values[f.key] ?? '')}
                 onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
               />
+            ) : f.browseParent ? (
+              <span className="modal-browse">
+                <input
+                  autoFocus={i === 0}
+                  placeholder={f.placeholder}
+                  value={String(values[f.key] ?? '')}
+                  onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={async () => {
+                    const parent = await window.api.repos.pickFolder(f.browseParent!)
+                    if (!parent) return
+                    const name = String(values[f.key] ?? '')
+                      .split(/[\\/]/)
+                      .filter(Boolean)
+                      .pop()
+                    const folder = parent.replace(/\\/g, '/')
+                    setValues((v) => ({ ...v, [f.key]: `${folder}/${name ?? ''}` }))
+                  }}
+                >
+                  Browse…
+                </button>
+              </span>
             ) : (
               <input
                 autoFocus={i === 0}

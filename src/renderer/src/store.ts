@@ -92,6 +92,8 @@ interface AppState {
   pickAndOpen(): Promise<void>
   openRepo(path: string): Promise<void>
   closeTab(index: number): void
+  /** Opens several repositories at once, e.g. a workspace; `replace` closes the other tabs. */
+  openTabs(paths: string[], replace: boolean): void
   toggleFavorite(path: string): void
   /** Forgets a repository from the recent and favorite lists, e.g. once it's deleted. */
   forgetRepo(path: string): void
@@ -229,6 +231,25 @@ export const useApp = create<AppState>((set, get) => {
       localStorage.setItem(RECENT_KEY, JSON.stringify(recent))
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
       set({ recent, favorites })
+    },
+
+    openTabs(paths, replace) {
+      if (!paths.length) return
+      const kept = replace ? get().tabs.filter((t) => paths.includes(t.path)) : get().tabs
+      const added: RepoTab[] = paths
+        .filter((path) => !kept.some((t) => t.path === path))
+        .map((path) => ({
+          path,
+          name: baseName(path),
+          loading: false,
+          selected: null,
+          draft: EMPTY_DRAFT
+        }))
+      const tabs = [...kept, ...added]
+      const active = tabs.findIndex((t) => t.path === paths[0])
+      set({ tabs, active })
+      persist(tabs, active)
+      added.forEach((t) => void load(t.path))
     },
 
     closeTab(index) {

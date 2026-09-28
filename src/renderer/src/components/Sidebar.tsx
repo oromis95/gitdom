@@ -8,6 +8,7 @@ import {
   EyeOff,
   File,
   Folder,
+  FolderGit2,
   GitBranch,
   Globe,
   HardDrive,
@@ -25,7 +26,8 @@ import * as actions from '../actions'
 import { roomBeside, updateSettings } from '../settings'
 import { hoverCard } from '../hover'
 import ResizeHandle from './ResizeHandle'
-import { RefCard, StashCard } from './HoverCards'
+import { RefCard, StashCard, WorktreeCard } from './HoverCards'
+import * as worktrees from '../worktrees'
 
 const SUBMODULE_STATES: Record<SubmoduleState, string> = {
   uninitialized: 'not initialized',
@@ -202,7 +204,7 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
   const openRepo = useApp((s) => s.openRepo)
   const [filter, setFilter] = useState('')
 
-  const { locals, remotes, tags, stashes, submodules, lfsPatterns } = useMemo(() => {
+  const { locals, remotes, tags, stashes, submodules, worktreeList, lfsPatterns } = useMemo(() => {
     const q = filter.trim().toLowerCase()
     const match = (name: string): boolean => !q || name.toLowerCase().includes(q)
     return {
@@ -211,6 +213,7 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
       tags: snapshot.refs.filter((r) => r.type === 'tag' && match(r.name)),
       stashes: snapshot.stashes.filter((s) => match(s.message)),
       submodules: snapshot.submodules.filter((s) => match(s.path)),
+      worktreeList: snapshot.worktrees.filter((w) => match(w.path) || match(w.branch ?? '')),
       lfsPatterns: snapshot.lfs.patterns.filter(match)
     }
   }, [snapshot, filter])
@@ -309,6 +312,49 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
             snapshot={snapshot}
           />
         </Section>
+
+        {/* A repository always has its own working tree: the section appears once there's another */}
+        {snapshot.worktrees.length > 1 && (
+          <Section
+            title="Worktrees"
+            icon={<FolderGit2 size={15} />}
+            count={worktreeList.length}
+            onAdd={
+              snapshot.head.hash
+                ? {
+                    title: 'New worktree',
+                    run: () => void worktrees.createWorktree(snapshot, null)
+                  }
+                : undefined
+            }
+          >
+            {worktreeList.map((wt) => {
+              const here = worktrees.samePath(wt.path, snapshot.path)
+              const missing = wt.prunable !== null
+              return (
+                <button
+                  key={wt.path}
+                  className={`tree-item${here ? ' current' : ''}${missing ? ' worktree-missing' : ''}`}
+                  {...hoverCard(() => <WorktreeCard snapshot={snapshot} worktree={wt} />)}
+                  onClick={() => wt.head && select(wt.head, true)}
+                  onDoubleClick={() => {
+                    if (!here && !missing) void worktrees.openWorktree(wt.path)
+                  }}
+                  onContextMenu={(e) => openMenu(e, worktrees.worktreeMenu(snapshot, wt))}
+                >
+                  <FolderGit2 size={14} />
+                  <span>{worktrees.folderName(wt.path)}</span>
+                  <span className="muted">
+                    {wt.bare ? 'bare' : (wt.branch ?? `detached ${wt.head?.slice(0, 7) ?? ''}`)}
+                  </span>
+                  {(wt.locked !== null || missing) && (
+                    <span className="tree-badge">{missing ? 'missing' : 'locked'}</span>
+                  )}
+                </button>
+              )
+            })}
+          </Section>
+        )}
 
         {snapshot.submodules.length > 0 && (
           <Section title="Submodules" icon={<Package size={15} />} count={submodules.length}>

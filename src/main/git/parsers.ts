@@ -18,7 +18,8 @@ import type {
   Stash,
   Submodule,
   SubmoduleState,
-  WorkingTreeStatus
+  WorkingTreeStatus,
+  Worktree
 } from '../../shared/types'
 import type { MergeToolInfo } from '../../shared/api'
 
@@ -43,6 +44,31 @@ export function parseLog(output: string): Commit[] {
     })
   }
   return commits
+}
+
+/** Parses `git worktree list --porcelain`: blocks of "key value" lines separated by blank lines. */
+export function parseWorktrees(output: string): Worktree[] {
+  const worktrees: Worktree[] = []
+  for (const block of output.replace(/\r/g, '').split(/\n\n+/)) {
+    const lines = block.split('\n').filter(Boolean)
+    if (!lines[0]?.startsWith('worktree ')) continue
+    const value = (key: string): string | null => {
+      const line = lines.find((l) => l === key || l.startsWith(`${key} `))
+      return line === undefined ? null : line.slice(key.length + 1)
+    }
+    const branch = value('branch')
+    worktrees.push({
+      path: lines[0].slice('worktree '.length),
+      head: value('HEAD'),
+      branch: branch ? branch.replace(/^refs\/heads\//, '') : null,
+      // git lists the main working tree first
+      main: worktrees.length === 0,
+      bare: value('bare') !== null,
+      locked: value('locked'),
+      prunable: value('prunable')
+    })
+  }
+  return worktrees
 }
 
 export const REF_FORMAT = [

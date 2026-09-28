@@ -29,7 +29,8 @@ import {
   parseSigning,
   parseStashes,
   parseStatus,
-  parseSubmodules
+  parseSubmodules,
+  parseWorktrees
 } from './parsers'
 import { GitError, runGit, tryGit } from './exec'
 import { historyLabels } from './history'
@@ -156,28 +157,41 @@ export function logRevisions(filter?: GraphFilter): string[] {
 }
 
 export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<RepoSnapshot> {
-  const [head, log, refs, stashes, remotes, status, operation, submodules, lfs, identity, signing] =
-    await Promise.all([
-      readHead(repo),
-      // An empty repository has no refs, so log may fail: treat it as no commits
-      tryGit(repo, [
-        'log',
-        '--date-order',
-        `-n${COMMIT_LIMIT + 1}`,
-        `--format=${LOG_FORMAT}`,
-        ...logRevisions(filter),
-        '--'
-      ]),
-      runGit(repo, ['for-each-ref', `--format=${REF_FORMAT}`]),
-      tryGit(repo, ['stash', 'list', `--format=${STASH_FORMAT}`]),
-      runGit(repo, ['remote', '-v']),
-      loadStatus(repo),
-      readOperation(repo),
-      loadSubmodules(repo),
-      loadLfs(repo),
-      loadIdentity(repo),
-      loadSigning(repo)
-    ])
+  const [
+    head,
+    log,
+    refs,
+    stashes,
+    remotes,
+    status,
+    operation,
+    submodules,
+    lfs,
+    identity,
+    signing,
+    worktrees
+  ] = await Promise.all([
+    readHead(repo),
+    // An empty repository has no refs, so log may fail: treat it as no commits
+    tryGit(repo, [
+      'log',
+      '--date-order',
+      `-n${COMMIT_LIMIT + 1}`,
+      `--format=${LOG_FORMAT}`,
+      ...logRevisions(filter),
+      '--'
+    ]),
+    runGit(repo, ['for-each-ref', `--format=${REF_FORMAT}`]),
+    tryGit(repo, ['stash', 'list', `--format=${STASH_FORMAT}`]),
+    runGit(repo, ['remote', '-v']),
+    loadStatus(repo),
+    readOperation(repo),
+    loadSubmodules(repo),
+    loadLfs(repo),
+    loadIdentity(repo),
+    loadSigning(repo),
+    tryGit(repo, ['worktree', 'list', '--porcelain'])
+  ])
 
   const commits = parseLog(log ?? '')
   const truncated = commits.length > COMMIT_LIMIT
@@ -196,6 +210,7 @@ export async function loadSnapshot(repo: string, filter?: GraphFilter): Promise<
     history: await historyLabels(repo),
     truncated,
     submodules,
+    worktrees: parseWorktrees(worktrees ?? ''),
     lfs,
     identity,
     signing
