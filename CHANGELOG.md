@@ -2,6 +2,32 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## 1.0.0 — 2026-09-28
+
+### Added
+
+- **Themes**: Nord, Dracula, Tokyo Night, Catppuccin Mocha and Latte, Gruvbox Dark, Monokai, Solarized Dark and Light, and high-contrast dark and light, in a gallery in **Preferences → Themes**
+- **Your own themes**: start from any theme and change its colors; GitDom checks that text stays readable (WCAG contrast) and warns you when it doesn't. Export and import themes as text through the clipboard
+- **Custom shortcuts**: **Preferences → Keyboard** lists every shortcut; give it other keys, remove them, or reset them
+- **Full keyboard navigation**
+  - `Ctrl+1`, `Ctrl+2` and `Ctrl+3` move between the sidebar, the graph and the details
+  - The arrow keys move through the sidebar and the file lists; Enter checks out a branch or opens a diff, `Space` stages or unstages a file
+  - `Alt+Down` / `Alt+Up` (or `F7` / `Shift+F7`) jump between the changes of a diff
+  - The menu key or `Shift+F10` opens the right-click menu of the selected item
+- **Git config editor** (**Preferences → Git config**): see, change, add and remove your global git settings and those of the open repository
+- **External diff tool**: open a change in WinMerge, Beyond Compare, VS Code or any tool git knows, from the diff view or the file's menu (choose it in **Preferences → External tools**)
+- **Check out a tag** from its menu or with a double-click, to look at that version
+- **Discard all changes** button above the unstaged files
+- **Submodules**: add one, and sync their URLs from `.gitmodules`
+- **Git LFS**: download (`git lfs pull`) and upload (`git lfs push`) the LFS files
+- The sidebar shows branches as folders or as a flat list (the button beside the filter); `Ctrl+Alt+F` jumps to the filter
+- `Ctrl+P` also opens the command palette
+
+### Improved
+
+- The zoom level is always in the status bar, 100% included
+- Keyboard focus is clearly outlined everywhere
+
 ## 0.9.0 — 2026-09-28
 
 ### Added

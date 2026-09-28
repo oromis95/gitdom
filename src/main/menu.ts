@@ -2,18 +2,38 @@
 // zoom and the recovery tools, Window with the themes, and Help. Commands go to the renderer,
 // which owns the state.
 import { BrowserWindow, ipcMain, Menu, shell, type MenuItemConstructorOptions } from 'electron'
-import { IPC, type MenuCommand, type ThemeChoice } from '../shared/api'
+import {
+  IPC,
+  type MenuCommand,
+  type MenuShortcuts,
+  type ThemeChoice,
+  type ThemeOption
+} from '../shared/api'
 import { REPO_URL } from './updates'
 
-const THEMES: { theme: ThemeChoice; label: string }[] = [
-  { theme: 'dark', label: 'Dark' },
-  { theme: 'light', label: 'Light' },
-  { theme: 'studio', label: 'Studio' },
-  { theme: 'system', label: 'Follow the system' }
+/** Themes listed in Window > Theme: the renderer owns them (built-in and custom) and sends them. */
+let themes: ThemeOption[] = [
+  { id: 'dark', label: 'Dark' },
+  { id: 'light', label: 'Light' },
+  { id: 'studio', label: 'Studio' },
+  { id: 'system', label: 'Follow the system' }
 ]
 
 /** Theme applied in the renderer, checked in Window > Theme; the renderer reports it at startup. */
 let current: ThemeChoice | null = null
+
+/** Keys shown in the menu: the renderer handles them, with the user's changes (UI-03). */
+let keys: MenuShortcuts = {
+  open: 'Ctrl+O',
+  preferences: 'Ctrl+,',
+  zoomIn: 'Ctrl+=',
+  zoomOut: 'Ctrl+-',
+  zoomReset: 'Ctrl+0',
+  activity: 'Ctrl+Shift+L'
+}
+
+const shown = (key: keyof MenuShortcuts): Partial<MenuItemConstructorOptions> =>
+  keys[key] ? { accelerator: keys[key], registerAccelerator: false } : {}
 
 const send = (command: MenuCommand) => (_item: unknown, win: unknown) =>
   (win as BrowserWindow | undefined)?.webContents.send(IPC.menuCommand, command)
@@ -22,11 +42,11 @@ function build(): void {
   const file: MenuItemConstructorOptions = {
     label: 'File',
     submenu: [
-      { label: 'Open Repository…', accelerator: 'CmdOrCtrl+O', click: send('open') },
+      { label: 'Open Repository…', ...shown('open'), click: send('open') },
       { label: 'Clone Repository…', click: send('clone') },
       { label: 'New Repository…', click: send('init') },
       { type: 'separator' },
-      { label: 'Preferences…', accelerator: 'CmdOrCtrl+,', click: send('preferences') },
+      { label: 'Preferences…', ...shown('preferences'), click: send('preferences') },
       { type: 'separator' },
       { role: 'quit' }
     ]
@@ -34,17 +54,11 @@ function build(): void {
   const view: MenuItemConstructorOptions = {
     label: 'View',
     submenu: [
-      { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', click: send('zoomIn') },
-      { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: send('zoomOut') },
-      { label: 'Actual Size', accelerator: 'CmdOrCtrl+0', click: send('zoomReset') },
+      { label: 'Zoom In', ...shown('zoomIn'), click: send('zoomIn') },
+      { label: 'Zoom Out', ...shown('zoomOut'), click: send('zoomOut') },
+      { label: 'Actual Size', ...shown('zoomReset'), click: send('zoomReset') },
       { type: 'separator' },
-      // Handled by the renderer, which also gets it from the terminal: only shown here
-      {
-        label: 'Activity Log',
-        accelerator: 'CmdOrCtrl+Shift+L',
-        registerAccelerator: false,
-        click: send('activity')
-      },
+      { label: 'Activity Log', ...shown('activity'), click: send('activity') },
       { label: 'Reflog', click: send('reflog') },
       { label: 'Backups', click: send('backups') },
       { type: 'separator' },
@@ -58,12 +72,12 @@ function build(): void {
     submenu: [
       {
         label: 'Theme',
-        submenu: THEMES.map(({ theme, label }) => ({
+        submenu: themes.map(({ id, label }) => ({
           label,
           type: 'radio',
-          checked: theme === current,
+          checked: id === current,
           click: (_item, win) =>
-            (win as BrowserWindow | undefined)?.webContents.send(IPC.menuTheme, theme)
+            (win as BrowserWindow | undefined)?.webContents.send(IPC.menuTheme, id)
         }))
       },
       { type: 'separator' },
@@ -85,9 +99,38 @@ function build(): void {
 
 export function registerMenu(): void {
   build()
-  ipcMain.on(IPC.menuSetTheme, (_event, theme: ThemeChoice) => {
-    if (theme === current || !THEMES.some((t) => t.theme === theme)) return
+  ipcMain.on(IPC.menuSetTheme, (_event, theme: ThemeChoice, list: ThemeOption[]) => {
+    if (typeof theme !== 'string' || !Array.isArray(list)) return
+    const next = list
+      .filter((t) => typeof t?.id === 'string' && typeof t.label === 'string')
+      .map(({ id, label }) => ({ id, label }))
+    if (theme === current && JSON.stringify(next) === JSON.stringify(themes)) return
     current = theme
+    themes = next
     build()
+  })
+  ipcMain.on(IPC.menuSetShortcuts, (_event, next: MenuShortcuts) => {
+    if (!next || typeof next !== 'object') return
+    const clean = { ...keys }
+    for (const key of Object.keys(keys) as (keyof MenuShortcuts)[]) {
+      const value = next[key]
+      clean[key] = typeof value === 'string' && value.length < 40 ? value : null
+    }
+    if (JSON.stringify(clean) === JSON.stringify(keys)) return
+    keys = clean
+    try {
+      build()
+    } catch {
+      // A key Electron can't show: the menu goes without the keys, which still work
+      keys = {
+        open: null,
+        preferences: null,
+        zoomIn: null,
+        zoomOut: null,
+        zoomReset: null,
+        activity: null
+      }
+      build()
+    }
   })
 }

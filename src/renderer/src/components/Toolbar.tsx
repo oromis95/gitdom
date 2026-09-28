@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import {
   ArchiveRestore,
   ArchiveX,
@@ -23,6 +22,7 @@ import { openMenu, useUi } from '../ui'
 import * as actions from '../actions'
 import { toggleTerminal, useTerminal } from '../terminal'
 import { toggleDetail, useTheme } from '../theme'
+import { useShortcut, useShortcutLabel } from '../shortcuts'
 import RepoSwitcher from './RepoSwitcher'
 
 const LATER = 'Available in a later milestone'
@@ -92,25 +92,65 @@ export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
   const canUndo = !!history?.undo && !busy && !snapshot?.operation
   const canRedo = !!history?.redo && !busy && !snapshot?.operation
 
-  // Ctrl+Z / Ctrl+Y, unless typing: text fields keep their own undo
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (!e.ctrlKey || e.altKey) return
-      const target = e.target as HTMLElement
-      if (target.closest('input, textarea, select, [contenteditable]')) return
-      if (document.querySelector('.modal, .menu, .palette')) return
-      const key = e.key.toLowerCase()
-      if (key === 'z' && !e.shiftKey && canUndo) {
-        e.preventDefault()
-        void actions.undo(repo)
-      } else if ((key === 'y' || (key === 'z' && e.shiftKey)) && canRedo) {
-        e.preventDefault()
-        void actions.redo(repo)
-      }
+  // The toolbar's shortcuts, unless typing (text fields keep their own undo) or in a dialog
+  const toolKey =
+    (enabled: boolean, run: () => unknown) =>
+    (e: KeyboardEvent): boolean => {
+      if ((e.target as HTMLElement).closest?.('input, textarea, select, [contenteditable]'))
+        return false
+      if (document.querySelector('.modal, .menu, .palette') || !enabled) return false
+      void run()
+      return true
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [repo, canUndo, canRedo])
+  useShortcut(
+    'undo',
+    toolKey(canUndo, () => actions.undo(repo))
+  )
+  useShortcut(
+    'redo',
+    toolKey(canRedo, () => actions.redo(repo))
+  )
+  useShortcut(
+    'pull',
+    toolKey(!busy && !!snapshot, () => actions.pull(repo, pullMode))
+  )
+  useShortcut(
+    'push',
+    toolKey(!busy && !!head?.branch, () => actions.push(repo))
+  )
+  useShortcut(
+    'fetch',
+    toolKey(!busy && !!snapshot, () => actions.fetchAll(repo))
+  )
+  useShortcut(
+    'branch',
+    toolKey(!!head?.hash, () => actions.createBranch(repo, null))
+  )
+  useShortcut(
+    'stash',
+    toolKey(changes > 0, () => actions.stash(repo))
+  )
+  useShortcut(
+    'pop',
+    toolKey(!!topStash, () => topStash && actions.stashPop(repo, topStash))
+  )
+  useShortcut(
+    'refresh',
+    toolKey(true, () => refresh())
+  )
+  const keys = {
+    undo: useShortcutLabel('undo'),
+    redo: useShortcutLabel('redo'),
+    pull: useShortcutLabel('pull'),
+    push: useShortcutLabel('push'),
+    branch: useShortcutLabel('branch'),
+    stash: useShortcutLabel('stash'),
+    pop: useShortcutLabel('pop'),
+    refresh: useShortcutLabel('refresh'),
+    terminal: useShortcutLabel('terminal'),
+    palette: useShortcutLabel('palette')
+  }
+  const hint = (text: string, key: string): string => (key ? `${text} (${key})` : text)
 
   const icon = (label: string, node: React.ReactNode): React.ReactNode =>
     tab.busy === label ? <LoaderCircle size={20} className="spin" /> : node
@@ -136,14 +176,14 @@ export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
         label="Undo"
         icon={<Undo2 size={20} />}
         disabled={!canUndo}
-        title={history?.undo ? `Undo "${history.undo}" (Ctrl+Z)` : 'Nothing to undo'}
+        title={history?.undo ? hint(`Undo "${history.undo}"`, keys.undo) : 'Nothing to undo'}
         onClick={() => void actions.undo(repo)}
       />
       <Tool
         label="Redo"
         icon={<Redo2 size={20} />}
         disabled={!canRedo}
-        title={history?.redo ? `Redo "${history.redo}" (Ctrl+Y)` : 'Nothing to redo'}
+        title={history?.redo ? hint(`Redo "${history.redo}"`, keys.redo) : 'Nothing to redo'}
         onClick={() => void actions.redo(repo)}
       />
       <div className="tool-split">
@@ -151,7 +191,7 @@ export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
           label="Pull"
           icon={icon('Pulling', <ArrowDownToLine size={20} />)}
           disabled={busy || !snapshot}
-          title={PULL_MODES.find((m) => m.mode === pullMode)?.label}
+          title={hint(PULL_MODES.find((m) => m.mode === pullMode)?.label ?? 'Pull', keys.pull)}
           onClick={() => void actions.pull(repo, pullMode)}
         />
         <button className="tool-arrow" disabled={busy} onClick={pullMenu} aria-label="Pull options">
@@ -166,39 +206,47 @@ export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
         label="Push"
         icon={icon('Pushing', <ArrowUpFromLine size={20} />)}
         disabled={busy || !head?.branch}
+        title={hint('Push', keys.push)}
         onClick={() => void actions.push(repo)}
       />
       <Tool
         label="Branch"
         icon={<GitBranchPlus size={20} />}
         disabled={!head?.hash}
+        title={hint('New branch', keys.branch)}
         onClick={() => void actions.createBranch(repo, null)}
       />
       <Tool
         label="Stash"
         icon={<ArchiveX size={20} />}
         disabled={changes === 0}
+        title={hint('Stash', keys.stash)}
         onClick={() => void actions.stash(repo)}
       />
       <Tool
         label="Pop"
         icon={<ArchiveRestore size={20} />}
         disabled={!topStash}
-        title={topStash ? `Pop "${topStash.message}"` : 'No stashes'}
+        title={topStash ? hint(`Pop "${topStash.message}"`, keys.pop) : 'No stashes'}
         onClick={() => topStash && void actions.stashPop(repo, topStash)}
       />
-      <Tool label="Refresh" icon={<RefreshCw size={20} />} onClick={() => void refresh()} />
+      <Tool
+        label="Refresh"
+        icon={<RefreshCw size={20} />}
+        title={hint('Refresh', keys.refresh)}
+        onClick={() => void refresh()}
+      />
       <Tool
         label="Terminal"
         icon={<SquareTerminal size={20} />}
-        title="Terminal in the repository folder (Ctrl+`)"
+        title={hint('Terminal in the repository folder', keys.terminal)}
         active={terminalShown}
         onClick={() => toggleTerminal()}
       />
       <Tool
         label="Actions"
         icon={<Command size={20} />}
-        title="Command palette (Ctrl+P)"
+        title={hint('Command palette', keys.palette)}
         onClick={() => useUi.setState({ palette: true })}
       />
     </>

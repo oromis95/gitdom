@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Archive,
   Check,
@@ -13,6 +13,8 @@ import {
   Globe,
   HardDrive,
   Laptop,
+  List,
+  ListTree,
   Package,
   Plus,
   Search,
@@ -22,8 +24,10 @@ import {
 import type { Ref, RepoSnapshot, SubmoduleState } from '../../../shared/types'
 import { useApp } from '../store'
 import { openMenu } from '../ui'
+import { listKeys } from '../focus'
+import { useShortcut } from '../shortcuts'
 import * as actions from '../actions'
-import { roomBeside, updateSettings } from '../settings'
+import { roomBeside, updateSettings, useSettings } from '../settings'
 import { hoverCard } from '../hover'
 import ResizeHandle from './ResizeHandle'
 import { RefCard, StashCard, WorktreeCard } from './HoverCards'
@@ -42,11 +46,14 @@ interface TreeNode {
   ref?: Ref
 }
 
-/** Builds a folder tree from slash-separated branch names (feature/x → feature › x). */
-function buildTree(refs: Ref[], nameOf: (r: Ref) => string): TreeNode {
+/**
+ * Builds a folder tree from slash-separated branch names (feature/x → feature › x), or a flat
+ * list of full names.
+ */
+function buildTree(refs: Ref[], nameOf: (r: Ref) => string, folders: boolean): TreeNode {
   const root: TreeNode = { name: '', children: new Map() }
   for (const ref of refs) {
-    const parts = nameOf(ref).split('/')
+    const parts = folders ? nameOf(ref).split('/') : [nameOf(ref)]
     let node = root
     parts.forEach((part, i) => {
       let child = node.children.get(part)
@@ -129,7 +136,7 @@ function Tree({
               <RefCard
                 snapshot={snapshot}
                 refInfo={ref}
-                hint={ref.type === 'tag' || isCurrent ? undefined : 'Double-click to check out'}
+                hint={isCurrent ? undefined : 'Double-click to check out'}
               />
             ))}
             onClick={() => select(ref.hash, true)}
@@ -138,6 +145,7 @@ function Tree({
                 void actions.checkoutBranch(snapshot.path, ref.name)
               else if (ref.type === 'remote')
                 void actions.checkoutRemoteBranch(snapshot.path, snapshot, ref)
+              else if (ref.type === 'tag') void actions.checkoutCommit(snapshot.path, ref.hash)
             }}
             onContextMenu={(e) => openMenu(e, actions.refMenu(snapshot, ref))}
           >
@@ -203,6 +211,14 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
   const select = useApp((s) => s.select)
   const openRepo = useApp((s) => s.openRepo)
   const [filter, setFilter] = useState('')
+  const folders = useSettings((s) => s.sidebarTree)
+  const filterRef = useRef<HTMLInputElement>(null)
+  useShortcut('filterSidebar', () => {
+    if (document.querySelector('.modal, .palette')) return false
+    filterRef.current?.focus()
+    filterRef.current?.select()
+    return true
+  })
 
   const { locals, remotes, tags, stashes, submodules, worktreeList, lfsPatterns } = useMemo(() => {
     const q = filter.trim().toLowerCase()
@@ -236,9 +252,37 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
       />
       <div className="sidebar-filter">
         <Search size={14} className="muted" />
-        <input placeholder="Filter" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <input
+          ref={filterRef}
+          placeholder="Filter"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && filter) {
+              e.stopPropagation()
+              setFilter('')
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              e.currentTarget
+                .closest('.sidebar')
+                ?.querySelector<HTMLElement>('.sidebar-scroll button.tree-item')
+                ?.focus()
+            }
+          }}
+        />
+        <button
+          className="sidebar-view"
+          title={folders ? 'Show branches as a list' : 'Group branches in folders'}
+          aria-label={folders ? 'Show branches as a list' : 'Group branches in folders'}
+          onClick={() => updateSettings({ sidebarTree: !folders })}
+        >
+          {folders ? <ListTree size={14} /> : <List size={14} />}
+        </button>
       </div>
-      <div className="sidebar-scroll">
+      <div
+        className="sidebar-scroll"
+        onKeyDown={(e) => listKeys(e, e.currentTarget, 'button.tree-item, button.section-header')}
+      >
         <Section
           title="Local"
           icon={<Laptop size={15} />}
@@ -253,7 +297,7 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
           }
         >
           <Tree
-            node={buildTree(locals, (r) => r.name)}
+            node={buildTree(locals, (r) => r.name, folders)}
             depth={0}
             leafIcon={<GitBranch size={14} />}
             snapshot={snapshot}
@@ -279,7 +323,8 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
               <Tree
                 node={buildTree(
                   remotes.filter((r) => r.remote === remote),
-                  (r) => r.name.slice(remote.length + 1)
+                  (r) => r.name.slice(remote.length + 1),
+                  folders
                 )}
                 depth={1}
                 leafIcon={<GitBranch size={14} />}
@@ -306,7 +351,7 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
 
         <Section title="Tags" icon={<Tag size={15} />} count={tags.length}>
           <Tree
-            node={buildTree(tags, (r) => r.name)}
+            node={buildTree(tags, (r) => r.name, folders)}
             depth={0}
             leafIcon={<Tag size={14} />}
             snapshot={snapshot}
@@ -357,7 +402,12 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
         )}
 
         {snapshot.submodules.length > 0 && (
-          <Section title="Submodules" icon={<Package size={15} />} count={submodules.length}>
+          <Section
+            title="Submodules"
+            icon={<Package size={15} />}
+            count={submodules.length}
+            onAdd={{ title: 'Add submodule', run: () => void actions.addSubmodule(snapshot.path) }}
+          >
             {submodules.map((sub) => (
               <button
                 key={sub.path}
@@ -411,7 +461,16 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
                     {
                       label: `Stop tracking ${pattern}`,
                       onClick: () => void actions.lfsUntrack(snapshot.path, pattern)
-                    }
+                    },
+                    'separator',
+                    {
+                      label: 'Download the LFS files',
+                      onClick: () => void actions.lfsPull(snapshot.path)
+                    },
+                    ...snapshot.remotes.map((r) => ({
+                      label: `Upload the LFS files to ${r.name}`,
+                      onClick: () => void actions.lfsPush(snapshot.path, r.name)
+                    }))
                   ])
                 }
               >

@@ -187,16 +187,47 @@ function ContextMenu(): React.JSX.Element | null {
     })
   }, [menu])
 
+  // Keyboard (NFR-09): the first item takes the focus, arrows move it, Enter picks; the focus
+  // goes back where it was when the menu closes
   useEffect(() => {
     if (!menu) return
+    const before = document.activeElement as HTMLElement | null
+    const items = (): HTMLButtonElement[] =>
+      Array.from(
+        ref.current?.querySelectorAll<HTMLButtonElement>('.menu-item:not(:disabled)') ?? []
+      )
+    items()[0]?.focus()
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') closeMenu()
+      if (e.key === 'Escape') {
+        closeMenu()
+        return
+      }
+      const list = items()
+      const at = list.indexOf(document.activeElement as HTMLButtonElement)
+      const target =
+        e.key === 'ArrowDown'
+          ? list[(at + 1) % list.length]
+          : e.key === 'ArrowUp'
+            ? list[(at - 1 + list.length) % list.length]
+            : e.key === 'Home'
+              ? list[0]
+              : e.key === 'End'
+                ? list[list.length - 1]
+                : null
+      if (target) {
+        e.preventDefault()
+        e.stopPropagation()
+        target.focus()
+      } else if (e.key === 'Tab') e.preventDefault()
     }
-    window.addEventListener('keydown', onKey)
+    window.addEventListener('keydown', onKey, true)
     window.addEventListener('blur', closeMenu)
     return () => {
-      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('blur', closeMenu)
+      // Unless the item moved it on purpose, e.g. into a dialog
+      if (!document.activeElement || document.activeElement === document.body)
+        before?.focus({ preventScroll: true })
     }
   }, [menu, closeMenu])
 
@@ -207,7 +238,8 @@ function ContextMenu(): React.JSX.Element | null {
       onMouseDown={closeMenu}
       onContextMenu={(e) => {
         e.preventDefault()
-        closeMenu()
+        // The menu key sends one on release, to the item it just focused
+        if (!ref.current?.contains(e.target as Node)) closeMenu()
       }}
     >
       <div ref={ref} className="menu" style={position} onMouseDown={(e) => e.stopPropagation()}>

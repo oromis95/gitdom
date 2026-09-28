@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { RotateCcw, X } from 'lucide-react'
+import { useShortcut } from '../shortcuts'
 import type { ShellInfo } from '../../../shared/api'
 import { useApp } from '../store'
 import {
@@ -27,16 +28,7 @@ export default function TerminalDock(): React.JSX.Element | null {
   }, [])
 
   // Ctrl+` (the key left of 1, whatever the keyboard layout) shows and hides the terminal
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.code === 'Backquote') {
-        e.preventDefault()
-        toggleTerminal()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  useShortcut('terminal', () => toggleTerminal())
 
   useEffect(() => {
     if (shown && repo) ensureSession(repo)

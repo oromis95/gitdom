@@ -11,7 +11,14 @@ import type {
   Result,
   StashMode
 } from '../../shared/api'
-import type { FileChange, Ref, RepoSnapshot, Stash, Submodule } from '../../shared/types'
+import type {
+  DiffSource,
+  FileChange,
+  Ref,
+  RepoSnapshot,
+  Stash,
+  Submodule
+} from '../../shared/types'
 import { extensionOf, folderOf, ignorePattern, type IgnoreKind } from '../../shared/ignore'
 import { NO_GRAPH_FILTER, WIP_HASH, useApp } from './store'
 import { useSettings } from './settings'
@@ -529,6 +536,21 @@ export async function resolveWith(
   return ok && (await run(repo, 'resolveConflict', paths, side))
 }
 
+export async function openDiffTool(
+  repo: string,
+  source: DiffSource,
+  path: string,
+  oldPath?: string
+): Promise<void> {
+  const { setBusy } = useApp.getState()
+  setBusy(repo, 'Waiting for the diff tool')
+  const result = await call(repo, 'openDiffTool', source, path, oldPath)
+  setBusy(repo, undefined)
+  // A tool can edit the working copy (unstaged side)
+  void useApp.getState().refreshPath(repo)
+  if (!result.ok) fail(result)
+}
+
 export async function openMergeTool(repo: string, path: string): Promise<void> {
   const { setBusy, openDiff } = useApp.getState()
   setBusy(repo, 'Waiting for the merge tool')
@@ -995,6 +1017,11 @@ export function remoteBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
 export function tagMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
   const repo = snapshot.path
   return [
+    {
+      label: `Checkout ${ref.name} (detached)`,
+      disabled: snapshot.head.hash === ref.hash && !snapshot.head.branch,
+      onClick: () => void checkoutCommit(repo, ref.hash)
+    },
     compareWithHead(snapshot, ref.name),
     'separator',
     ...snapshot.remotes.map((r): MenuItem => ({
@@ -1111,6 +1138,45 @@ export async function updateSubmodules(repo: string, paths: string[] = []): Prom
   else fail(result)
 }
 
+/** Adds a repository as a submodule, in a folder named after it by default. */
+export async function addSubmodule(repo: string): Promise<void> {
+  const values = await showForm({
+    title: 'Add submodule',
+    message: 'Clones a repository into a folder of this one, pinned at its current commit.',
+    fields: [
+      { key: 'url', label: 'Repository URL', placeholder: 'https://github.com/owner/library.git' },
+      {
+        key: 'path',
+        label: 'Folder',
+        placeholder: 'Empty: named after the repository, e.g. libs/library',
+        optional: true
+      }
+    ],
+    confirmLabel: 'Add submodule'
+  })
+  if (!values) return
+  const url = String(values.url).trim()
+  const path =
+    String(values.path).trim() ||
+    (
+      url
+        .replace(/[\\/]+$/, '')
+        .split(/[\\/:]/)
+        .pop() ?? ''
+    ).replace(/\.git$/, '')
+  if (!url || !path) return
+  const result = await runBusy(repo, 'Adding submodule', 'submoduleAdd', url, path)
+  if (result.ok) notify('success', `Added ${path}: commit it together with .gitmodules`)
+  else fail(result)
+}
+
+/** Copies the submodule URLs from .gitmodules to the configuration, after they changed there. */
+export async function syncSubmodules(repo: string, paths: string[] = []): Promise<void> {
+  const result = await runBusy(repo, 'Syncing submodules', 'submoduleSync', paths)
+  if (result.ok) notify('success', paths.length === 1 ? `Synced ${paths[0]}` : 'Synced submodules')
+  else fail(result)
+}
+
 export const submodulePath = (repo: string, sub: Submodule): string => `${repo}/${sub.path}`
 
 export function submoduleMenu(snapshot: RepoSnapshot, sub: Submodule): MenuItem[] {
@@ -1126,6 +1192,11 @@ export function submoduleMenu(snapshot: RepoSnapshot, sub: Submodule): MenuItem[
       label: initialized ? 'Update to the recorded commit' : 'Initialize',
       disabled: sub.state === 'clean',
       onClick: () => void updateSubmodules(repo, [sub.path])
+    },
+    {
+      label: 'Sync the URL from .gitmodules',
+      disabled: !initialized,
+      onClick: () => void syncSubmodules(repo, [sub.path])
     },
     'separator',
     { label: 'Copy path', onClick: () => copy(sub.path) },
@@ -1147,6 +1218,18 @@ export async function lfsTrack(repo: string, pattern?: string): Promise<void> {
   if (await run(repo, 'lfsTrack', value.trim())) {
     notify('success', `Files matching ${value.trim()} are stored with LFS: commit .gitattributes`)
   }
+}
+
+export async function lfsPull(repo: string): Promise<void> {
+  const result = await runBusy(repo, 'Downloading LFS files', 'lfsPull')
+  if (result.ok) notify('success', 'LFS files downloaded')
+  else fail(result)
+}
+
+export async function lfsPush(repo: string, remote: string): Promise<void> {
+  const result = await runBusy(repo, 'Uploading LFS files', 'lfsPush', remote)
+  if (result.ok) notify('success', `LFS files uploaded to ${remote}`)
+  else fail(result)
 }
 
 export async function lfsUntrack(repo: string, pattern: string): Promise<void> {

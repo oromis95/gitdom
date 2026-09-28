@@ -39,7 +39,12 @@ const api: GitDomApi = {
     mergeTools: () => ipcRenderer.invoke(IPC.toolsMergeTools),
     openInEditor: (repo, path) => ipcRenderer.invoke(IPC.toolsOpenInEditor, repo, path),
     showInFolder: (repo, path) => ipcRenderer.send(IPC.toolsShowInFolder, repo, path),
-    setZoom: (factor) => webFrame.setZoomFactor(factor)
+    setZoom: (factor) => webFrame.setZoomFactor(factor),
+    configList: (scope, repo) => ipcRenderer.invoke(IPC.toolsConfigList, scope, repo),
+    configSet: (scope, repo, key, value, old) =>
+      ipcRenderer.invoke(IPC.toolsConfigSet, scope, repo, key, value, old),
+    configUnset: (scope, repo, key, value) =>
+      ipcRenderer.invoke(IPC.toolsConfigUnset, scope, repo, key, value)
   },
   terminal: {
     shells: () => ipcRenderer.invoke(IPC.terminalShells),
@@ -61,7 +66,8 @@ const api: GitDomApi = {
     }
   },
   menu: {
-    setTheme: (theme) => ipcRenderer.send(IPC.menuSetTheme, theme),
+    setTheme: (theme, themes) => ipcRenderer.send(IPC.menuSetTheme, theme, themes),
+    setShortcuts: (shortcuts) => ipcRenderer.send(IPC.menuSetShortcuts, shortcuts),
     onTheme: (listener) => {
       const handler = (_event: IpcRendererEvent, theme: ThemeChoice): void => listener(theme)
       ipcRenderer.on(IPC.menuTheme, handler)

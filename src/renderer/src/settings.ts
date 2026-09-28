@@ -39,6 +39,8 @@ export interface Settings extends ToolSettings {
   checkUpdates: boolean
   /** Stash and reapply local changes in the way of a checkout without asking (STASH-06) */
   autoStash: boolean
+  /** Branches and tags grouped in folders by their slashes, or a flat list (SIDE-11) */
+  sidebarTree: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -48,6 +50,7 @@ export const DEFAULT_SETTINGS: Settings = {
   zoom: 1,
   autoFetchMinutes: 10,
   sidebarWidth: null,
+  sidebarTree: true,
   detailWidth: null,
   diffLayout: 'unified',
   diffWrap: false,
@@ -68,7 +71,8 @@ export const DEFAULT_SETTINGS: Settings = {
   autoStash: false,
   gitPath: '',
   editor: '',
-  mergeTool: ''
+  mergeTool: '',
+  diffTool: ''
 }
 
 export const ZOOM_STEPS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]
@@ -137,7 +141,12 @@ function apply(s: Settings): void {
   setVar('--sidebar-w', s.sidebarWidth ? `${s.sidebarWidth}px` : '')
   setVar('--detail-w', s.detailWidth ? `${s.detailWidth}px` : '')
   window.api.tools.setZoom(s.zoom)
-  window.api.tools.configure({ gitPath: s.gitPath, editor: s.editor, mergeTool: s.mergeTool })
+  window.api.tools.configure({
+    gitPath: s.gitPath,
+    editor: s.editor,
+    mergeTool: s.mergeTool,
+    diffTool: s.diffTool
+  })
 }
 
 export function updateSettings(patch: Partial<Settings>): void {

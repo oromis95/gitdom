@@ -26,6 +26,9 @@ import { markMatches, matchesCommit, nextMatch, searchKey, type SearchMode } fro
 import { firstParentChain } from '../graph/highlight'
 import { avatarImage, onAvatarLoaded } from '../graph/avatars'
 import { useTheme } from '../theme'
+import { useShortcut, useShortcutLabel } from '../shortcuts'
+import { focusPanel } from '../focus'
+import { readableOn } from '../themes'
 import { buildRefLabels, type RefLabel } from '../graph/refLabels'
 import { NO_GRAPH_FILTER, WIP_HASH, useApp } from '../store'
 import { openMenu, openMenuAt, type MenuItem } from '../ui'
@@ -151,7 +154,7 @@ function RefPill({
   return (
     <div
       className={`ref-pill${over ? ' drop-target' : ''}`}
-      style={{ background: color }}
+      style={{ background: color, color: readableOn(color) }}
       title={ref ? undefined : label.name}
       draggable={isBranch}
       onMouseEnter={(e) => {
@@ -234,7 +237,7 @@ export default function GraphView({
   const scrollerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
-  const theme = useTheme((s) => s.applied)
+  const theme = useTheme((s) => s.revision)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(0)
   /** Commits selected with Ctrl+click, for actions on several commits */
@@ -463,18 +466,12 @@ export default function GraphView({
     }
   }, [scrollRequest, rowIndex])
 
-  // Ctrl+F jumps to the search box, except in the terminal, which has its own use for it
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (!e.ctrlKey || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return
-      if ((e.target as HTMLElement | null)?.closest?.('.xterm')) return
-      e.preventDefault()
-      searchRef.current?.focus()
-      searchRef.current?.select()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  // Ctrl+F jumps to the search box (not from the terminal, which has its own use for it)
+  useShortcut('search', () => {
+    searchRef.current?.focus()
+    searchRef.current?.select()
+  })
+  const searchShortcut = useShortcutLabel('search')
 
   const goToMatch = (backwards: boolean): void => {
     const row = nextMatch(matchRows, selectedRow, backwards)
@@ -491,15 +488,39 @@ export default function GraphView({
     }
   }
 
-  const onKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-    e.preventDefault()
-    const next = Math.min(
-      rows.length - 1,
-      Math.max(0, selectedRow + (e.key === 'ArrowDown' ? 1 : -1))
-    )
-    const row = rows[next]
-    if (row) select(rowKey(row), true)
+  // Keyboard (NFR-09): arrows, pages, Home and End move the selection; the menu key or Shift+F10
+  // opens the commit's menu; Enter goes on to its details
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (e.ctrlKey || e.altKey) return
+    const page = Math.max(1, Math.floor(viewportHeight / ROW_HEIGHT) - 1)
+    const steps: Record<string, number> = {
+      ArrowDown: 1,
+      ArrowUp: -1,
+      PageDown: page,
+      PageUp: -page,
+      Home: -Infinity,
+      End: Infinity
+    }
+    if (e.key in steps && !e.shiftKey) {
+      e.preventDefault()
+      const from = selectedRow < 0 ? -1 : selectedRow
+      const next = Math.min(rows.length - 1, Math.max(0, from + steps[e.key]))
+      const row = rows[next]
+      if (row) select(rowKey(row), true)
+    } else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+      e.preventDefault()
+      const row = rows[selectedRow]
+      if (!row) return
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = rect.left + refsWidth + 24
+      const y = rect.top + (selectedRow + 1) * ROW_HEIGHT - e.currentTarget.scrollTop
+      if (row.kind === 'commit')
+        openMenuAt(x, y, actions.commitMenu(snapshot, row.commit.hash, row.commit.subject))
+      else if (row.kind === 'stash') openMenuAt(x, y, actions.stashMenu(snapshot, row.stash))
+    } else if (e.key === 'Enter' && !e.shiftKey && selectedRow >= 0) {
+      e.preventDefault()
+      focusPanel('detail')
+    }
   }
 
   const markers = useMemo(() => {
@@ -685,8 +706,8 @@ export default function GraphView({
             ref={searchRef}
             placeholder={
               searchMode === 'commit'
-                ? 'Search messages, authors, SHA (Ctrl+F)'
-                : 'Search changed files (Ctrl+F)'
+                ? `Search messages, authors, SHA${searchShortcut ? ` (${searchShortcut})` : ''}`
+                : `Search changed files${searchShortcut ? ` (${searchShortcut})` : ''}`
             }
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}

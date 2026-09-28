@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { History, ScanText, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Columns2, History, ScanText, X } from 'lucide-react'
 import type { Result } from '../../../shared/api'
 import { buildPatch } from '../../../shared/diff'
 import type {
@@ -12,10 +12,11 @@ import type {
 } from '../../../shared/types'
 import { hunkWordRanges, markHtml } from '../../../shared/wordDiff'
 import { useApp, type DiffTarget } from '../store'
+import { useShortcut } from '../shortcuts'
 import { highlightLines } from '../highlight'
 import { DIFF_CONTEXT_MAX, updateSettings, useSettings } from '../settings'
 import { confirm, fromTerminal } from '../ui'
-import { discardFiles, markResolved, resolveWith, run } from '../actions'
+import { discardFiles, markResolved, openDiffTool, resolveWith, run } from '../actions'
 import ImageDiff from './ImageDiff'
 
 /** Highlights the lines of all hunks, grouped by hunk, with the changed words marked (DIFF-03). */
@@ -138,6 +139,25 @@ export default function DiffView({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [openDiff, onClose])
+
+  // Next and previous change from the keyboard (NFR-09)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const jumpHunk = (step: 1 | -1): boolean => {
+    const body = bodyRef.current
+    if (!body) return false
+    const top = body.getBoundingClientRect().top
+    const offsets = [...body.querySelectorAll<HTMLElement>('.hunk')].map(
+      (h) => h.getBoundingClientRect().top - top + body.scrollTop
+    )
+    const now = body.scrollTop
+    const target =
+      step === 1 ? offsets.find((o) => o > now + 2) : offsets.filter((o) => o < now - 2).pop()
+    if (target === undefined) return true
+    body.scrollTo({ top: target })
+    return true
+  }
+  useShortcut('nextHunk', () => jumpHunk(1))
+  useShortcut('prevHunk', () => jumpHunk(-1))
 
   const diff = loaded?.key === key && loaded.result.ok ? loaded.result.value : null
   const highlighted = useMemo(() => (diff ? highlightHunks(diff) : []), [diff])
@@ -415,6 +435,13 @@ export default function DiffView({
                 <ScanText size={14} /> Blame
               </button>
             )}
+            <button
+              className="btn"
+              title="Open the changes in the external diff tool (Preferences > Tools)"
+              onClick={() => void openDiffTool(repo, source, target.path, target.oldPath)}
+            >
+              <Columns2 size={14} /> Diff tool
+            </button>
           </>
         )}
         <button
@@ -497,7 +524,9 @@ export default function DiffView({
           resolved, or keep one side.
         </div>
       )}
-      <div className={`diff-body${wrap ? ' wrap' : ''}`}>{body}</div>
+      <div ref={bodyRef} className={`diff-body${wrap ? ' wrap' : ''}`} tabIndex={0}>
+        {body}
+      </div>
     </div>
   )
 }

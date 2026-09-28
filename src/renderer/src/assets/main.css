@@ -10,6 +10,8 @@
   --border: #33373f;
   --text: #d6d9de;
   --text-muted: #8b919b;
+  /* Text on a solid accent background */
+  --accent-text: #fff;
   --text-dim: #5f6570;
   --accent: #1f8fff;
   --accent-soft: #1c4f80;
@@ -250,9 +252,20 @@ input {
 }
 .sidebar-filter input {
   flex: 1;
+  min-width: 0;
   background: none;
   border: none;
   outline: none;
+}
+.sidebar-view {
+  display: flex;
+  padding: 2px;
+  border-radius: 3px;
+  color: var(--text-muted);
+}
+.sidebar-view:hover {
+  color: var(--text);
+  background: var(--bg-hover);
 }
 
 .sidebar-scroll {

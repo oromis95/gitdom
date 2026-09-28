@@ -133,6 +133,8 @@ export interface RepoOps {
   skipOperation(): OpOutcome
   /** Opens the configured external merge tool (`merge.tool`) on a conflicted file. */
   openMergeTool(path: string): void
+  /** Shows a file's changes in the external diff tool (DIFF-12); resolves when it closes. */
+  openDiffTool(source: DiffSource, path: string, oldPath?: string): void
   /** Working tree content of a conflicted file, with its conflict markers. */
   readConflictFile(path: string): string
   /** Writes the resolved content of a conflicted file and stages it. */
@@ -205,6 +207,10 @@ export interface RepoOps {
 
   /** Clones missing submodules and checks them out at the recorded commits; all when empty. */
   submoduleUpdate(paths: string[]): string
+  /** Adds the repository at `url` as a submodule in the folder `path` (ADV-02). */
+  submoduleAdd(url: string, path: string): string
+  /** Copies the submodule URLs from .gitmodules to the configuration; all when empty. */
+  submoduleSync(paths: string[]): string
   /** Adds a pattern to the root .gitignore, and stops tracking the given files (COMMIT-11). */
   ignore(pattern: string, untrack: string[]): void
   /** Stores files matching the pattern with Git LFS, through the root .gitattributes. */
@@ -221,6 +227,10 @@ export interface RepoOps {
   worktreeLock(path: string, locked: boolean): void
   lfsTrack(pattern: string): void
   lfsUntrack(pattern: string): void
+  /** Downloads the LFS files of the checked-out commit (ADV-03). */
+  lfsPull(): string
+  /** Uploads every local LFS file the remote lacks. */
+  lfsPush(remote: string): string
   /** Sets the author identity in the repository (local) or for every repository (global). */
   setIdentity(name: string, email: string, scope: 'local' | 'global'): void
   /** Removes the repository's own identity, falling back to the global one. */
@@ -321,6 +331,8 @@ export interface ToolSettings {
   editor: string
   /** Merge tool name for `git mergetool --tool`; empty to use merge.tool from git config (MERGE-08) */
   mergeTool: string
+  /** Diff tool name for `git difftool --tool`; empty to use diff.tool from git config (DIFF-12) */
+  diffTool: string
 }
 
 export interface MergeToolInfo {
@@ -344,6 +356,30 @@ export interface ToolsApi {
   showInFolder(repo: string, path: string | null): void
   /** Zoom factor of the window, 1 for 100%. */
   setZoom(factor: number): void
+  /** Entries of the user's (global) or a repository's (local) git configuration (SET-03). */
+  configList(scope: ConfigScope, repo: string | null): Promise<Result<ConfigEntry[]>>
+  /** Adds an entry (`old` null) or replaces the value `old` of a key. */
+  configSet(
+    scope: ConfigScope,
+    repo: string | null,
+    key: string,
+    value: string,
+    old: string | null
+  ): Promise<Result<void>>
+  /** Removes one value of a key (a key may have several). */
+  configUnset(
+    scope: ConfigScope,
+    repo: string | null,
+    key: string,
+    value: string
+  ): Promise<Result<void>>
+}
+
+export type ConfigScope = 'global' | 'local'
+
+export interface ConfigEntry {
+  key: string
+  value: string
 }
 
 /** A git command GitDom ran, for the activity log (UI-09, NFR-07). */
@@ -397,13 +433,34 @@ export interface AppApi {
   openRepoPage(url: string): void
 }
 
-/** Themes offered in the app and in the Window menu; 'system' follows Windows' light or dark setting. */
-export type ThemeChoice = 'dark' | 'light' | 'system' | 'studio'
+/**
+ * A theme offered in the app and in the Window menu: 'dark', 'light', 'studio', 'system' (Windows'
+ * light or dark setting), a built-in palette such as 'nord', or one of the user's ('custom-...').
+ */
+export type ThemeChoice = string
+
+/** An entry of Window > Theme. */
+export interface ThemeOption {
+  id: ThemeChoice
+  label: string
+}
+
+/** Keys the menu shows next to its items (Electron accelerators); the renderer handles them. */
+export interface MenuShortcuts {
+  open: string | null
+  preferences: string | null
+  zoomIn: string | null
+  zoomOut: string | null
+  zoomReset: string | null
+  activity: string | null
+}
 
 /** The native menu bar, built in the main process. */
 export interface MenuApi {
-  /** Tells the menu which theme is applied, to check it in Window > Theme. */
-  setTheme(theme: ThemeChoice): void
+  /** Tells the menu the themes to list in Window > Theme, and the one to check. */
+  setTheme(theme: ThemeChoice, themes: ThemeOption[]): void
+  /** Tells the menu the keys to show, after the user changes them. */
+  setShortcuts(shortcuts: MenuShortcuts): void
   /** Subscribes to themes picked from the menu; returns the unsubscribe function. */
   onTheme(listener: (theme: ThemeChoice) => void): () => void
   /** Subscribes to File menu commands; returns the unsubscribe function. */
@@ -461,6 +518,7 @@ export const IPC = {
   terminalData: 'term:data',
   terminalExit: 'term:exit',
   menuSetTheme: 'menu:set-theme',
+  menuSetShortcuts: 'menu:set-shortcuts',
   menuTheme: 'menu:theme',
   menuCommand: 'menu:command',
   pickFolder: 'repos:pick-folder',
@@ -473,6 +531,9 @@ export const IPC = {
   toolsMergeTools: 'tools:merge-tools',
   toolsOpenInEditor: 'tools:open-in-editor',
   toolsShowInFolder: 'tools:show-in-folder',
+  toolsConfigList: 'tools:config-list',
+  toolsConfigSet: 'tools:config-set',
+  toolsConfigUnset: 'tools:config-unset',
   activityList: 'activity:list',
   activityClear: 'activity:clear',
   activityEntry: 'activity:entry',

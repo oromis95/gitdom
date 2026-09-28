@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ShieldX,
   SlidersHorizontal,
+  Trash2,
   X
 } from 'lucide-react'
 import type { CommitOptions, Result } from '../../../shared/api'
@@ -33,6 +34,8 @@ import {
   type DiffTarget
 } from '../store'
 import { notify, openMenu, type MenuItem } from '../ui'
+import { matches } from '../shortcuts'
+import { focusedRow, isMenuKey, moveFocus, openMenuOf, refocusRow } from '../focus'
 import { roomBeside, updateSettings } from '../settings'
 import { hoverCard } from '../hover'
 import { relativeTime } from '../time'
@@ -48,6 +51,7 @@ import {
   lfsTrack,
   markResolved,
   openInEditor,
+  openDiffTool,
   reword,
   run,
   showInFolder,
@@ -214,6 +218,11 @@ function FileList({
       : []),
     'separator' as const,
     {
+      label: 'Open in diff tool',
+      disabled: kind === 'conflicted' || f.status === '?',
+      onClick: () => void openDiffTool(repo, sourceFor(kind, f, hash, compare), f.path, f.oldPath)
+    },
+    {
       label: 'Open in editor',
       disabled: f.status === 'D',
       onClick: () => void openInEditor(repo, f.path)
@@ -257,6 +266,14 @@ function FileList({
     }
   ]
 
+  /** Stages or unstages from the keyboard; the focus goes to the row taking the file's place. */
+  const runFromKeyboard = (row: HTMLElement, files: FileChange[]): void => {
+    const panel = row.closest('.detail')
+    const index = focusedRow(panel, '.file-row')
+    action?.run(files)
+    refocusRow(panel, '.file-row', index)
+  }
+
   const fileRow = (f: FileChange, depth: number, label: string): React.JSX.Element => {
     const target: DiffTarget = {
       source: sourceFor(kind, f, hash, compare),
@@ -270,7 +287,21 @@ function FileList({
         className={`file-row${isActive(f) ? ' active' : ''}`}
         style={{ paddingLeft: 4 + depth * 16 }}
         title={f.oldPath ? `${f.oldPath} → ${f.path}` : f.path}
+        tabIndex={0}
         onClick={() => openDiff(target)}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            openDiff(target)
+          } else if (action && kind !== 'conflicted' && matches(e, 'stageFile')) {
+            e.preventDefault()
+            runFromKeyboard(e.currentTarget, [f])
+          } else if (isMenuKey(e)) {
+            e.preventDefault()
+            openMenuOf(e.currentTarget)
+          }
+        }}
         onContextMenu={(e) => openMenu(e, menuFor(f))}
       >
         <span className={`file-status status-${f.status}`}>
@@ -304,19 +335,33 @@ function FileList({
     const rows: React.JSX.Element[] = []
     for (const folder of folders) {
       const isCollapsed = collapsed.has(folder.path)
+      const toggle = (): void =>
+        setCollapsed((prev) => {
+          const next = new Set(prev)
+          if (isCollapsed) next.delete(folder.path)
+          else next.add(folder.path)
+          return next
+        })
       rows.push(
         <div
           key={`dir:${folder.path}`}
           className="file-row"
           style={{ paddingLeft: 4 + depth * 16 }}
-          onClick={() =>
-            setCollapsed((prev) => {
-              const next = new Set(prev)
-              if (isCollapsed) next.delete(folder.path)
-              else next.add(folder.path)
-              return next
-            })
-          }
+          tabIndex={0}
+          onClick={toggle}
+          onKeyDown={(e) => {
+            if (e.target !== e.currentTarget) return
+            if (
+              e.key === 'Enter' ||
+              (e.key === 'ArrowRight' ? isCollapsed : e.key === 'ArrowLeft' && !isCollapsed)
+            ) {
+              e.preventDefault()
+              toggle()
+            } else if (action && kind !== 'conflicted' && matches(e, 'stageFile')) {
+              e.preventDefault()
+              runFromKeyboard(e.currentTarget, allFiles(folder))
+            }
+          }}
         >
           {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
           <Folder size={14} className="muted" />
@@ -344,7 +389,11 @@ function FileList({
     return rows
   }
 
-  return <div>{tree ? folderRows(tree, 0) : files.map((f) => fileRow(f, 0, f.path))}</div>
+  return (
+    <div onKeyDown={(e) => moveFocus(e, e.currentTarget.closest('.detail'), '.file-row')}>
+      {tree ? folderRows(tree, 0) : files.map((f) => fileRow(f, 0, f.path))}
+    </div>
+  )
 }
 
 /** A commit message template (COMMIT-10): its text, and its comment lines as a hint. */
@@ -501,7 +550,7 @@ function CommitBox({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element 
     <div
       className="commit-box"
       onKeyDown={(e) => {
-        if (e.key === 'Enter' && e.ctrlKey) {
+        if (matches(e, 'commit')) {
           e.preventDefault()
           void commit()
         }
@@ -715,6 +764,16 @@ function WorkingTreePanel({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.E
             <span className="toolbar-spacer" />
             {unstaged.length > 0 && (
               <button
+                className="btn btn-small btn-danger-outline"
+                title="Discard all changes"
+                aria-label="Discard all changes"
+                onClick={() => void discardFiles(repo, unstaged)}
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+            {unstaged.length > 0 && (
+              <button
                 className="btn btn-small btn-stage"
                 onClick={() =>
                   // With conflicts, stage everything else: conflicted files are marked resolved explicitly
@@ -864,7 +923,7 @@ function CommitPanel({ repoPath, hash }: { repoPath: string; hash: string }): Re
         <div
           className="reword-box"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && e.ctrlKey) {
+            if (matches(e, 'commit')) {
               e.preventDefault()
               void save()
             } else if (e.key === 'Escape') {

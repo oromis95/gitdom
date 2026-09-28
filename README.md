@@ -35,10 +35,13 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Show the whole file with its changes, choose the context lines, ignore whitespace, wrap long lines
 - Compare any two commits (Ctrl+click both in the graph), or a branch or tag with the current branch
 - Images compared side by side, overlaid with an opacity slider, or with a swipe
+- Open any change in your external diff tool (WinMerge, Beyond Compare, VS Code…)
+
+![A diff in the Catppuccin Latte theme](docs/screenshots/diff.png)
 
 **Everyday workflow**
 
-- Stage and unstage whole files, single hunks or single lines
+- Stage and unstage whole files, single hunks or single lines; discard all the changes at once
 - Commit, amend, and a WIP row for your uncommitted changes
 - Commit options: skip the hooks (`--no-verify`), sign, commit as another author
 - Commit message template (`commit.template`) and quick reuse of a recent message
@@ -46,7 +49,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Sign commits and tags with GPG, SSH or X.509 keys, and see whether each signature is verified
 - Add a file, its extension or its folder to `.gitignore` from the file's menu
 - Stash everything, only the staged changes, or a single file; optionally stash automatically on checkout
-- Branches, checkout, tags and stashes from the sidebar
+- Branches, checkout, tags and stashes from the sidebar, shown as folders (`feature/…`) or as a flat list; check out a tag to look at that version
 - Pull (merge, fast-forward only or rebase), push, and a periodic background fetch
 
 **Advanced operations**
@@ -65,18 +68,18 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 
 **Productivity**
 
-- Command palette (`Ctrl+P`) for every action
+- Command palette (`Ctrl+Shift+P` or `Ctrl+P`) for every action
 - Integrated terminal (`` Ctrl+` ``) that opens in the repository
 - Blame and file history
 - Several repositories open side by side in tabs
 - Quick switcher on the repository name in the toolbar: open tabs, favorites and recent repositories, with search
 - Workspaces: save the open tabs under a name and reopen them together
 - Worktrees: check out a branch in its own folder, listed in the sidebar, to work on two branches at once
-- Submodules: status, initialize and update
-- Git LFS: tracked patterns, LFS badges on files, track or untrack from the file list
+- Submodules: status, add, initialize, update and sync their URLs
+- Git LFS: tracked patterns, LFS badges on files, track or untrack from the file list, download and upload the LFS files
 - Author identity per repository or global, with saved profiles to switch between
 - Open a file in your editor (VS Code or any command you choose) or show it in Explorer
-- Launch your merge tool on a conflicted file
+- Launch your merge tool on a conflicted file, or your diff tool on any change
 
 **Preferences** (**File → Preferences**, `Ctrl+,`)
 
@@ -84,7 +87,8 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Zoom the whole interface with `Ctrl+=` / `Ctrl+-` / `Ctrl+0` or `Ctrl`+mouse wheel; the status bar shows the level
 - Drag the edges of the side panels to resize them; GitDom remembers the sizes (double-click an edge to reset it)
 - Background fetch interval (or off), default pull strategy, automatic stash on checkout
-- Path of the git executable, external editor and merge tool
+- Path of the git executable, external editor, merge tool and diff tool
+- **Git config**: see and edit your global git settings and those of the open repository, with a filter
 - Startup check for new versions
 
 **Updates**
@@ -92,11 +96,24 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - At startup GitDom tells you when a newer version is out on GitHub, with a link to download it
 - **Help → What's New** lists what each version added; the full list is in [CHANGELOG.md](CHANGELOG.md)
 
+**Keyboard**
+
+- Every shortcut is listed in **Preferences → Keyboard**, where you can give it other keys or remove them
+- Move between the panels with `Ctrl+1` (sidebar), `Ctrl+2` (graph) and `Ctrl+3` (details); `Ctrl+Alt+F` filters the sidebar
+- In the graph, the arrow keys, Page Up/Down, Home and End move the selection, and Enter goes to the details
+- In the sidebar and the file lists, the arrow keys move between the items; Enter checks out a branch or opens a file's diff, and `Space` stages or unstages the file
+- `Alt+Down` / `Alt+Up` (or `F7` / `Shift+F7`) jump to the next or previous change in a diff
+- The menu key or `Shift+F10` opens the right-click menu of the selected item, and the arrow keys move through it
+
 **Themes**
 
 - Dark, Light, or follow the system setting
 - **Studio**: a different layout, with floating rounded panels, actions in a rail on the left and a collapsible detail panel
-- To switch theme, use **Window → Theme** or the command palette
+- Ready-made themes: Nord, Dracula, Tokyo Night, Catppuccin (Mocha and Latte), Gruvbox Dark, Monokai, Solarized (dark and light), and high-contrast dark and light
+- **Your own themes**: start from any theme and change its colors in **Preferences → Themes**; GitDom checks that text stays readable (WCAG contrast) and warns you if it doesn't. Themes can be exported and imported as text through the clipboard
+- To switch theme, use **Preferences → Themes**, **Window → Theme** or the command palette
+
+![The theme gallery in Preferences](docs/screenshots/themes.png)
 
 ![GitDom, Studio theme](docs/screenshots/studio.png)
 
@@ -154,7 +171,7 @@ docs/         Requirements (Italian) and screenshots
 
 ## Status
 
-GitDom is a personal project under active development (version 0.9.0).
+GitDom is a personal project under active development (version 1.0.0).
 The full list of requirements is in [docs/REQUISITI.md](docs/REQUISITI.md), and the plan for the next versions is in [docs/ROADMAP.md](docs/ROADMAP.md) (both in Italian).
 
 ## License

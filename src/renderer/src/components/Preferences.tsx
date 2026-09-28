@@ -11,16 +11,12 @@ import {
   useSettings,
   type Settings
 } from '../settings'
-import { setSplashEnabled, setTheme, splashEnabled, useTheme, type ThemeChoice } from '../theme'
+import { setSplashEnabled, setTheme, splashEnabled, themeOptions, useTheme } from '../theme'
 import { useUi } from '../ui'
 import { checkForUpdates, showWhatsNew } from '../updates'
-
-const THEMES: { value: ThemeChoice; label: string }[] = [
-  { value: 'dark', label: 'Dark' },
-  { value: 'light', label: 'Light' },
-  { value: 'studio', label: 'Studio (different layout)' },
-  { value: 'system', label: 'Follow the system' }
-]
+import ThemeSettings from './ThemeSettings'
+import ShortcutSettings from './ShortcutSettings'
+import ConfigSettings from './ConfigSettings'
 
 const PULL_MODES: { value: PullMode; label: string }[] = [
   { value: 'ff', label: 'Fast-forward if possible, otherwise merge' },
@@ -53,7 +49,7 @@ const COMMON_MERGE_TOOLS: MergeToolInfo[] = [
   { name: 'smerge', label: 'Sublime Merge', available: false }
 ]
 
-type Section = 'appearance' | 'git' | 'tools'
+type Section = 'appearance' | 'themes' | 'keyboard' | 'git' | 'config' | 'tools'
 
 /**
  * A text setting saved when the field loses focus or Enter is pressed, not at every key:
@@ -119,14 +115,15 @@ function Row({
 
 function Appearance({ s }: { s: Settings }): React.JSX.Element {
   const theme = useTheme((t) => t.theme)
+  const custom = useTheme((t) => t.custom)
   const [splash, setSplash] = useState(splashEnabled)
   return (
     <>
-      <Row label="Theme" hint="Also in Window → Theme">
-        <select value={theme} onChange={(e) => setTheme(e.target.value as ThemeChoice)}>
-          {THEMES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
+      <Row label="Theme" hint="Also in Window → Theme; previews and your own themes in Themes">
+        <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+          {themeOptions(custom).map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.id === 'studio' ? 'Studio (different layout)' : t.label}
             </option>
           ))}
         </select>
@@ -345,12 +342,40 @@ function Tools({ s }: { s: Settings }): React.JSX.Element {
   const found = tools?.filter((t) => t.available) ?? []
   const missing = tools?.filter((t) => !t.available) ?? COMMON_MERGE_TOOLS
   const listed = tools ?? COMMON_MERGE_TOOLS
-  const unknown = s.mergeTool && !listed.some((t) => t.name === s.mergeTool)
   // bc, bc3 and bc4 are all "Beyond Compare": their name tells them apart
   const label = (tool: MergeToolInfo): string =>
     listed.filter((t) => t.label === tool.label).length > 1
       ? `${tool.label} (${tool.name})`
       : tool.label
+  // Diff and merge tools share the names git knows (git difftool --tool-help lists the same ones)
+  const toolSelect = (
+    value: string,
+    fallback: string,
+    onChange: (value: string) => void
+  ): React.JSX.Element => (
+    <select value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{fallback}</option>
+      {value && !listed.some((t) => t.name === value) && <option value={value}>{value}</option>}
+      {found.length > 0 && (
+        <optgroup label="Found on this machine">
+          {found.map((t) => (
+            <option key={t.name} value={t.name}>
+              {label(t)}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {missing.length > 0 && (
+        <optgroup label={tools ? 'Not found' : 'Common tools'}>
+          {missing.map((t) => (
+            <option key={t.name} value={t.name}>
+              {tools ? `${label(t)} - not found` : label(t)}
+            </option>
+          ))}
+        </optgroup>
+      )}
+    </select>
+  )
 
   return (
     <>
@@ -378,28 +403,17 @@ function Tools({ s }: { s: Settings }): React.JSX.Element {
             : 'Checking which tools are installed…'
         }
       >
-        <select value={s.mergeTool} onChange={(e) => updateSettings({ mergeTool: e.target.value })}>
-          <option value="">From git config (merge.tool)</option>
-          {unknown && <option value={s.mergeTool}>{s.mergeTool}</option>}
-          {found.length > 0 && (
-            <optgroup label="Found on this machine">
-              {found.map((t) => (
-                <option key={t.name} value={t.name}>
-                  {label(t)}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {missing.length > 0 && (
-            <optgroup label={tools ? 'Not found' : 'Common tools'}>
-              {missing.map((t) => (
-                <option key={t.name} value={t.name}>
-                  {tools ? `${label(t)} - not found` : label(t)}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
+        {toolSelect(s.mergeTool, 'From git config (merge.tool)', (mergeTool) =>
+          updateSettings({ mergeTool })
+        )}
+      </Row>
+      <Row
+        label="Diff tool"
+        hint="Opens a file's changes side by side, from the diff view or the file's menu."
+      >
+        {toolSelect(s.diffTool, 'From git config (diff.tool)', (diffTool) =>
+          updateSettings({ diffTool })
+        )}
       </Row>
       <datalist id="pref-editors">
         {EDITORS.map((e) => (
@@ -443,7 +457,10 @@ export default function Preferences(): React.JSX.Element | null {
             {(
               [
                 ['appearance', 'Appearance'],
+                ['themes', 'Themes'],
+                ['keyboard', 'Keyboard'],
                 ['git', 'Git'],
+                ['config', 'Git config'],
                 ['tools', 'External tools']
               ] as const
             ).map(([id, label]) => (
@@ -459,14 +476,17 @@ export default function Preferences(): React.JSX.Element | null {
           </nav>
           <div className="pref-content">
             {section === 'appearance' && <Appearance s={settings} />}
+            {section === 'themes' && <ThemeSettings />}
+            {section === 'keyboard' && <ShortcutSettings />}
             {section === 'git' && <Git s={settings} />}
+            {section === 'config' && <ConfigSettings />}
             {section === 'tools' && <Tools s={settings} />}
           </div>
         </div>
         <div className="modal-actions">
           <button
             className="btn"
-            title="Fonts, zoom, panels, fetch interval and tools; the theme stays"
+            title="Fonts, zoom, panels, fetch interval and tools; the theme and the keys stay"
             onClick={() => updateSettings(DEFAULT_SETTINGS)}
           >
             Restore defaults

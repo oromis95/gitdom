@@ -648,6 +648,50 @@ const ops: OpImpl = {
     return withConflicts(repo, [operation, '--skip'])
   },
 
+  async openDiffTool(repo, source, path, oldPath) {
+    const paths = oldPath && oldPath !== path ? [oldPath, path] : [path]
+    paths.forEach((p) => assertArg(p, 'path'))
+    const tool = toolSettings().diffTool
+    if (tool && !/^[\w.-]+$/.test(tool)) throw new Error(`Invalid diff tool: ${tool}`)
+    if (!tool && !(await getConfig(repo, 'diff.tool')) && !(await getConfig(repo, 'merge.tool'))) {
+      throw new Error(
+        'No external diff tool configured: choose one in Preferences, or set diff.tool in your git config'
+      )
+    }
+    let revs: string[]
+    switch (source.kind) {
+      case 'unstaged':
+        revs = []
+        break
+      case 'staged':
+        revs = ['--cached']
+        break
+      case 'untracked':
+        throw new Error('A new file has nothing to compare with yet: stage it first')
+      case 'commit':
+        assertHash(source.hash)
+        revs = [
+          (await firstParentOf(repo, source.hash)) ?? '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
+          source.hash
+        ] // root: the empty tree
+        break
+      case 'compare':
+        assertRev(source.from)
+        assertRev(source.to)
+        revs = [source.from, source.to]
+        break
+    }
+    await runGit(repo, [
+      'difftool',
+      '--no-prompt',
+      ...(tool ? [`--tool=${tool}`] : []),
+      '-M',
+      ...revs,
+      '--',
+      ...paths
+    ])
+  },
+
   async openMergeTool(repo, path) {
     repoFile(repo, path)
     // Without a configured tool git would try terminal editors, which can't run here
@@ -1051,6 +1095,19 @@ const ops: OpImpl = {
     })
   },
 
+  async submoduleAdd(repo, url, path) {
+    assertArg(url, 'URL')
+    repoFile(repo, path)
+    return runGit(repo, ['submodule', 'add', '--', url, path], { withStderr: true })
+  },
+
+  async submoduleSync(repo, paths) {
+    paths.forEach((p) => assertArg(p, 'path'))
+    return runGit(repo, ['submodule', 'sync', '--recursive', '--', ...paths], {
+      withStderr: true
+    })
+  },
+
   async ignore(repo, pattern, untrack) {
     if (!pattern.trim() || /[\0\r\n]/.test(pattern)) throw new Error(`Invalid pattern: ${pattern}`)
     untrack.forEach((p) => repoFile(repo, p))
@@ -1107,6 +1164,15 @@ const ops: OpImpl = {
   async lfsUntrack(repo, pattern) {
     assertArg(pattern, 'pattern')
     await runGit(repo, ['lfs', 'untrack', pattern])
+  },
+
+  async lfsPull(repo) {
+    return runGit(repo, ['lfs', 'pull'], { withStderr: true })
+  },
+
+  async lfsPush(repo, remote) {
+    assertArg(remote, 'remote')
+    return runGit(repo, ['lfs', 'push', '--all', remote], { withStderr: true })
   },
 
   async setIdentity(repo, name, email, scope) {
@@ -1174,7 +1240,7 @@ const READ_ONLY = new Set<OpName>([
  * Operations that wait on the user, outside the queue: an external merge tool can stay open for
  * minutes, and only touches the index when it exits.
  */
-const UNQUEUED = new Set<OpName>(['openMergeTool'])
+const UNQUEUED = new Set<OpName>(['openMergeTool', 'openDiffTool'])
 
 const queues = new Map<string, Promise<unknown>>()
 

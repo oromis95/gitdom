@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 0.9.0 pubblicata il 2026-09-28 (Step 1–8 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.0.0 pubblicata il 2026-09-28 (Step 1–9 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -22,9 +22,10 @@ Le milestone 0–6 sono completate:
 - log attività, backup automatici, reflog consultabile, avviso di nuova versione e changelog (Step 5);
 - firma GPG/SSH di commit e tag, opzioni del commit, reword, template, .gitignore e stash parziali (Step 6);
 - worktree, selettore rapido dei repository e workspace (Step 7);
-- caricamento a pagine per storie di ogni dimensione, aperture più rapide e bundle diviso (Step 8).
+- caricamento a pagine per storie di ogni dimensione, aperture più rapide e bundle diviso (Step 8);
+- temi pronti e personalizzati con verifica del contrasto, scorciatoie personalizzabili, navigazione completa da tastiera, editor della configurazione git e diff tool esterno (Step 9).
 
-I requisiti P0 e i P1 principali sono coperti; il prossimo passo è la v1.0: tastiera, accessibilità e rifinitura (Step 9).
+Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è l'aggiornamento dall'app e la CI su ogni push (Step 10).
 
 ## Principi per l'ordine
 
@@ -120,7 +121,9 @@ Serve a fidarsi dell'app anche nelle operazioni rischiose.
 - Divisione del bundle, oggi 1,6 MB in un unico file, per un avvio più rapido
 - Misura della RAM con 5 repository aperti (NFR-10)
 
-## Step 9 — v1.0: Tastiera, accessibilità, rifinitura
+## Step 9 — v1.0: Tastiera, accessibilità, rifinitura ✅
+
+> Completato: 11 temi pronti (Nord, Dracula, Tokyo Night, Catppuccin Mocha e Latte, Gruvbox Dark, Monokai, Solarized scuro e chiaro, alto contrasto scuro e chiaro) in una galleria nelle Preferenze; temi personalizzati partendo da qualsiasi tema, con verifica del contrasto WCAG ed esportazione/importazione come testo. Scorciatoie personalizzabili in Preferenze → Keyboard. Navigazione da tastiera: Ctrl+1/2/3 tra i pannelli, frecce in sidebar, grafo e liste dei file, Invio e Spazio sui file, Alt+Giù/Su e F7 tra gli hunk, tasto menu e Shift+F10 per i menu contestuali, focus sempre visibile. Pulizia dei P1: checkout dei tag (TAG-03), Scarta tutto (COMMIT-13), aggiunta e sync dei submodule (ADV-02), pull e push LFS (ADV-03), sidebar a cartelle o a lista e Ctrl+Alt+F (SIDE-09, SIDE-11), zoom sempre in barra di stato (UI-06), diff tool esterno (DIFF-12) ed editor della configurazione git globale e locale (SET-03). README e screenshot aggiornati.
 
 Obiettivo della v1.0: tutti i requisiti P0 e P1 coperti.
 

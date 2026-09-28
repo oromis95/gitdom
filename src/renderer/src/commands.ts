@@ -7,11 +7,12 @@ import {
   setSplashEnabled,
   setTheme,
   splashEnabled,
+  themeOptions,
   toggleDetail,
-  useTheme,
-  type ThemeChoice
+  useTheme
 } from './theme'
 import * as actions from './actions'
+import { shortcutLabel } from './shortcuts'
 import { createWorktree, folderName, openWorktree, samePath } from './worktrees'
 import { openWorkspace, saveWorkspace, useWorkspaces } from './workspaces'
 import { toggleTerminal, useTerminal } from './terminal'
@@ -38,13 +39,6 @@ const PULLS: { mode: PullMode; title: string }[] = [
   { mode: 'ff', title: 'Pull (fast-forward if possible)' },
   { mode: 'ff-only', title: 'Pull (fast-forward only)' },
   { mode: 'rebase', title: 'Pull (rebase)' }
-]
-
-const THEMES: { theme: ThemeChoice; title: string }[] = [
-  { theme: 'dark', title: 'Theme: dark' },
-  { theme: 'light', title: 'Theme: light' },
-  { theme: 'studio', title: 'Theme: Studio (different layout)' },
-  { theme: 'system', title: 'Theme: follow the system' }
 ]
 
 /** Commands, most useful first: the palette keeps this order for equal matches. */
@@ -74,21 +68,22 @@ export function buildCommands(): Command[] {
       }
     }
     if (history.undo && !operation) {
-      add('History', `Undo "${history.undo}"`, () => void actions.undo(repo), 'Ctrl+Z')
+      add('History', `Undo "${history.undo}"`, () => void actions.undo(repo), shortcutLabel('undo'))
     }
     if (history.redo && !operation) {
-      add('History', `Redo "${history.redo}"`, () => void actions.redo(repo), 'Ctrl+Y')
+      add('History', `Redo "${history.redo}"`, () => void actions.redo(repo), shortcutLabel('redo'))
     }
 
     if (snapshot.remotes.length) {
-      add('Remote', 'Fetch all', () => void actions.fetchAll(repo))
+      add('Remote', 'Fetch all', () => void actions.fetchAll(repo), shortcutLabel('fetch'))
       for (const { mode, title } of PULLS) add('Remote', title, () => void actions.pull(repo, mode))
-      if (current) add('Remote', 'Push', () => void actions.push(repo))
+      if (current) add('Remote', 'Push', () => void actions.push(repo), shortcutLabel('push'))
     }
     add('Remote', 'Add remote…', () => void actions.addRemote(repo))
 
     const changes = snapshot.status.staged.length + snapshot.status.unstaged.length
-    if (changes) add('Stash', 'Stash changes', () => void actions.stash(repo))
+    if (changes)
+      add('Stash', 'Stash changes', () => void actions.stash(repo), shortcutLabel('stash'))
     for (const entry of snapshot.stashes) {
       add('Stash', `Pop stash: ${entry.message}`, () => void actions.stashPop(repo, entry))
     }
@@ -152,6 +147,13 @@ export function buildCommands(): Command[] {
         () => void actions.updateSubmodules(repo)
       )
     }
+    add('Submodule', 'Add submodule…', () => void actions.addSubmodule(repo))
+    if (snapshot.submodules.length > 0) {
+      add('Submodule', 'Update all submodules', () => void actions.updateSubmodules(repo))
+      add('Submodule', 'Sync submodule URLs from .gitmodules', () => {
+        void actions.syncSubmodules(repo)
+      })
+    }
     for (const sub of snapshot.submodules) {
       if (sub.state !== 'uninitialized') {
         add('Submodule', `Open submodule ${sub.path}`, () => {
@@ -170,6 +172,12 @@ export function buildCommands(): Command[] {
     }
     if (snapshot.lfs.installed) {
       add('LFS', 'Track files with LFS…', () => void actions.lfsTrack(repo))
+      add('LFS', 'Download the LFS files (git lfs pull)', () => void actions.lfsPull(repo))
+      for (const remote of snapshot.remotes) {
+        add('LFS', `Upload the LFS files to ${remote.name}`, () => {
+          void actions.lfsPush(repo, remote.name)
+        })
+      }
       for (const pattern of snapshot.lfs.patterns) {
         add(
           'LFS',
@@ -200,12 +208,12 @@ export function buildCommands(): Command[] {
     add('Recovery', 'Backups saved before resets, rebases and force pushes', () =>
       app.openRecovery('backups')
     )
-    add('Repository', 'Refresh', () => void app.refresh())
+    add('Repository', 'Refresh', () => void app.refresh(), shortcutLabel('refresh'))
     add('Repository', 'Open repository in editor', () => void actions.openInEditor(repo, null))
     add('Repository', 'Show repository in Explorer', () => actions.showInFolder(repo, null))
   }
 
-  add('Repository', 'Open repository…', () => void app.pickAndOpen(), 'Ctrl+O')
+  add('Repository', 'Open repository…', () => void app.pickAndOpen(), shortcutLabel('openRepo'))
   add('Repository', 'Clone repository…', () => openRepoDialog('clone'))
   add('Repository', 'New repository…', () => openRepoDialog('init'))
   for (const workspace of useWorkspaces.getState().list) {
@@ -241,18 +249,24 @@ export function buildCommands(): Command[] {
 
   if (snapshot) {
     const shown = useTerminal.getState().shown
-    add('View', shown ? 'Hide terminal' : 'Open terminal', () => toggleTerminal(), 'Ctrl+`')
+    add(
+      'View',
+      shown ? 'Hide terminal' : 'Open terminal',
+      () => toggleTerminal(),
+      shortcutLabel('terminal')
+    )
   }
   const activity = useActivity.getState().shown
   add(
     'View',
     activity ? 'Hide the activity log' : 'Show the activity log (git commands run)',
     () => toggleActivity(),
-    'Ctrl+Shift+L'
+    shortcutLabel('activity')
   )
   const { theme, studio, detailHidden } = useTheme.getState()
-  for (const t of THEMES) {
-    add('View', t.title, () => setTheme(t.theme), t.theme === theme ? 'current' : undefined)
+  for (const t of themeOptions()) {
+    const title = t.id === 'studio' ? 'Studio (different layout)' : t.label
+    add('View', `Theme: ${title}`, () => setTheme(t.id), t.id === theme ? 'current' : undefined)
   }
   if (snapshot && studio) {
     add('View', detailHidden ? 'Show the detail panel' : 'Hide the detail panel', () =>
@@ -260,10 +274,10 @@ export function buildCommands(): Command[] {
     )
   }
   const zoom = Math.round(useSettings.getState().zoom * 100)
-  add('View', 'Zoom in', () => stepZoom(1), `Ctrl+=  (${zoom}%)`)
-  add('View', 'Zoom out', () => stepZoom(-1), 'Ctrl+-')
-  add('View', 'Reset zoom', () => stepZoom(0), 'Ctrl+0')
-  add('Preferences', 'Preferences…', () => openPreferences(), 'Ctrl+,')
+  add('View', 'Zoom in', () => stepZoom(1), `${shortcutLabel('zoomIn')}  (${zoom}%)`.trim())
+  add('View', 'Zoom out', () => stepZoom(-1), shortcutLabel('zoomOut'))
+  add('View', 'Reset zoom', () => stepZoom(0), shortcutLabel('zoomReset'))
+  add('Preferences', 'Preferences…', () => openPreferences(), shortcutLabel('preferences'))
   add('Help', "What's new in GitDom", () => showWhatsNew())
   add('Help', 'Check for updates', () => void checkForUpdates(true))
   const splash = splashEnabled()

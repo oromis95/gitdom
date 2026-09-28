@@ -1,8 +1,16 @@
 // External programs: the editor (DIFF-12), the file manager, and checks on the git executable (SET-04).
 import { execFile, spawn } from 'child_process'
+import { homedir } from 'os'
 import { relative, resolve } from 'path'
 import { ipcMain, shell } from 'electron'
-import { IPC, type MergeToolInfo, type Result, type ToolSettings } from '../shared/api'
+import {
+  IPC,
+  type ConfigEntry,
+  type ConfigScope,
+  type MergeToolInfo,
+  type Result,
+  type ToolSettings
+} from '../shared/api'
 import { parseMergeTools } from './git/parsers'
 import { gitBinary, setToolSettings, toolSettings } from './settings'
 
@@ -17,9 +25,9 @@ function repoPath(repo: string, path: string | null): string {
   return full
 }
 
-function execText(file: string, args: string[], timeout = 15000): Promise<string> {
+function execText(file: string, args: string[], timeout = 15000, cwd?: string): Promise<string> {
   return new Promise((done, fail) =>
-    execFile(file, args, { windowsHide: true, timeout }, (error, stdout, stderr) =>
+    execFile(file, args, { windowsHide: true, timeout, cwd }, (error, stdout, stderr) =>
       error ? fail(new Error(stderr.trim() || error.message)) : done(stdout)
     )
   )
@@ -77,6 +85,37 @@ function mergeTools(): Promise<MergeToolInfo[]> {
   return mergeToolsProbe.tools
 }
 
+/** Runs `git config` on one scope; the local one needs a repository, the global one does not. */
+function gitConfig(scope: ConfigScope, repo: string | null, args: string[]): Promise<string> {
+  if (scope !== 'global' && scope !== 'local') throw new Error(`Invalid scope: ${String(scope)}`)
+  if (scope === 'local' && !repo) throw new Error('Open a repository to edit its configuration')
+  return execText(gitBinary(), ['config', `--${scope}`, ...args], 15000, repo ?? homedir())
+}
+
+/** section[.subsection].name: the subsection may hold anything but a line break. */
+function assertConfigKey(key: string): void {
+  if (typeof key !== 'string' || !/^[A-Za-z0-9-]+(\.[^\0\n]+)?\.[A-Za-z][A-Za-z0-9-]*$/.test(key)) {
+    throw new Error(`Invalid configuration key: ${key}`)
+  }
+}
+
+function assertConfigValue(value: string): void {
+  if (typeof value !== 'string' || value.includes('\0')) throw new Error('Invalid value')
+}
+
+/** Output of `git config --list --null`: "key\nvalue" records ended by NUL. */
+export function parseConfigList(out: string): ConfigEntry[] {
+  return out
+    .split('\0')
+    .filter(Boolean)
+    .map((record) => {
+      const at = record.indexOf('\n')
+      return at < 0
+        ? { key: record, value: '' }
+        : { key: record.slice(0, at), value: record.slice(at + 1) }
+    })
+}
+
 async function toResult<T>(work: () => Promise<T>): Promise<Result<T>> {
   try {
     return { ok: true, value: await work() }
@@ -102,6 +141,59 @@ export function registerToolHandlers(): void {
       const error = await shell.openPath(target)
       if (error) throw new Error(error)
     })
+  )
+
+  ipcMain.handle(IPC.toolsConfigList, (_event, scope: ConfigScope, repo: string | null) =>
+    toResult(async () => {
+      try {
+        return parseConfigList(await gitConfig(scope, repo, ['--list', '--null']))
+      } catch (e) {
+        // No ~/.gitconfig yet: an empty configuration, the first change creates the file
+        if (scope === 'global') return []
+        throw e
+      }
+    })
+  )
+
+  ipcMain.handle(
+    IPC.toolsConfigSet,
+    (
+      _event,
+      scope: ConfigScope,
+      repo: string | null,
+      key: string,
+      value: string,
+      old: string | null
+    ) =>
+      toResult(async () => {
+        assertConfigKey(key)
+        assertConfigValue(value)
+        if (old !== null) assertConfigValue(old)
+        // --end-of-options: a value may start with a dash; --fixed-value: `old` is not a regex
+        await gitConfig(
+          scope,
+          repo,
+          old === null
+            ? ['--add', '--end-of-options', key, value]
+            : ['--fixed-value', '--replace-all', '--end-of-options', key, value, old]
+        )
+      })
+  )
+
+  ipcMain.handle(
+    IPC.toolsConfigUnset,
+    (_event, scope: ConfigScope, repo: string | null, key: string, value: string) =>
+      toResult(async () => {
+        assertConfigKey(key)
+        assertConfigValue(value)
+        await gitConfig(scope, repo, [
+          '--fixed-value',
+          '--unset-all',
+          '--end-of-options',
+          key,
+          value
+        ])
+      })
   )
 
   ipcMain.on(IPC.toolsShowInFolder, (_event, repo: string, path: string | null) => {

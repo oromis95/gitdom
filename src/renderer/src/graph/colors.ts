@@ -1,4 +1,5 @@
-// Lane palettes of the commit graph: one for the classic themes, one for Studio.
+// Lane palettes of the commit graph: one for the classic themes, one for Studio; the palette
+// themes bring their own.
 const LANE_COLORS = [
   '#15a0bf',
   '#0669f7',
@@ -26,8 +27,17 @@ const STUDIO_COLORS = [
   '#f7768e'
 ]
 
+let themeColors: string[] | null = null
+
+/** Lanes of a palette theme; null goes back to the CSS theme's. */
+export function setLanePalette(colors: string[] | null): void {
+  themeColors = colors && colors.length > 0 ? colors : null
+}
+
 export function laneColor(lane: number): string {
-  const palette = document.documentElement.dataset.theme === 'studio' ? STUDIO_COLORS : LANE_COLORS
+  const palette =
+    themeColors ??
+    (document.documentElement.dataset.theme === 'studio' ? STUDIO_COLORS : LANE_COLORS)
   return palette[lane % palette.length]
 }
 

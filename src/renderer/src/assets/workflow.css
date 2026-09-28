@@ -1279,6 +1279,10 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  /* Below the 15vh the dialogs start at, with room for the title and the buttons */
+  max-height: calc(85vh - 200px);
+  overflow-y: auto;
+  padding-right: 4px;
 }
 .pref-row {
   display: flex;
@@ -1382,7 +1386,7 @@
   font-weight: 700;
   line-height: 13px;
   border-radius: 7px;
-  color: #fff;
+  color: var(--accent-text);
   background: var(--accent);
 }
 .commit-options {
@@ -1560,4 +1564,349 @@
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+/* --- Preferences > Themes -------------------------------------------------------------- */
+.theme-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.theme-section-title .btn-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: normal;
+}
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+}
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 5px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.theme-card:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.theme-card.current {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.theme-card-preview {
+  position: relative;
+  display: flex;
+  height: 52px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.theme-card-side {
+  width: 26%;
+}
+.theme-card-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px;
+}
+.theme-card-lines span {
+  height: 4px;
+  border-radius: 2px;
+}
+.theme-card-lines span:nth-child(2) {
+  width: 70%;
+}
+.theme-card-lines span:nth-child(3) {
+  width: 85%;
+}
+.theme-card-lines span:nth-child(4) {
+  width: 55%;
+}
+.theme-card-text {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.theme-card-system .theme-card-preview span {
+  flex: 1;
+}
+.theme-card-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.theme-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.theme-list-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.theme-list-row .theme-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.theme-list-row .theme-card-preview {
+  width: 90px;
+  height: 36px;
+  flex-shrink: 0;
+}
+.theme-list-row .btn-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.theme-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.theme-editor-head {
+  display: flex;
+  gap: 8px;
+}
+.theme-editor-head input,
+.theme-editor-head select,
+.theme-color-hex {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  outline: none;
+}
+.theme-editor-head input:focus,
+.theme-color-hex:focus {
+  border-color: var(--accent);
+}
+.theme-name {
+  flex: 1;
+  min-width: 0;
+}
+.theme-contrast {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 4px;
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+}
+.theme-contrast svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.theme-contrast.bad {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+}
+.theme-group-title {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.theme-colors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+}
+.theme-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.theme-color input[type='color'] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.theme-color-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.theme-color-hex {
+  width: 82px;
+  padding: 3px 6px;
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+/* --- Preferences > Keyboard ------------------------------------------------------------ */
+.shortcut-group {
+  display: flex;
+  flex-direction: column;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.shortcut-row:hover {
+  background: var(--bg-hover);
+}
+.shortcut-label {
+  flex: 1;
+  min-width: 0;
+}
+.shortcut-keys {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 3px 1px 7px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  line-height: 20px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.key-chip.recording {
+  padding: 1px 7px;
+  font-family: inherit;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.key-chip button,
+.key-add,
+.key-reset {
+  display: inline-flex;
+  padding: 2px;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.key-add {
+  padding: 4px;
+  border: 1px dashed var(--border);
+}
+.key-chip button:hover,
+.key-add:hover,
+.key-reset:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+/* Keyboard navigation (NFR-09): a visible ring on whatever has the focus */
+button:focus-visible,
+[tabindex]:focus-visible,
+.file-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.graph-scroller:focus-visible,
+.diff-body:focus-visible {
+  outline-offset: -2px;
+}
+.menu-item:focus {
+  outline: none;
+  background: var(--accent-soft);
+}
+.file-row:focus-visible .row-action,
+.file-row:focus-within .row-action {
+  display: block;
+}
+
+/* --- Preferences > Git config ---------------------------------------------------------- */
+.config-scope {
+  display: flex;
+  gap: 4px;
+}
+.config-scope .btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.config-add {
+  display: flex;
+  gap: 6px;
+}
+.config-add input,
+.config-filter,
+.config-value {
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  outline: none;
+}
+.config-add input:focus,
+.config-filter:focus,
+.config-value:focus {
+  border-color: var(--accent);
+}
+.config-add input {
+  flex: 1;
+}
+.config-key {
+  flex: 0 0 42%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+.config-value {
+  flex: 1;
+  padding: 3px 6px;
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+.config-value:not(:focus) {
+  background: transparent;
+  border-color: transparent;
+}
+.config-row:hover .config-value:not(:focus) {
+  border-color: var(--border);
 }

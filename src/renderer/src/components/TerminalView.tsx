@@ -1,5 +1,6 @@
 // One xterm terminal session: loaded on first use, xterm is a big part of the bundle.
 import { useEffect, useRef } from 'react'
+import { isAppShortcut } from '../shortcuts'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -140,10 +141,11 @@ export default function TerminalView({
     })
 
     term.attachCustomKeyEventHandler((e) => {
-      if (e.type !== 'keydown' || !e.ctrlKey || e.altKey) return true
-      const key = e.key.toLowerCase()
+      if (e.type !== 'keydown') return true
       // App shortcuts: toggle the terminal, command palette, activity log
-      if (e.code === 'Backquote' || (e.shiftKey && (key === 'p' || key === 'l'))) return false
+      if (isAppShortcut(e)) return false
+      if (!e.ctrlKey || e.altKey) return true
+      const key = e.key.toLowerCase()
       // Ctrl+C copies when there is a selection, and interrupts otherwise
       if (key === 'c' && (e.shiftKey || term.hasSelection())) {
         void navigator.clipboard.writeText(term.getSelection())
@@ -159,7 +161,8 @@ export default function TerminalView({
     const resizeObserver = new ResizeObserver(() => fit())
     resizeObserver.observe(host)
     const themeObserver = new MutationObserver(() => (term.options.theme = themeColors()))
-    themeObserver.observe(document.documentElement, { attributeFilter: ['data-theme'] })
+    // Palette themes set their colours as inline styles on <html>
+    themeObserver.observe(document.documentElement, { attributeFilter: ['data-theme', 'style'] })
     const offFont = useSettings.subscribe((s, previous) => {
       if (s.codeFont === previous.codeFont && s.codeFontSize === previous.codeFontSize) return
       term.options.fontFamily = codeFont(s).family

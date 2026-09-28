@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { buildCommands, type Command } from '../commands'
 import { fuzzyFilter } from '../fuzzy'
-import { fromTerminal, useUi } from '../ui'
+import { useUi } from '../ui'
+import { useShortcut } from '../shortcuts'
 
 const MAX_RESULTS = 100
 
@@ -93,23 +94,8 @@ function Palette(): React.JSX.Element {
 export default function CommandPalette(): React.JSX.Element | null {
   const open = useUi((s) => s.palette)
 
-  // Ctrl+P or Ctrl+Shift+P
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      // In the terminal Ctrl+P is the shell's (previous command): only Ctrl+Shift+P opens the palette
-      if (
-        e.ctrlKey &&
-        !e.altKey &&
-        e.key.toLowerCase() === 'p' &&
-        (e.shiftKey || !fromTerminal(e))
-      ) {
-        e.preventDefault()
-        useUi.setState((s) => ({ palette: !s.palette, menu: null }))
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  // In the terminal Ctrl+P is the shell's (previous command): only Ctrl+Shift+P opens the palette
+  useShortcut('palette', () => useUi.setState((s) => ({ palette: !s.palette, menu: null })))
 
   // Remounted at each opening: the commands reflect the state at that moment
   return open ? <Palette /> : null

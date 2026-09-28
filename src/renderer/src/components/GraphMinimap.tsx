@@ -26,7 +26,7 @@ export default function GraphMinimap({
   onScroll
 }: Props): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const theme = useTheme((s) => s.applied)
+  const theme = useTheme((s) => s.revision)
   const [height, setHeight] = useState(0)
 
   const total = Math.max(rows * rowHeight, viewportHeight, 1)

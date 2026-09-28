@@ -1,6 +1,6 @@
 // Activity log dock (UI-09, NFR-07): the git commands GitDom ran, grouped by the action that ran
 // them, newest first, with duration, exit code and output.
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, CircleAlert, CircleCheck, Copy, Trash2, X } from 'lucide-react'
 import type { ActivityEntry } from '../../../shared/api'
 import {
@@ -13,6 +13,7 @@ import {
   useActivity
 } from '../activity'
 import { notify } from '../ui'
+import { useShortcut, useShortcutLabel } from '../shortcuts'
 
 interface Group {
   key: string
@@ -136,16 +137,8 @@ export default function ActivityDock(): React.JSX.Element | null {
   const groups = useMemo(() => groupEntries(entries, background), [entries, background])
 
   // Ctrl+Shift+L shows and hides the log; the View menu only displays the shortcut
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'l') {
-        e.preventDefault()
-        toggleActivity()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  useShortcut('activity', () => toggleActivity())
+  const hideKey = useShortcutLabel('activity')
 
   if (!shown) return null
 
@@ -182,7 +175,7 @@ export default function ActivityDock(): React.JSX.Element | null {
         </button>
         <button
           className="diff-close"
-          title="Hide (Ctrl+Shift+L)"
+          title={hideKey ? `Hide (${hideKey})` : 'Hide'}
           onClick={() => toggleActivity(false)}
         >
           <X size={16} />

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { setToolSettings } from '../settings'
 import { runOp } from './operations'
 import { ensureCommitGraph, loadCommits, loadIdentity, loadSnapshot } from './repository'
 
@@ -765,6 +766,61 @@ describe('submodules, LFS and identity', () => {
     expect(existsSync(join(clone, 'libs', 'my lib', 'lib.txt'))).toBe(true)
     expect((await loadSnapshot(clone)).submodules[0].state).toBe('clean')
     vi.unstubAllEnvs()
+  })
+
+  it('adds a submodule and syncs its URL', async () => {
+    vi.stubEnv('GIT_CONFIG_PARAMETERS', "'protocol.file.allow=always'")
+    const lib = join(root, 'lib')
+    mkdirSync(lib)
+    init(lib)
+    writeFileSync(join(lib, 'lib.txt'), 'lib\n')
+    git(lib, 'add', '.')
+    git(lib, 'commit', '-q', '-m', 'lib')
+    await commitFile('a.txt', 'a\n', 'first')
+
+    await runOp(repo, 'submoduleAdd', [lib, 'libs/lib'])
+    expect(existsSync(join(repo, 'libs', 'lib', 'lib.txt'))).toBe(true)
+    expect((await loadSnapshot(repo)).submodules.map((s) => s.path)).toEqual(['libs/lib'])
+    await expect(runOp(repo, 'submoduleAdd', [lib, '../outside'])).rejects.toThrow()
+
+    // A URL changed in .gitmodules reaches the configuration only with a sync
+    const moved = join(root, 'lib-moved')
+    git(repo, 'config', '-f', '.gitmodules', 'submodule.libs/lib.url', moved)
+    await runOp(repo, 'submoduleSync', [[]])
+    expect(git(repo, 'config', 'submodule.libs/lib.url')).toBe(moved)
+    vi.unstubAllEnvs()
+  })
+
+  it('opens the external diff tool on each kind of change (DIFF-12)', async () => {
+    await commitFile('a.txt', 'one\n', 'first')
+    await commitFile('a.txt', 'two\n', 'second')
+    // A "tool" that records the two sides it was given
+    git(repo, 'config', 'difftool.fake.cmd', 'cat "$LOCAL" "$REMOTE" >> ../seen.txt')
+    const seen = (): string => readFileSync(join(root, 'seen.txt'), 'utf8').replace(/\r/g, '')
+    const tools = { gitPath: '', editor: '', mergeTool: '', diffTool: '' }
+    // Independent of a diff.tool in the user's own configuration
+    vi.stubEnv('GIT_CONFIG_GLOBAL', join(root, 'no-global-config'))
+    try {
+      await expect(runOp(repo, 'openDiffTool', [{ kind: 'unstaged' }, 'a.txt'])).rejects.toThrow(
+        /No external diff tool/
+      )
+      setToolSettings({ ...tools, diffTool: 'fake' })
+      await runOp(repo, 'openDiffTool', [
+        { kind: 'commit', hash: git(repo, 'rev-parse', 'HEAD') },
+        'a.txt'
+      ])
+      expect(seen()).toBe('one\ntwo\n')
+      write('a.txt', 'three\n')
+      await runOp(repo, 'openDiffTool', [{ kind: 'unstaged' }, 'a.txt'])
+      expect(seen()).toBe('one\ntwo\ntwo\nthree\n')
+      setToolSettings({ ...tools, diffTool: 'bad tool' })
+      await expect(runOp(repo, 'openDiffTool', [{ kind: 'unstaged' }, 'a.txt'])).rejects.toThrow(
+        /Invalid diff tool/
+      )
+    } finally {
+      setToolSettings(tools)
+      vi.unstubAllEnvs()
+    }
   })
 
   it('tracks and untracks LFS patterns', async () => {

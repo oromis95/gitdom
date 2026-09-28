@@ -29,6 +29,8 @@ import { stepZoom, useSettings } from './settings'
 import { splashEnabled, useTheme } from './theme'
 import { startActivityLog, toggleActivity, useActivity } from './activity'
 import { checkForUpdates, showWhatsNew, startupChecks } from './updates'
+import { useShortcut, useShortcutLabel } from './shortcuts'
+import { focusPanel, type Panel } from './focus'
 
 // Loaded on first use, to keep the startup bundle small (NFR-02)
 const DiffView = lazy(() => import('./components/DiffView'))
@@ -183,25 +185,30 @@ function App(): React.JSX.Element {
     return () => clearInterval(timer)
   }, [autoFetchMinutes])
 
-  // Ctrl+Shift+= types "+" on most layouts: the menu only binds Ctrl+=. Ctrl+wheel zooms too.
+  // The menu's keys: it only shows them, so that the user's own keys work too
+  useShortcut('openRepo', () => void useApp.getState().pickAndOpen())
+  useShortcut('preferences', () => openPreferences())
+  useShortcut('zoomIn', () => stepZoom(1))
+  useShortcut('zoomOut', () => stepZoom(-1))
+  useShortcut('zoomReset', () => stepZoom(0))
+  // Moving between the panels (NFR-09), not from behind a dialog
+  const focusKey = (panel: Panel) => (): boolean =>
+    !document.querySelector('.modal, .palette') && focusPanel(panel)
+  useShortcut('focusSidebar', focusKey('sidebar'))
+  useShortcut('focusGraph', focusKey('graph'))
+  useShortcut('focusDetail', focusKey('detail'))
+  const activityKey = useShortcutLabel('activity')
+  const zoomResetKey = useShortcutLabel('zoomReset')
+
+  // Ctrl+wheel zooms too
   useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.ctrlKey && !e.altKey && e.key === '+') {
-        e.preventDefault()
-        stepZoom(1)
-      }
-    }
     const onWheel = (e: WheelEvent): void => {
       if (!e.ctrlKey || e.deltaY === 0) return
       e.preventDefault()
       stepZoom(e.deltaY < 0 ? 1 : -1)
     }
-    window.addEventListener('keydown', onKey)
     window.addEventListener('wheel', onWheel, { passive: false })
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      window.removeEventListener('wheel', onWheel)
-    }
+    return () => window.removeEventListener('wheel', onWheel)
   }, [])
   const zoom = useSettings((s) => s.zoom)
   const activityShown = useActivity((s) => s.shown)
@@ -274,16 +281,18 @@ function App(): React.JSX.Element {
         {snapshot && <IdentityButton snapshot={snapshot} />}
         <button
           className={`status-activity${activityShown ? ' active' : ''}`}
-          title="Activity log: the git commands GitDom runs (Ctrl+Shift+L)"
+          title={`Activity log: the git commands GitDom runs${activityKey ? ` (${activityKey})` : ''}`}
           onClick={() => toggleActivity()}
         >
           <ScrollText size={13} /> Activity
         </button>
-        {zoom !== 1 && (
-          <button className="status-zoom" title="Reset zoom (Ctrl+0)" onClick={() => stepZoom(0)}>
-            {Math.round(zoom * 100)}%
-          </button>
-        )}
+        <button
+          className="status-zoom"
+          title={zoomResetKey ? `Reset zoom (${zoomResetKey})` : 'Reset zoom'}
+          onClick={() => stepZoom(0)}
+        >
+          {Math.round(zoom * 100)}%
+        </button>
         <span>GitDom {__APP_VERSION__}</span>
       </div>
       <Overlays />
