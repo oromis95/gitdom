@@ -29,6 +29,11 @@ export interface RunOptions {
   signal?: AbortSignal
   /** How stdout is decoded: base64 for binary content such as images */
   encoding?: 'utf8' | 'base64'
+  /**
+   * Receives stdout as it arrives, instead of collecting it: for output too big to hold, such as
+   * the whole history with its changed files. The promise then resolves with an empty string.
+   */
+  onStdout?: (chunk: Buffer) => void
 }
 
 // Options forced on every invocation so output is stable and parseable
@@ -60,7 +65,14 @@ export function runGit(cwd: string, args: string[], options: RunOptions = {}): P
 
     const out: Buffer[] = []
     const err: Buffer[] = []
-    child.stdout.on('data', (chunk: Buffer) => out.push(chunk))
+    let streamed = 0
+    child.stdout.on('data', (chunk: Buffer) => {
+      if (!options.onStdout) out.push(chunk)
+      else {
+        streamed += chunk.length
+        options.onStdout(chunk)
+      }
+    })
     child.stderr.on('data', (chunk: Buffer) => {
       err.push(chunk)
       options.onStderr?.(chunk.toString('utf8'))
@@ -81,8 +93,9 @@ export function runGit(cwd: string, args: string[], options: RunOptions = {}): P
       const stdout = Buffer.concat(out).toString(options.encoding ?? 'utf8')
       const stderr = Buffer.concat(err).toString('utf8')
       const ok = code === 0 || (code !== null && !!options.okExitCodes?.includes(code))
-      const shown =
-        options.encoding === 'base64'
+      const shown = options.onStdout
+        ? `(output read as it arrived, ${streamed} bytes)`
+        : options.encoding === 'base64'
           ? `(binary output, ${Buffer.concat(out).length} bytes)`
           : stdout
       logged(code, stderr ? `${shown.trimEnd()}\n${stderr}`.trim() : shown, ok)

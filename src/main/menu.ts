@@ -61,6 +61,7 @@ function build(): void {
       { label: 'Activity Log', ...shown('activity'), click: send('activity') },
       { label: 'Reflog', click: send('reflog') },
       { label: 'Backups', click: send('backups') },
+      { label: 'Statistics', click: send('statistics') },
       { type: 'separator' },
       { role: 'togglefullscreen' },
       { role: 'reload' },

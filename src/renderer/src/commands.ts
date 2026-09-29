@@ -208,6 +208,9 @@ export function buildCommands(): Command[] {
     add('Recovery', 'Backups saved before resets, rebases and force pushes', () =>
       app.openRecovery('backups')
     )
+    add('Repository', 'Statistics: authors, activity, languages and hot files', () =>
+      app.openStatistics(true)
+    )
     add('Repository', 'Refresh', () => void app.refresh(), shortcutLabel('refresh'))
     add('Repository', 'Open repository in editor', () => void actions.openInEditor(repo, null))
     add('Repository', 'Show repository in Explorer', () => actions.showInFolder(repo, null))

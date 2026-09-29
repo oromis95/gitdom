@@ -66,6 +66,12 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Automatic backup of the branch before a reset, a rebase or a force push; restore it with one click or create a branch from it (**View → Backups**)
 - Reflog of HEAD and of each branch, to find commits lost after a reset or a rebase (**View → Reflog**)
 
+**Understanding the repository**
+
+- Statistics (**View → Statistics**): commits, authors and their share, an activity calendar, commits per month with the growth of the code, the hours commits are made, and the languages of the project
+- Hot files, changed most and most recently, and the files only one person knows, with the bus factor
+- For the current branch or all of them, over any period; reading a big history can be stopped
+
 **Productivity**
 
 - Command palette (`Ctrl+Shift+P` or `Ctrl+P`) for every action

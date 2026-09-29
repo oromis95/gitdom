@@ -37,6 +37,7 @@ const DiffView = lazy(() => import('./components/DiffView'))
 const ConflictView = lazy(() => import('./components/ConflictView'))
 const FileInspector = lazy(() => import('./components/FileInspector'))
 const RecoveryView = lazy(() => import('./components/RecoveryView'))
+const StatisticsView = lazy(() => import('./components/StatisticsView'))
 
 function IdentityButton({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
   const { name, email, scope } = snapshot.identity
@@ -149,7 +150,8 @@ function App(): React.JSX.Element {
         else if (command === 'activity') toggleActivity()
         else if (command === 'reflog' || command === 'backups') {
           useApp.getState().openRecovery(command)
-        } else if (command === 'whatsNew') showWhatsNew()
+        } else if (command === 'statistics') useApp.getState().openStatistics(true)
+        else if (command === 'whatsNew') showWhatsNew()
         else if (command === 'checkUpdates') void checkForUpdates(true)
         else stepZoom(command === 'zoomIn' ? 1 : command === 'zoomOut' ? -1 : 0)
       }),
@@ -246,6 +248,8 @@ function App(): React.JSX.Element {
                   <FileInspector snapshot={snapshot} inspect={tab.inspect} />
                 ) : tab.recovery ? (
                   <RecoveryView snapshot={snapshot} view={tab.recovery} />
+                ) : tab.statistics ? (
+                  <StatisticsView snapshot={snapshot} />
                 ) : (
                   <GraphView
                     snapshot={snapshot}

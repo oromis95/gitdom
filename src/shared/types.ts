@@ -331,3 +331,93 @@ export interface Signature {
   /** Key id or fingerprint */
   key: string
 }
+
+/** What the repository statistics cover. */
+export interface StatisticsOptions {
+  /** Only the commits of the last N days; null for the whole history */
+  sinceDays: number | null
+  /** Every branch, remote branch and tag, instead of the current branch only */
+  allBranches: boolean
+}
+
+export interface AuthorStats {
+  name: string
+  email: string
+  commits: number
+  added: number
+  deleted: number
+  /** Unix times of the author's first and last commit */
+  first: number
+  last: number
+}
+
+export interface FileStats {
+  path: string
+  /** Commits that changed the file, following its renames */
+  changes: number
+  /** Different authors who changed it */
+  authors: number
+  /** Unix time of the last change */
+  last: number
+  /** Changes weighted by how recent they are: a recent change counts more than an old one */
+  heat: number
+  /** Name of the author with the most changes, and their share of the changes (0 to 1) */
+  owner: string
+  ownerShare: number
+}
+
+export interface LanguageStats {
+  name: string
+  /** Size of the language's files in the current version */
+  bytes: number
+  files: number
+}
+
+export interface MonthStats {
+  /** "YYYY-MM" */
+  month: string
+  commits: number
+  added: number
+  deleted: number
+}
+
+/** Repository statistics, from the history and the current version. */
+export interface RepoStatistics {
+  commits: number
+  merges: number
+  /** Lines added and deleted by all the commits; binary files don't count */
+  added: number
+  deleted: number
+  /** Unix times of the oldest and newest commit; null without commits */
+  first: number | null
+  last: number | null
+  /** Most active authors first, at most 100 */
+  authors: AuthorStats[]
+  authorCount: number
+  /** Commits per day, "YYYY-MM-DD" in the author's time zone */
+  days: Record<string, number>
+  /** Commits per weekday (0 is Sunday) and hour, in the author's time zone: 7 rows of 24 */
+  punchcard: number[][]
+  /** Every month from the first commit to the last, oldest first */
+  months: MonthStats[]
+  /** Biggest first; generated and vendored files don't count */
+  languages: LanguageStats[]
+  /** Files of the current version changed most, and most recently, first; at most 50 */
+  hotspots: FileStats[]
+  /** Files of the current version changed by a single author, most changed first; at most 50 */
+  soloFiles: FileStats[]
+  /** Files of the current version, and how many of them the history covered */
+  trackedFiles: number
+  changedFiles: number
+  /**
+   * Fewest authors who are the main author of half the changed files: how many people could leave
+   * before most of the code has no one who knows it
+   */
+  busFactor: number
+}
+
+export interface StatisticsProgress {
+  repo: string
+  /** Commits read so far */
+  commits: number
+}

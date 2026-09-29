@@ -20,6 +20,8 @@ export interface RepoTab {
   inspect?: FileInspect
   /** Reflog or backups listed instead of the graph (ADV-05, NFR-04) */
   recovery?: RecoveryView
+  /** Repository statistics shown instead of the graph */
+  statistics?: boolean
   /** Label of the long-running operation in progress (fetch, push…) */
   busy?: string
   /** The next page of commits is being loaded (GRAPH-08) */
@@ -115,6 +117,8 @@ interface AppState {
   inspectFile(inspect: FileInspect | null): void
   /** Lists the reflog or the backups in place of the graph, closing the diff and the inspector. */
   openRecovery(view: RecoveryView | null): void
+  /** Shows or hides the repository statistics in place of the graph. */
+  openStatistics(open: boolean): void
   setDraft(path: string, draft: Partial<CommitDraft>): void
   setBusy(path: string, busy: string | undefined): void
   /** Changes the branches the graph shows and reloads it. */
@@ -345,14 +349,36 @@ export const useApp = create<AppState>((set, get) => {
     inspectFile(inspect) {
       const tab = get().tabs[get().active]
       if (tab) {
-        updateTab(tab.path, { inspect: inspect ?? undefined, diff: undefined, recovery: undefined })
+        updateTab(tab.path, {
+          inspect: inspect ?? undefined,
+          diff: undefined,
+          recovery: undefined,
+          statistics: undefined
+        })
       }
     },
 
     openRecovery(view) {
       const tab = get().tabs[get().active]
       if (tab) {
-        updateTab(tab.path, { recovery: view ?? undefined, diff: undefined, inspect: undefined })
+        updateTab(tab.path, {
+          recovery: view ?? undefined,
+          diff: undefined,
+          inspect: undefined,
+          statistics: undefined
+        })
+      }
+    },
+
+    openStatistics(open) {
+      const tab = get().tabs[get().active]
+      if (tab) {
+        updateTab(tab.path, {
+          statistics: open || undefined,
+          diff: undefined,
+          inspect: undefined,
+          recovery: undefined
+        })
       }
     },
 

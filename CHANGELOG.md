@@ -2,6 +2,19 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- **Repository statistics** (**View → Statistics**, or "Statistics" in the command palette), shown in place of the graph
+  - Commits, authors, active days, lines added and deleted, files and the span of the history
+  - An activity calendar for each year, commits per month with the growth of the code, and the hours and days commits are made (in each author's own time zone)
+  - Authors with their share of the commits, and the languages of the current version (generated and vendored files don't count)
+  - **Hot files**: those changed most, and most recently, where bugs and conflicts tend to be; click one to see its history
+  - **Files only one person knows**, and the bus factor: how many people are the main authors of half the files; click a file to see its blame
+  - For the current branch or all of them, over all time or the last year, 6 months, 3 months or 30 days
+  - Reading a long history can be stopped; results stay until GitDom closes, and a button offers to refresh them when the repository changes
+
 ## 1.1.0 — 2026-09-29
 
 ### Added

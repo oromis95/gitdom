@@ -9,6 +9,7 @@ import {
   type ThemeChoice,
   type UpdateProgress
 } from '../shared/api'
+import type { StatisticsProgress } from '../shared/types'
 
 const api: GitDomApi = {
   pickRepository: () => ipcRenderer.invoke(IPC.pickRepository),
@@ -102,6 +103,16 @@ const api: GitDomApi = {
       return () => ipcRenderer.removeListener(IPC.appUpdateProgress, handler)
     },
     installUpdate: () => ipcRenderer.invoke(IPC.appInstallUpdate)
+  },
+  statistics: {
+    load: (repo, options) => ipcRenderer.invoke(IPC.statsLoad, repo, options),
+    cancel: (repo) => ipcRenderer.send(IPC.statsCancel, repo),
+    onProgress: (listener) => {
+      const handler = (_event: IpcRendererEvent, progress: StatisticsProgress): void =>
+        listener(progress)
+      ipcRenderer.on(IPC.statsProgress, handler)
+      return () => ipcRenderer.removeListener(IPC.statsProgress, handler)
+    }
   }
 }
 

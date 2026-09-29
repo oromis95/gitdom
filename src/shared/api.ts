@@ -13,7 +13,10 @@ import type {
   ImagePair,
   ReflogEntry,
   RepoSnapshot,
+  RepoStatistics,
   Signing,
+  StatisticsOptions,
+  StatisticsProgress,
   TagInfo,
   WorkingTreeStatus
 } from './types'
@@ -451,6 +454,15 @@ export interface AppApi {
   installUpdate(): Promise<Result<void>>
 }
 
+/** Repository statistics, computed in the main process from the whole history. */
+export interface StatisticsApi {
+  /** Reads the history; a new request for the same repository stops the previous one. */
+  load(repo: string, options: StatisticsOptions): Promise<Result<RepoStatistics>>
+  /** Stops the statistics being read; load() then resolves with an error. */
+  cancel(repo: string): void
+  onProgress(listener: (progress: StatisticsProgress) => void): () => void
+}
+
 /**
  * A theme offered in the app and in the Window menu: 'dark', 'light', 'studio', 'system' (Windows'
  * light or dark setting), a built-in palette such as 'nord', or one of the user's ('custom-...').
@@ -497,6 +509,7 @@ export type MenuCommand =
   | 'activity'
   | 'reflog'
   | 'backups'
+  | 'statistics'
   | 'whatsNew'
   | 'checkUpdates'
 
@@ -520,6 +533,7 @@ export interface GitDomApi {
   menu: MenuApi
   activity: ActivityApi
   app: AppApi
+  statistics: StatisticsApi
 }
 
 export const IPC = {
@@ -561,5 +575,8 @@ export const IPC = {
   appDownloadUpdate: 'app:download-update',
   appCancelUpdate: 'app:cancel-update',
   appUpdateProgress: 'app:update-progress',
-  appInstallUpdate: 'app:install-update'
+  appInstallUpdate: 'app:install-update',
+  statsLoad: 'stats:load',
+  statsCancel: 'stats:cancel',
+  statsProgress: 'stats:progress'
 } as const

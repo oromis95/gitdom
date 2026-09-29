@@ -61,7 +61,7 @@ export function HoverLayer(): React.JSX.Element | null {
   )
 }
 
-function Avatar({
+export function Avatar({
   name,
   email,
   size

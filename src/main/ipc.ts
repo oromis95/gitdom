@@ -11,8 +11,9 @@ import { activityEntries, clearActivity, inAction, onActivity, redact } from './
 import { cancelClone, cloneRepository, initRepository } from './git/clone'
 import { GitError } from './git/exec'
 import { runOp } from './git/operations'
-import type { GraphFilter } from '../shared/types'
+import type { GraphFilter, StatisticsOptions } from '../shared/types'
 import { ensureCommitGraph, loadSnapshot, resolveRepoRoot } from './git/repository'
+import { cancelStatistics, repoStatistics } from './git/statistics'
 import { setWatchedRepos } from './watcher'
 import { registerTerminalHandlers } from './terminal'
 import { registerToolHandlers } from './tools'
@@ -118,6 +119,17 @@ export function registerIpcHandlers(): void {
   ipcMain.on(IPC.appOpenRepoPage, (_event, url: unknown) => {
     if (isRepoUrl(url)) void shell.openExternal(url)
   })
+
+  ipcMain.handle(IPC.statsLoad, (event, repo: string, options: StatisticsOptions) =>
+    toResult(() =>
+      inAction('Repository statistics', () =>
+        repoStatistics(repo, options, (commits) => {
+          if (!event.sender.isDestroyed()) event.sender.send(IPC.statsProgress, { repo, commits })
+        })
+      )
+    )
+  )
+  ipcMain.on(IPC.statsCancel, (_event, repo: string) => cancelStatistics(repo))
 
   registerTerminalHandlers()
   registerToolHandlers()
