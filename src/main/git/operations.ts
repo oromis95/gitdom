@@ -16,6 +16,7 @@ import {
   REFLOG_FORMAT,
   parseBlame,
   parseFileLog,
+  parseLineLog,
   parseNameStatus,
   parseReflog,
   withNumstat
@@ -43,6 +44,8 @@ const HASH_RE = /^[0-9a-f]{4,64}$/i
 const STASH_RE = /^stash@\{\d+\}$/
 const AUTO_STASH_MESSAGE = 'GitDom auto-stash before checkout'
 const FILE_HISTORY_LIMIT = 5000
+/** Each commit of a line history carries a diff: fewer of them */
+const LINE_HISTORY_LIMIT = 500
 const REFLOG_LIMIT = 2000
 const CONFLICT_MARKER_RE = /^(<{7}|>{7})( |$)/m
 
@@ -470,6 +473,34 @@ const ops: OpImpl = {
       path
     ])
     return parseFileLog(output, path)
+  },
+
+  async lineHistory(repo, path, range, rev) {
+    assertArg(path, 'path')
+    if (rev) assertHash(rev)
+    // Line numbers ("12,40") or a function name, which git looks for with its function detection
+    const lines = /^(\d+),(\d+)$/.exec(range)
+    const valid = lines
+      ? Number(lines[1]) >= 1 && Number(lines[2]) >= Number(lines[1])
+      : /^:[^:\0\n]+$/.test(range)
+    if (!valid) throw new Error(`Invalid line range: ${range}`)
+    const output = await runGit(repo, [
+      'log',
+      `-L${range}:${path}`,
+      `-n${LINE_HISTORY_LIMIT}`,
+      `--format=${FILE_LOG_FORMAT}`,
+      ...(rev ? [rev] : []),
+      '--'
+    ]).catch((e: unknown) => {
+      if (!lines && e instanceof GitError && /no match/.test(e.message)) {
+        const name = range.slice(1).replace(/\\(.)/g, '$1')
+        throw new Error(
+          `Git finds no function named “${name}” in ${path}: it looks for lines that start a function, like “function ${name}” or “def ${name}”, from the start of the line`
+        )
+      }
+      throw e
+    })
+    return parseLineLog(output, path)
   },
 
   async blame(repo, path, rev) {
@@ -1222,6 +1253,7 @@ const READ_ONLY = new Set<OpName>([
   'commitPreview',
   'tagInfo',
   'fileHistory',
+  'lineHistory',
   'blame',
   'lastCommitMessage',
   'commitTemplate',

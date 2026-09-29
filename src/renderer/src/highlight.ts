@@ -1,5 +1,7 @@
 // Syntax highlighting of source lines, shared by the diff and blame views.
 import hljs from 'highlight.js/lib/common'
+import type { FileDiff } from '../../shared/types'
+import { hunkWordRanges, markHtml } from '../../shared/wordDiff'
 
 /** Beyond this, lines are shown as plain text: highlighting would make large files sluggish. */
 const HIGHLIGHT_LIMIT = 5000
@@ -31,4 +33,21 @@ export function highlightLines(path: string, lines: string[]): string[] {
       ? hljs.highlight(text, { language, ignoreIllegals: true }).value
       : escapeHtml(text)
   )
+}
+
+/** Highlights the lines of all hunks, grouped by hunk, with the changed words marked (DIFF-03). */
+export function highlightHunks(diff: FileDiff): string[][] {
+  const html = highlightLines(
+    diff.path,
+    diff.hunks.flatMap((hunk) => hunk.lines.map((line) => line.text))
+  )
+  let next = 0
+  return diff.hunks.map((hunk) => {
+    const words = hunkWordRanges(hunk.lines)
+    return hunk.lines.map((_, l) => {
+      const line = html[next++]
+      const ranges = words.get(l)
+      return ranges ? markHtml(line, ranges) : line
+    })
+  })
 }

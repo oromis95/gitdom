@@ -6,6 +6,7 @@ import type {
   Commit,
   FileChange,
   FileRevision,
+  LineRevision,
   FileStat,
   FileStatusCode,
   Identity,
@@ -22,6 +23,7 @@ import type {
   Worktree
 } from '../../shared/types'
 import type { MergeToolInfo } from '../../shared/api'
+import { parseDiff } from '../../shared/diff'
 
 export const FIELD = '\x1f'
 export const RECORD = '\x1e'
@@ -281,6 +283,50 @@ export function parseFileLog(output: string, path: string): FileRevision[] {
     revisions.push(revision)
     // Older commits know the file by its name before the rename
     current = revision.oldPath ?? revision.path
+  }
+  return revisions
+}
+
+/** A path from a diff header (`+++ b/path`); null for /dev/null or a quoted path. */
+function diffHeaderPath(line: string | undefined, prefix: string): string | null {
+  if (!line?.startsWith(prefix) || line.startsWith(`${prefix}"`)) return null
+  return line.slice(prefix.length)
+}
+
+/**
+ * Parses `git log -L<range>:path --format=FILE_LOG_FORMAT`, newest first: each commit is followed
+ * by the diff of the lines followed. `path` names the file when a header can't be read.
+ */
+export function parseLineLog(output: string, path: string): LineRevision[] {
+  const revisions: LineRevision[] = []
+  for (const record of output.split(RECORD)) {
+    if (!record.trim()) continue
+    const fields = record.split(FIELD)
+    const [hash, parents, authorName, authorEmail, authorDate, subject] = fields
+    const patch = fields.slice(6).join(FIELD)
+    const lines = patch.split('\n')
+    const newPath = diffHeaderPath(
+      lines.find((l) => l.startsWith('+++ ')),
+      '+++ b/'
+    )
+    const oldPath = diffHeaderPath(
+      lines.find((l) => l.startsWith('--- ')),
+      '--- a/'
+    )
+    const shown = newPath ?? oldPath ?? path
+    const diff = parseDiff(patch, shown)
+    if (oldPath && newPath && oldPath !== newPath) diff.oldPath = oldPath
+    if (!oldPath && newPath) diff.change = 'added'
+    revisions.push({
+      hash,
+      parents: parents ? parents.split(' ') : [],
+      authorName,
+      authorEmail,
+      authorDate: Number(authorDate),
+      subject: subject ?? '',
+      path: shown,
+      diff
+    })
   }
   return revisions
 }

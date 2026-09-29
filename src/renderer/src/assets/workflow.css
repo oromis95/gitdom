@@ -1018,6 +1018,58 @@
   flex-shrink: 0;
   color: var(--text-muted);
 }
+.blame-no {
+  cursor: pointer;
+}
+.blame-no:hover {
+  color: var(--text);
+}
+.blame-no.picked {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.blame-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+/* History of some lines: each commit, then how it changed them */
+.line-revision {
+  border-bottom: 1px solid var(--border);
+}
+.line-revision .history-row {
+  position: sticky;
+  left: 0;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  background: var(--bg-panel);
+}
+.line-revision .history-row:hover {
+  background: var(--bg-hover);
+}
+.line-revision .history-row.selected {
+  background: var(--bg-selected);
+}
+.line-revision .hunk {
+  margin-bottom: 8px;
+}
+.diff-line.line-fold {
+  position: sticky;
+  left: 0;
+  width: max-content;
+  align-items: center;
+  gap: 6px;
+  padding-left: 64px;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.diff-line.line-fold:hover {
+  color: var(--accent);
+}
 
 /* --- Terminal ------------------------------------------------------------------------- */
 .tool.active {

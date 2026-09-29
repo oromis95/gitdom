@@ -71,6 +71,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Statistics (**View → Statistics**): commits, authors and their share, an activity calendar, commits per month with the growth of the code, the hours commits are made, and the languages of the project
 - Hot files, changed most and most recently, and the files only one person knows, with the bus factor
 - For the current branch or all of them, over any period; reading a big history can be stopped
+- History of some lines or of a function: pick the lines in the blame, or type the function's name, and see every commit that changed them
 
 **Productivity**
 

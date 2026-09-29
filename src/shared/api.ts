@@ -9,6 +9,7 @@ import type {
   FileChange,
   FileDiff,
   FileRevision,
+  LineRevision,
   GraphFilter,
   ImagePair,
   ReflogEntry,
@@ -103,6 +104,11 @@ export interface RepoOps {
   tagInfo(name: string): TagInfo | null
   /** Commits that changed a file, newest first, following renames. */
   fileHistory(path: string): FileRevision[]
+  /**
+   * Commits that changed some lines of a file, newest first, with the changes (`git log -L`).
+   * `range` is "start,end" or ":function"; line numbers are those of `rev`, or of HEAD when null.
+   */
+  lineHistory(path: string, range: string, rev: string | null): LineRevision[]
   /** Who last changed each line of a file, at a commit or in the working tree (null). */
   blame(path: string, rev: string | null): Blame
 

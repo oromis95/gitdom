@@ -734,6 +734,49 @@ describe('file inspection', () => {
     const atCreate = await runOp(repo, 'blame', ['old name.txt', history[2].hash])
     expect(atCreate.lines.map((l) => l.text)).toEqual(['one', 'two', 'three', 'four'])
   })
+
+  it('follows some lines, or a function, through the commits that changed them', async () => {
+    await commitFile('old name.txt', 'one\ntwo\nthree\nfour\n', 'create')
+    git(repo, 'mv', 'old name.txt', 'new name.txt')
+    await commitFile('new name.txt', 'one\nTWO\nthree\nfour\n', 'edit two')
+    await commitFile('new name.txt', 'one\nTWO\nthree\nFOUR\n', 'edit four')
+
+    const lines = await runOp(repo, 'lineHistory', ['new name.txt', '2,3', null])
+    expect(lines.map((r) => [r.subject, r.path, r.diff.oldPath])).toEqual([
+      ['edit two', 'new name.txt', 'old name.txt'],
+      ['create', 'old name.txt', undefined]
+    ])
+    expect(lines[0].diff.hunks[0].lines.map((l) => l.type + l.text)).toEqual([
+      'deltwo',
+      'addTWO',
+      'contextthree'
+    ])
+    expect(lines[1].diff.change).toBe('added')
+    // Line numbers of an older version
+    const before = await runOp(repo, 'lineHistory', ['old name.txt', '4,4', lines[1].hash])
+    expect(before.map((r) => r.subject)).toEqual(['create'])
+
+    await commitFile(
+      'code.c',
+      'int add(int a) {\n  return a;\n}\n\nint sub(int a) {\n  return -a;\n}\n',
+      'code'
+    )
+    await commitFile(
+      'code.c',
+      'int add(int a) {\n  return a + 1;\n}\n\nint sub(int a) {\n  return -a;\n}\n',
+      'fix add'
+    )
+    const fn = await runOp(repo, 'lineHistory', ['code.c', ':sub', null])
+    expect(fn.map((r) => r.subject)).toEqual(['code'])
+    await expect(runOp(repo, 'lineHistory', ['code.c', ':mul', null])).rejects.toThrow(
+      'no function named “mul”'
+    )
+
+    for (const range of ['0,2', '3,1', 'a,b', ':x:y', '1,2 -p'])
+      await expect(runOp(repo, 'lineHistory', ['code.c', range, null])).rejects.toThrow(
+        'Invalid line range'
+      )
+  })
 })
 
 describe('submodules, LFS and identity', () => {

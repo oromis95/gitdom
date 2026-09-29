@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   parseBlame,
   parseFileLog,
+  parseLineLog,
   parseIdentity,
   parseLfsPatterns,
   parseLog,
@@ -143,6 +144,35 @@ describe('parseFileLog', () => {
       ['c1', 'old.txt', 'A', undefined]
     ])
     expect(revisions[0].parents).toEqual(['c3', 'x9'])
+  })
+})
+
+describe('parseLineLog', () => {
+  it('reads each commit with the diff of the lines followed', () => {
+    const rec = (hash: string, subject: string, patch: string): string =>
+      `${R}${hash}${F}p${F}Ann${F}ann@x.it${F}1700000000${F}${subject}${F}\n\n${patch}`
+    const out =
+      rec(
+        'c2',
+        'Rename and edit',
+        'diff --git a/old.ts b/new.ts\n--- a/old.ts\n+++ b/new.ts\n@@ -2,2 +2,2 @@\n-a\n+b\n c\n'
+      ) +
+      rec(
+        'c1',
+        'Create',
+        'diff --git a/old.ts b/old.ts\n--- /dev/null\n+++ b/old.ts\n@@ -0,0 +2,2 @@\n+a\n+c\n'
+      )
+    const revisions = parseLineLog(out, 'new.ts')
+    expect(revisions.map((r) => [r.hash, r.path, r.diff.oldPath, r.diff.change])).toEqual([
+      ['c2', 'new.ts', 'old.ts', undefined],
+      ['c1', 'old.ts', undefined, 'added']
+    ])
+    expect(revisions[0].diff.hunks[0].lines).toEqual([
+      { type: 'del', text: 'a', oldNo: 2 },
+      { type: 'add', text: 'b', newNo: 2 },
+      { type: 'context', text: 'c', oldNo: 3, newNo: 3 }
+    ])
+    expect(revisions[1].diff.hunks[0].lines.map((l) => l.newNo)).toEqual([2, 3])
   })
 })
 

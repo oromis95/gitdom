@@ -14,6 +14,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - **Files only one person knows**, and the bus factor: how many people are the main authors of half the files; click a file to see its blame
   - For the current branch or all of them, over all time or the last year, 6 months, 3 months or 30 days
   - Reading a long history can be stopped; results stay until GitDom closes, and a button offers to refresh them when the repository changes
+- **History of some lines, or of a function**: in the blame, click the line numbers (Shift+click for a range) and choose **History of these lines**, or use **Function…** and type a function's name
+  - Each commit that changed those lines, newest first, with just the part of the diff that touches them; the lines follow the file through edits and renames
+  - Long runs of unchanged lines are folded, and open with a click
+  - Click a commit to show it, or right-click to see the blame at that commit
 
 ## 1.1.0 — 2026-09-29
 

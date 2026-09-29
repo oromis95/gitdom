@@ -231,6 +231,14 @@ export interface FileRevision extends Commit {
   status?: FileStatusCode
 }
 
+/** A commit that changed some lines of a file, with how they changed (`git log -L`). */
+export interface LineRevision extends Commit {
+  /** Path of the file in this commit */
+  path: string
+  /** The changes to the lines followed, as git narrows them down */
+  diff: FileDiff
+}
+
 export interface BlameCommit {
   hash: string
   authorName: string

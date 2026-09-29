@@ -10,31 +10,13 @@ import type {
   Hunk,
   RepoSnapshot
 } from '../../../shared/types'
-import { hunkWordRanges, markHtml } from '../../../shared/wordDiff'
 import { useApp, type DiffTarget } from '../store'
 import { useShortcut } from '../shortcuts'
-import { highlightLines } from '../highlight'
+import { highlightHunks } from '../highlight'
 import { DIFF_CONTEXT_MAX, updateSettings, useSettings } from '../settings'
 import { confirm, fromTerminal } from '../ui'
 import { discardFiles, markResolved, openDiffTool, resolveWith, run } from '../actions'
 import ImageDiff from './ImageDiff'
-
-/** Highlights the lines of all hunks, grouped by hunk, with the changed words marked (DIFF-03). */
-function highlightHunks(diff: FileDiff): string[][] {
-  const html = highlightLines(
-    diff.path,
-    diff.hunks.flatMap((hunk) => hunk.lines.map((line) => line.text))
-  )
-  let next = 0
-  return diff.hunks.map((hunk) => {
-    const words = hunkWordRanges(hunk.lines)
-    return hunk.lines.map((_, l) => {
-      const line = html[next++]
-      const ranges = words.get(l)
-      return ranges ? markHtml(line, ranges) : line
-    })
-  })
-}
 
 /** Line indexes shown side by side (DIFF-01): removed lines on the left, facing the added ones. */
 function splitRows(lines: DiffLine[]): [number | null, number | null][] {

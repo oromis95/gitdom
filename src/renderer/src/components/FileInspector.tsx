@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { History, ScanText, X } from 'lucide-react'
+import { Braces, ChevronsUpDown, History, ListTree, ScanText, X } from 'lucide-react'
 import type { Result } from '../../../shared/api'
-import type { Blame, BlameCommit, FileRevision, RepoSnapshot } from '../../../shared/types'
+import type {
+  Blame,
+  BlameCommit,
+  DiffLine,
+  FileRevision,
+  LineRevision,
+  RepoSnapshot
+} from '../../../shared/types'
 import { WIP_HASH, useActiveTab, useApp, type FileInspect } from '../store'
-import { fromTerminal, notify, openMenu, type MenuItem } from '../ui'
-import { highlightLines } from '../highlight'
+import { fromTerminal, notify, openMenu, prompt, type MenuItem } from '../ui'
+import { highlightHunks, highlightLines } from '../highlight'
+import { foldContext, functionRange, rangeLabel } from '../lineRange'
 import DiffView from './DiffView'
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
@@ -137,6 +145,124 @@ function FileHistory({
   )
 }
 
+/** The commits that changed some lines of a file, each with how it changed them. */
+function FileLines({
+  snapshot,
+  inspect
+}: {
+  snapshot: RepoSnapshot
+  inspect: FileInspect
+}): React.JSX.Element {
+  const { inspectFile, select } = useApp()
+  const selected = useActiveTab()?.selected
+  const repo = snapshot.path
+  const path = inspect.revPath ?? inspect.path
+  const range = inspect.range ?? '1,1'
+  // Folds of unchanged lines the user opened: "hash:hunk:first line"
+  const [opened, setOpened] = useState<Set<string>>(() => new Set())
+  const result = useLoaded(`${path}\0${range}\0${inspect.rev}\0${snapshot.head.hash}`, () =>
+    window.api.op(repo, 'lineHistory', path, range, inspect.rev)
+  )
+  const revisions = result?.ok ? result.value : null
+  const highlighted = useMemo(
+    () => revisions?.map((r) => highlightHunks(r.diff)) ?? [],
+    [revisions]
+  )
+  // Without a revision git numbers the lines as in the last commit, not as on disk
+  const modified =
+    !inspect.rev &&
+    [...snapshot.status.staged, ...snapshot.status.unstaged].some((f) => f.path === inspect.path)
+
+  const menuFor = (r: LineRevision): MenuItem[] => [
+    {
+      label: 'Blame at this commit',
+      disabled: r.diff.change === 'deleted',
+      onClick: () => inspectFile({ ...inspect, mode: 'blame', rev: r.hash, revPath: r.path })
+    },
+    { label: 'Show commit in graph', onClick: () => showInGraph(r.hash) },
+    'separator',
+    { label: 'Copy commit hash', onClick: () => copyHash(r.hash) }
+  ]
+
+  const renderLine = (line: DiffLine, l: number, html: string): React.ReactNode => (
+    <div key={l} className={`diff-line ${line.type}`}>
+      <span className="diff-no">{line.oldNo ?? ''}</span>
+      <span className="diff-no">{line.newNo ?? ''}</span>
+      <span className="diff-marker">
+        {line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' '}
+      </span>
+      <span className="diff-code" dangerouslySetInnerHTML={{ __html: html || ' ' }} />
+    </div>
+  )
+
+  if (!result) return <div className="center-message">Following the lines…</div>
+  if (!result.ok) return <div className="banner-error">{result.error}</div>
+  if (!revisions!.length) return <div className="center-message">No commits change these lines</div>
+
+  return (
+    <>
+      {modified && (
+        <div className="diff-hint">
+          The file has uncommitted changes: lines are numbered as in the last commit.
+        </div>
+      )}
+      {revisions!.length >= 500 && <div className="diff-hint">Showing the latest 500 commits.</div>}
+      <div className="diff-body line-history">
+        {revisions!.map((r, i) => (
+          <section key={r.hash} className="line-revision">
+            <div
+              className={`history-row${selected === r.hash ? ' selected' : ''}`}
+              onClick={() => select(r.hash)}
+              onContextMenu={(e) => openMenu(e, menuFor(r))}
+              title="Select the commit; right-click for more"
+            >
+              <span className="history-hash mono">{r.hash.slice(0, 7)}</span>
+              <span className="history-subject">
+                {r.subject}
+                {r.diff.oldPath && <span className="muted"> (renamed from {r.diff.oldPath})</span>}
+                {r.diff.change === 'added' && <span className="muted"> (file created)</span>}
+              </span>
+              <span className="cell-author">{r.authorName}</span>
+              <span className="cell-date">{formatDate(r.authorDate)}</span>
+            </div>
+            {r.diff.hunks.map((hunk, h) => (
+              <div key={h} className="hunk">
+                {foldContext(hunk.lines).flatMap((row): React.ReactNode[] => {
+                  const line = (l: number): React.ReactNode =>
+                    renderLine(hunk.lines[l], l, highlighted[i][h][l])
+                  if (typeof row === 'number') return [line(row)]
+                  const fold = `${r.hash}:${h}:${row.start}`
+                  const count = row.end - row.start + 1
+                  if (opened.has(fold))
+                    return Array.from({ length: count }, (_, k) => line(row.start + k))
+                  return [
+                    <div
+                      key={`fold${row.start}`}
+                      className="diff-line line-fold"
+                      onClick={() => setOpened(new Set(opened).add(fold))}
+                      title="Show the unchanged lines"
+                    >
+                      <ChevronsUpDown size={13} /> {count} unchanged lines
+                    </div>
+                  ]
+                })}
+              </div>
+            ))}
+          </section>
+        ))}
+      </div>
+    </>
+  )
+}
+
+/** Lines picked in the blame, by clicking their numbers. */
+interface Picked {
+  key: string
+  anchor: number
+  start: number
+  end: number
+}
+
 /** Opacity of the age stripe: recent commits are bright, the oldest fade out. */
 function ageScale(commits: BlameCommit[]): (c: BlameCommit) => number {
   const dates = commits.filter((c) => !c.uncommitted).map((c) => c.authorDate)
@@ -162,6 +288,23 @@ function FileBlame({
     window.api.op(repo, 'blame', path, inspect.rev)
   )
   const blame: Blame | null = result?.ok ? result.value : null
+  const blameKey = `${path}\0${inspect.rev}`
+  const [picking, setPicked] = useState<Picked | null>(null)
+  // A pick belongs to the version it was made in
+  const picked = picking?.key === blameKey ? picking : null
+
+  const pick = (lineNo: number, extend: boolean): void =>
+    setPicked(
+      extend && picked
+        ? {
+            ...picked,
+            start: Math.min(picked.anchor, lineNo),
+            end: Math.max(picked.anchor, lineNo)
+          }
+        : { key: blameKey, anchor: lineNo, start: lineNo, end: lineNo }
+    )
+  const followLines = (start: number, end: number): void =>
+    inspectFile({ ...inspect, mode: 'lines', range: `${start},${end}` })
 
   const highlighted = useMemo(
     () =>
@@ -199,53 +342,99 @@ function FileBlame({
   if (!result.ok) return <div className="banner-error">{result.error}</div>
   if (!blame!.lines.length) return <div className="center-message">Empty file</div>
 
+  const numberMenu = (lineNo: number): MenuItem[] => {
+    const inPick = picked && lineNo >= picked.start && lineNo <= picked.end
+    const [start, end] = inPick ? [picked.start, picked.end] : [lineNo, lineNo]
+    return [
+      {
+        label: `History of ${rangeLabel(`${start},${end}`)}`,
+        onClick: () => followLines(start, end)
+      }
+    ]
+  }
+
   return (
-    <div className="diff-body blame-body">
-      <div className="blame-lines">
-        {blame!.lines.map((line, i) => {
-          const commit = blame!.commits[line.hash]
-          const first = i === 0 || blame!.lines[i - 1].hash !== line.hash
-          const hash = commit.uncommitted ? WIP_HASH : commit.hash
-          return (
-            <div
-              key={i}
-              className={`blame-line${first ? ' first' : ''}${selected === hash ? ' active' : ''}`}
-            >
-              <span
-                className="blame-gutter"
-                style={{
-                  borderLeftColor: `color-mix(in srgb, var(--accent) ${Math.round(age(commit) * 100)}%, transparent)`
-                }}
-                title={
-                  commit.uncommitted
-                    ? 'Not committed yet'
-                    : `${commit.summary}\n${commit.authorName} <${commit.authorEmail}>\n${formatDate(commit.authorDate)}\n${commit.hash}`
-                }
-                onClick={() => select(hash)}
-                onContextMenu={(e) => openMenu(e, menuFor(commit))}
+    <>
+      {picked ? (
+        <div className="diff-hint blame-pick">
+          <span>
+            {rangeLabel(`${picked.start},${picked.end}`).replace(/^./, (c) => c.toUpperCase())}{' '}
+            selected
+          </span>
+          <button className="btn btn-small" onClick={() => followLines(picked.start, picked.end)}>
+            <History size={13} /> History of these lines
+          </button>
+          <button className="link" onClick={() => setPicked(null)}>
+            Clear
+          </button>
+        </div>
+      ) : (
+        <div className="diff-hint">
+          Click line numbers to follow those lines through the history (Shift+click for a range).
+        </div>
+      )}
+      <div className="diff-body blame-body">
+        <div className="blame-lines">
+          {blame!.lines.map((line, i) => {
+            const commit = blame!.commits[line.hash]
+            const first = i === 0 || blame!.lines[i - 1].hash !== line.hash
+            const hash = commit.uncommitted ? WIP_HASH : commit.hash
+            return (
+              <div
+                key={i}
+                className={`blame-line${first ? ' first' : ''}${selected === hash ? ' active' : ''}`}
               >
-                {first &&
-                  (commit.uncommitted ? (
-                    <span className="blame-summary muted">Uncommitted changes</span>
-                  ) : (
-                    <>
-                      <span className="blame-summary">{commit.summary}</span>
-                      <span className="blame-meta">
-                        {commit.authorName} · {formatDate(commit.authorDate, dayFormat)}
-                      </span>
-                    </>
-                  ))}
-              </span>
-              <span className="diff-no">{line.lineNo}</span>
-              <span
-                className="diff-code"
-                dangerouslySetInnerHTML={{ __html: highlighted[i] || ' ' }}
-              />
-            </div>
-          )
-        })}
+                <span
+                  className="blame-gutter"
+                  style={{
+                    borderLeftColor: `color-mix(in srgb, var(--accent) ${Math.round(age(commit) * 100)}%, transparent)`
+                  }}
+                  title={
+                    commit.uncommitted
+                      ? 'Not committed yet'
+                      : `${commit.summary}\n${commit.authorName} <${commit.authorEmail}>\n${formatDate(commit.authorDate)}\n${commit.hash}`
+                  }
+                  onClick={() => select(hash)}
+                  onContextMenu={(e) => openMenu(e, menuFor(commit))}
+                >
+                  {first &&
+                    (commit.uncommitted ? (
+                      <span className="blame-summary muted">Uncommitted changes</span>
+                    ) : (
+                      <>
+                        <span className="blame-summary">{commit.summary}</span>
+                        <span className="blame-meta">
+                          {commit.authorName} · {formatDate(commit.authorDate, dayFormat)}
+                        </span>
+                      </>
+                    ))}
+                </span>
+                <span
+                  className={`diff-no blame-no${
+                    picked && line.lineNo >= picked.start && line.lineNo <= picked.end
+                      ? ' picked'
+                      : ''
+                  }`}
+                  title="Click to follow this line through the history, Shift+click for a range"
+                  onMouseDown={(e) => {
+                    if (e.button !== 0) return
+                    e.preventDefault()
+                    pick(line.lineNo, e.shiftKey)
+                  }}
+                  onContextMenu={(e) => openMenu(e, numberMenu(line.lineNo))}
+                >
+                  {line.lineNo}
+                </span>
+                <span
+                  className="diff-code"
+                  dangerouslySetInnerHTML={{ __html: highlighted[i] || ' ' }}
+                />
+              </div>
+            )
+          })}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -272,6 +461,20 @@ export default function FileInspector({
   const mode = (m: FileInspect['mode']): void => {
     if (m !== inspect.mode) inspectFile({ ...inspect, mode: m })
   }
+  const followFunction = async (): Promise<void> => {
+    const current = inspect.range?.startsWith(':') ? rangeLabel(inspect.range).slice(9) : ''
+    const name = (
+      await prompt(
+        'History of a function',
+        'Function name, as git finds it in the file',
+        current,
+        'Show history'
+      )
+    )?.trim()
+    if (!name) return
+    if (name.includes(':')) return notify('error', 'A function name can’t contain “:”')
+    inspectFile({ ...inspect, mode: 'lines', range: functionRange(name) })
+  }
 
   return (
     <div className="diff-view inspector">
@@ -285,6 +488,12 @@ export default function FileInspector({
             {inspect.rev ? `at ${inspect.rev.slice(0, 7)}` : 'working tree'}
           </span>
         )}
+        {inspect.mode === 'lines' && inspect.range && (
+          <span className="diff-source">
+            {rangeLabel(inspect.range)}
+            {inspect.rev ? ` at ${inspect.rev.slice(0, 7)}` : ''}
+          </span>
+        )}
         {inspect.mode === 'blame' && inspect.rev && (
           <button
             className="btn btn-small"
@@ -295,6 +504,13 @@ export default function FileInspector({
           </button>
         )}
         <span className="toolbar-spacer" />
+        <button
+          className="btn btn-small"
+          title="Follow a function through the history"
+          onClick={() => void followFunction()}
+        >
+          <Braces size={13} /> Function…
+        </button>
         <div className="segmented">
           <button
             className={inspect.mode === 'history' ? 'active' : ''}
@@ -308,6 +524,15 @@ export default function FileInspector({
           >
             <ScanText size={14} /> Blame
           </button>
+          {inspect.range && (
+            <button
+              className={inspect.mode === 'lines' ? 'active' : ''}
+              onClick={() => mode('lines')}
+              title={`History of ${rangeLabel(inspect.range)}`}
+            >
+              <ListTree size={14} /> Lines
+            </button>
+          )}
         </div>
         <button className="diff-close" onClick={() => inspectFile(null)} title="Close (Esc)">
           <X size={18} />
@@ -315,6 +540,8 @@ export default function FileInspector({
       </div>
       {inspect.mode === 'history' ? (
         <FileHistory snapshot={snapshot} inspect={inspect} />
+      ) : inspect.mode === 'lines' ? (
+        <FileLines snapshot={snapshot} inspect={inspect} />
       ) : (
         <FileBlame snapshot={snapshot} inspect={inspect} />
       )}
