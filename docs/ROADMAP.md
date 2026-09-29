@@ -26,13 +26,14 @@ Le milestone 0–6 sono completate:
 - temi pronti e personalizzati con verifica del contrasto, scorciatoie personalizzabili, navigazione completa da tastiera, editor della configurazione git e diff tool esterno (Step 9);
 - aggiornamento dall'app con verifica SHA-256 e CI su ogni push (Step 10).
 
-Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è l'integrazione con GitHub: login, pull request, stato della CI e issue (Step 11).
+Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è capire meglio il repository: statistiche, storia di singole righe e ricerca nel contenuto dei commit (Step 11).
 
 ## Principi per l'ordine
 
 1. Prima i buchi che impediscono l'uso quotidiano, poi la comodità, infine integrazioni e AI.
 2. Ogni step è una versione pubblicabile con un tag `v0.x.0`: GitHub genera l'exe da solo.
 3. Ogni operazione git nuova arriva con i suoi test su repository fixture (NFR-11).
+4. Prima le funzioni che lavorano solo in locale, senza servizi esterni; integrazioni e AI restano in fondo, facoltative ("Forse, un giorno").
 
 ---
 
@@ -141,36 +142,65 @@ Obiettivo della v1.0: tutti i requisiti P0 e P1 coperti.
 - **Aggiornamento dall'app**: scaricare e sostituire l'exe senza passare dal browser
 - **CI su ogni push**: lint, typecheck e test su GitHub Actions, non solo al momento del rilascio
 
-## Step 11 — v1.2: Integrazione GitHub
+## Step 11 — v1.2: Capire il repository
 
-- **Login con GitHub** tramite device flow OAuth, con token salvato cifrato con `safeStorage` (AUTH-06, NFR-06)
-- **Pull request**: elenco, creazione dal branch corrente, stato delle review, merge (INT-01, SIDE-07)
-- **Stato CI** accanto ai commit nel grafo (INT-03)
-- **Issue**: elenco, e creazione di un branch da una issue (INT-02, SIDE-08)
-- Dashboard personale con PR e issue di tutti i repository (INT-05)
+Tutto in locale, dai dati che git ha già. Le analisi lunghe mostrano l'avanzamento e si possono annullare.
 
-## Step 12 — v1.3: Assistente AI
+- **Statistiche del repository**: autori e quanto contribuisce ciascuno, calendario dell'attività, commit per ora e giorno della settimana, crescita del codice nel tempo, linguaggi; filtrabili per periodo
+- **File caldi**: i file cambiati più spesso e più di recente, e quelli conosciuti da un solo autore (bus factor)
+- **Storia di righe o di una funzione**: selezioni un pezzo di codice e vedi tutti i commit che l'hanno toccato (`git log -L`)
+- **Ricerca nel contenuto**: quando una stringa è comparsa o sparita nella storia (`git log -S/-G`), accanto alla ricerca per messaggio, autore, SHA e file
+- **Esplora i file a qualsiasi commit**: l'albero del progetto com'era in un commit, con i file da aprire o salvare
+- **Blame a ritroso**: da una riga del blame si passa alla versione prima di quel commit
 
-Opzionale, con chiave API fornita dall'utente e salvata cifrata. Usa i modelli Claude.
+## Step 12 — v1.3: Correggere senza paura
 
-- **Messaggio di commit generato** dalle modifiche in stage (AI-01)
-- **Spiegazione** di un commit o di un branch (AI-03)
-- **Aiuto sui conflitti**: proposta di risoluzione da confermare (AI-04)
-- **Descrizione della PR** generata (AI-05)
-- **Divisione delle modifiche** in più commit logici (AI-02)
+Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backup e undo.
 
-## Step 13 — v1.4: Funzioni avanzate
+- **Commit sul branch sbagliato**: sposti uno o più commit su un altro branch, nuovo o esistente, in un passaggio guidato
+- **Fixup**: "correggi questo commit" con le modifiche attuali; GitDom crea il fixup e fa l'autosquash
+- **Dividere un commit** in più commit, scegliendo file, hunk e righe (nuova azione `edit` nel rebase interattivo)
+- **Riordinare i commit trascinandoli nel grafo**, lungo il branch corrente
+- **Modificare un hunk prima dello stage**
+- **Anteprima dei conflitti**: prima di un merge o rebase GitDom dice se ci saranno conflitti e su quali file (`git merge-tree`, git 2.38 o successivo), e avvisa quando il tuo branch e main toccano gli stessi file
+- **Controlli prima del commit**: segreti (chiavi, token, password), file grandi o binari fuori da LFS, `console.log`/`TODO` dimenticati, formato del messaggio; sono avvisi disattivabili, mai blocchi
+- **Note di rilascio**: i commit tra due tag, raggruppati per tipo, da copiare nel changelog
+- **Perché questo file è ignorato?**: la regola del `.gitignore` responsabile (`git check-ignore -v`)
+- **Pulizia dei file non tracciati** con anteprima e conferma (`git clean`)
 
+## Step 13 — v1.4: Ordine, manutenzione e più repository
+
+- **Panoramica dei branch**: ultimo commit, età, avanti/indietro rispetto a main, già uniti o no; eliminazione in blocco di quelli vecchi o uniti
+- **Salute del repository**: spazio occupato, gli oggetti più pesanti nella storia, e `gc`, `prune` e `fsck` con un clic
+- **Gestione degli hook**: vedere, attivare, disattivare e modificare gli hook git del repository
 - **Bisect guidato**: segni "buono/cattivo" e l'app trova il commit colpevole (ADV-06)
 - **Patch**: creazione da commit e applicazione di file .patch (ADV-07)
-- **Git Flow**: feature, release e hotfix (ADV-04)
-- Sparse checkout, repository bare e shallow (ADV-08, REPO-10)
+- **Cruscotto dei workspace**: lo stato di tutti i repository in una vista (modifiche aperte, avanti/indietro), con "Fetch tutti"
+- **Cosa ho fatto questa settimana**: i tuoi commit su tutti i repository, per giorno, da copiare per uno standup o un report
 
 ---
+
+## Forse, un giorno
+
+Funzioni che dipendono da servizi esterni o poco usate nel lavoro quotidiano: restano possibili, ma fuori dalla roadmap attiva.
+
+- **Integrazione GitHub**:
+  - login tramite device flow OAuth, con token salvato cifrato con `safeStorage` (AUTH-06, NFR-06);
+  - pull request: elenco, creazione dal branch corrente, stato delle review, merge (INT-01, SIDE-07);
+  - stato della CI accanto ai commit nel grafo (INT-03);
+  - issue: elenco, e creazione di un branch da una issue (INT-02, SIDE-08);
+  - dashboard personale con PR e issue di tutti i repository (INT-05).
+- **Assistente AI**, opzionale, con chiave API fornita dall'utente e salvata cifrata, con i modelli Claude:
+  - messaggio di commit generato (AI-01);
+  - spiegazione di un commit o di un branch (AI-03);
+  - aiuto sui conflitti (AI-04);
+  - descrizione della PR (AI-05);
+  - divisione delle modifiche in più commit logici (AI-02).
+- **Git Flow**: feature, release e hotfix (ADV-04)
+- **Sparse checkout, repository bare e shallow** (ADV-08, REPO-10)
 
 ## Idee oltre i requisiti
 
 - **Variante chiara del tema Studio**, per chi vuole il layout Studio ma con fondo chiaro
-- **Statistiche del repository**: autori più attivi, frequenza dei commit, file più modificati
 - **Timeline animata** della storia del repository, in stile con il logo dell'autostrada
 - **Condivisione della configurazione** (temi, profili, scorciatoie) tramite un file esportabile (SET-05)
