@@ -269,6 +269,32 @@
 .update-notice-actions .link {
   margin-left: auto;
 }
+.update-notice-actions .muted {
+  flex: 1;
+}
+.update-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--bg-hover);
+}
+.update-progress > div {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.2s linear;
+}
+.update-progress > div.indeterminate {
+  animation: update-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes update-pulse {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
 .modal.whats-new {
   width: 620px;
   max-height: 75vh;

@@ -1,8 +1,18 @@
 // The new version notice and the What's New dialog.
 import { useEffect } from 'react'
-import { Download, Sparkles, X } from 'lucide-react'
+import { Download, RotateCw, Sparkles, X } from 'lucide-react'
+import type { ReleaseInfo } from '../../../shared/api'
 import { parseMarkdown, type Inline } from '../../../shared/releases'
-import { closeWhatsNew, dismissUpdate, showReleaseNotes, skipUpdate, useUpdates } from '../updates'
+import {
+  cancelUpdateDownload,
+  closeWhatsNew,
+  dismissUpdate,
+  downloadUpdate,
+  installUpdate,
+  showReleaseNotes,
+  skipUpdate,
+  useUpdates
+} from '../updates'
 
 function Text({ parts }: { parts: Inline[] }): React.JSX.Element {
   return (
@@ -85,6 +95,88 @@ function WhatsNewDialog(): React.JSX.Element | null {
   )
 }
 
+const megabytes = (bytes: number): string => (bytes / 1048576).toFixed(bytes < 10485760 ? 1 : 0)
+
+function UpdateActions({ release }: { release: ReleaseInfo }): React.JSX.Element {
+  const selfUpdate = useUpdates((s) => s.selfUpdate)
+  const download = useUpdates((s) => s.download)
+  const openPage = (): void => window.api.app.openRepoPage(release.downloadUrl ?? release.url)
+
+  if (download.state === 'downloading') {
+    const { received, total } = download
+    return (
+      <>
+        <div
+          className="update-progress"
+          role="progressbar"
+          aria-valuenow={received}
+          aria-valuemax={total ?? undefined}
+        >
+          <div
+            style={{ width: total ? `${(100 * received) / total}%` : '100%' }}
+            className={total ? '' : 'indeterminate'}
+          />
+        </div>
+        <div className="update-notice-actions">
+          <span className="muted">
+            Downloading… {megabytes(received)}
+            {total ? ` of ${megabytes(total)}` : ''} MB
+          </span>
+          <button className="btn" onClick={cancelUpdateDownload}>
+            Cancel
+          </button>
+        </div>
+      </>
+    )
+  }
+  if (download.state === 'ready') {
+    return (
+      <>
+        <div className="muted">
+          Downloaded and verified. It&apos;s installed when you close GitDom, or now:
+        </div>
+        <div className="update-notice-actions">
+          <button className="btn btn-primary" onClick={() => void installUpdate()}>
+            <RotateCw size={14} /> Restart now
+          </button>
+          <button className="btn" onClick={dismissUpdate}>
+            Later
+          </button>
+        </div>
+      </>
+    )
+  }
+  const failed = download.state === 'failed'
+  return (
+    <>
+      {failed && <div className="pref-bad">{download.error}</div>}
+      <div className="update-notice-actions">
+        {selfUpdate && (
+          <button
+            className="btn btn-primary"
+            title="Download it, then restart GitDom"
+            onClick={() => void downloadUpdate()}
+          >
+            {failed ? 'Try again' : 'Update'}
+          </button>
+        )}
+        {/* After a failed update, the release page is the way out */}
+        {(!selfUpdate || failed) && (
+          <button className={selfUpdate ? 'btn' : 'btn btn-primary'} onClick={openPage}>
+            Download
+          </button>
+        )}
+        <button className="btn" onClick={() => showReleaseNotes(release)}>
+          What&apos;s new
+        </button>
+        <button className="link" onClick={skipUpdate}>
+          Skip this version
+        </button>
+      </div>
+    </>
+  )
+}
+
 function UpdateNotice(): React.JSX.Element | null {
   const release = useUpdates((s) => s.available)
   if (!release) return null
@@ -103,20 +195,7 @@ function UpdateNotice(): React.JSX.Element | null {
         </button>
       </div>
       <div className="muted">You have version {__APP_VERSION__}.</div>
-      <div className="update-notice-actions">
-        <button
-          className="btn btn-primary"
-          onClick={() => window.api.app.openRepoPage(release.downloadUrl ?? release.url)}
-        >
-          Download
-        </button>
-        <button className="btn" onClick={() => showReleaseNotes(release)}>
-          What&apos;s new
-        </button>
-        <button className="link" onClick={skipUpdate}>
-          Skip this version
-        </button>
-      </div>
+      <UpdateActions release={release} />
     </div>
   )
 }

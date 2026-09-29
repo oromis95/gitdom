@@ -6,7 +6,8 @@ import {
   type CloneProgress,
   type GitDomApi,
   type MenuCommand,
-  type ThemeChoice
+  type ThemeChoice,
+  type UpdateProgress
 } from '../shared/api'
 
 const api: GitDomApi = {
@@ -90,7 +91,17 @@ const api: GitDomApi = {
   },
   app: {
     latestRelease: () => ipcRenderer.invoke(IPC.appLatestRelease),
-    openRepoPage: (url) => ipcRenderer.send(IPC.appOpenRepoPage, url)
+    openRepoPage: (url) => ipcRenderer.send(IPC.appOpenRepoPage, url),
+    canSelfUpdate: () => ipcRenderer.invoke(IPC.appCanSelfUpdate),
+    downloadUpdate: () => ipcRenderer.invoke(IPC.appDownloadUpdate),
+    cancelUpdate: () => ipcRenderer.send(IPC.appCancelUpdate),
+    onUpdateProgress: (listener) => {
+      const handler = (_event: IpcRendererEvent, progress: UpdateProgress): void =>
+        listener(progress)
+      ipcRenderer.on(IPC.appUpdateProgress, handler)
+      return () => ipcRenderer.removeListener(IPC.appUpdateProgress, handler)
+    },
+    installUpdate: () => ipcRenderer.invoke(IPC.appInstallUpdate)
   }
 }
 

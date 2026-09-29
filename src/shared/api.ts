@@ -421,8 +421,18 @@ export interface ReleaseInfo {
   url: string
   /** The portable exe, when attached */
   downloadUrl: string | null
+  /** Its SHA-256 (sha256sum format), which the in-app update requires */
+  checksumUrl: string | null
   /** Release notes, in Markdown */
   notes: string
+  /** Already downloaded and checked in this session: installed at a restart */
+  readyToInstall: boolean
+}
+
+/** Bytes of the update downloaded so far; `total` is null when GitHub doesn't say. */
+export interface UpdateProgress {
+  received: number
+  total: number | null
 }
 
 /** GitDom itself: updates and links. */
@@ -431,6 +441,14 @@ export interface AppApi {
   latestRelease(): Promise<Result<ReleaseInfo>>
   /** Opens a page of GitDom's GitHub repository in the browser. */
   openRepoPage(url: string): void
+  /** Whether this copy can replace itself: only the portable exe can. */
+  canSelfUpdate(): Promise<boolean>
+  /** Downloads and checks the release latestRelease() returned; resolves when it's ready. */
+  downloadUpdate(): Promise<Result<void>>
+  cancelUpdate(): void
+  onUpdateProgress(listener: (progress: UpdateProgress) => void): () => void
+  /** Puts the downloaded exe in place and restarts GitDom. */
+  installUpdate(): Promise<Result<void>>
 }
 
 /**
@@ -538,5 +556,10 @@ export const IPC = {
   activityClear: 'activity:clear',
   activityEntry: 'activity:entry',
   appLatestRelease: 'app:latest-release',
-  appOpenRepoPage: 'app:open-repo-page'
+  appOpenRepoPage: 'app:open-repo-page',
+  appCanSelfUpdate: 'app:can-self-update',
+  appDownloadUpdate: 'app:download-update',
+  appCancelUpdate: 'app:cancel-update',
+  appUpdateProgress: 'app:update-progress',
+  appInstallUpdate: 'app:install-update'
 } as const

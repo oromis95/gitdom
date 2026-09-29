@@ -93,7 +93,9 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 
 **Updates**
 
-- At startup GitDom tells you when a newer version is out on GitHub, with a link to download it
+- At startup GitDom tells you when a newer version is out on GitHub
+- **Update** downloads it in the background and checks it against the release's SHA-256; it's installed when you close GitDom, or right away with **Restart now**. The exe keeps its name and folder, so your shortcuts keep working
+- If the download is blocked, or GitDom's folder isn't writable, **Download** opens the release page instead
 - **Help → What's New** lists what each version added; the full list is in [CHANGELOG.md](CHANGELOG.md)
 
 **Keyboard**
@@ -158,7 +160,7 @@ npm run dev
 - **Canvas 2D** for the commit graph
 - **highlight.js** for diffs
 - **xterm.js** + **node-pty** for the integrated terminal
-- **Vitest** tests, run against real temporary repositories; `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository
+- **Vitest** tests, run against real temporary repositories, on GitHub Actions at every push (formatting, lint, types, tests and a build; a release is published only when they pass); `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository
 
 ```
 src/
@@ -171,7 +173,7 @@ docs/         Requirements (Italian) and screenshots
 
 ## Status
 
-GitDom is a personal project under active development (version 1.0.0).
+GitDom is a personal project under active development (version 1.1.0).
 The full list of requirements is in [docs/REQUISITI.md](docs/REQUISITI.md), and the plan for the next versions is in [docs/ROADMAP.md](docs/ROADMAP.md) (both in Italian).
 
 ## License

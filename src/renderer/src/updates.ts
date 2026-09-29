@@ -19,13 +19,28 @@ interface WhatsNew {
   entries: ChangelogEntry[]
 }
 
+/** The in-app update of the portable exe */
+export type UpdateDownload =
+  | { state: 'idle' }
+  | { state: 'downloading'; received: number; total: number | null }
+  | { state: 'ready' }
+  | { state: 'failed'; error: string }
+
 interface UpdatesState {
   /** Newer release found on GitHub, until dismissed */
   available: ReleaseInfo | null
+  /** Whether GitDom can download and install it itself, instead of linking the download */
+  selfUpdate: boolean
+  download: UpdateDownload
   whatsNew: WhatsNew | null
 }
 
-export const useUpdates = create<UpdatesState>(() => ({ available: null, whatsNew: null }))
+export const useUpdates = create<UpdatesState>(() => ({
+  available: null,
+  selfUpdate: false,
+  download: { state: 'idle' },
+  whatsNew: null
+}))
 
 export const showWhatsNew = (
   whatsNew: WhatsNew = { title: "What's new", entries: CHANGELOG }
@@ -43,13 +58,54 @@ export async function checkForUpdates(manual = false): Promise<void> {
   const release = result.value
   const newer = compareVersions(release.version, __APP_VERSION__) > 0
   if (newer && (manual || localStorage.getItem(SKIPPED_KEY) !== release.version)) {
-    useUpdates.setState({ available: release })
+    // Needs the portable exe and a release with its checksum
+    const selfUpdate =
+      !!release.downloadUrl && !!release.checksumUrl && (await window.api.app.canSelfUpdate())
+    const { download } = useUpdates.getState()
+    useUpdates.setState({
+      available: release,
+      selfUpdate,
+      download: release.readyToInstall
+        ? { state: 'ready' }
+        : download.state === 'downloading'
+          ? download
+          : { state: 'idle' }
+    })
   } else if (manual) {
     notify('success', `GitDom ${__APP_VERSION__} is the latest version`)
   }
 }
 
 export const dismissUpdate = (): void => useUpdates.setState({ available: null })
+
+/** Downloads the new exe and checks it; it's installed at a restart or when GitDom closes. */
+export async function downloadUpdate(): Promise<void> {
+  const release = useUpdates.getState().available
+  if (!release) return
+  useUpdates.setState({ download: { state: 'downloading', received: 0, total: null } })
+  const stop = window.api.app.onUpdateProgress((progress) =>
+    useUpdates.setState({ download: { state: 'downloading', ...progress } })
+  )
+  const result = await window.api.app.downloadUpdate()
+  stop()
+  if (result.ok) {
+    useUpdates.setState({ download: { state: 'ready' } })
+    // The notice may have been closed in the meantime
+    if (!useUpdates.getState().available)
+      notify('success', `GitDom ${release.version} is ready: it's installed when you close GitDom`)
+  } else if (result.error === 'Download cancelled') {
+    useUpdates.setState({ download: { state: 'idle' } })
+  } else {
+    useUpdates.setState({ download: { state: 'failed', error: result.error } })
+  }
+}
+
+export const cancelUpdateDownload = (): void => window.api.app.cancelUpdate()
+
+export async function installUpdate(): Promise<void> {
+  const result = await window.api.app.installUpdate()
+  if (!result.ok) notify('error', `Could not install the update: ${result.error}`)
+}
 
 /** Stops the startup notice for this release; the next one shows again. */
 export function skipUpdate(): void {

@@ -1,0 +1,51 @@
+# Checks every push to main: formatting, lint, types, tests and a build.
+# The Release workflow runs it too, so a version that fails it is never published.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    # GitDom runs on Windows, and most tests drive a real git: paths, line endings and timings
+    # are Windows ones
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The tests make commits in their own repositories; some also read the global identity
+      - name: Configure git
+        run: |
+          git config --global user.name "GitDom CI"
+          git config --global user.email "ci@gitdom.invalid"
+          git config --global core.autocrlf false
+
+      - name: Formatting
+        run: npx prettier --check src bench
+
+      - name: Lint
+        run: npx eslint src bench
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Tests
+        run: npx vitest run
+
+      - name: Build
+        run: npx electron-vite build

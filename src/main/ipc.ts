@@ -16,7 +16,14 @@ import { ensureCommitGraph, loadSnapshot, resolveRepoRoot } from './git/reposito
 import { setWatchedRepos } from './watcher'
 import { registerTerminalHandlers } from './terminal'
 import { registerToolHandlers } from './tools'
-import { isRepoUrl, latestRelease } from './updates'
+import {
+  canSelfUpdate,
+  cancelUpdate,
+  downloadUpdate,
+  installUpdateNow,
+  isRepoUrl,
+  latestRelease
+} from './updates'
 
 async function toResult<T>(work: () => Promise<T>): Promise<Result<T>> {
   try {
@@ -98,6 +105,16 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle(IPC.appLatestRelease, () => toResult(latestRelease))
+  ipcMain.handle(IPC.appCanSelfUpdate, () => canSelfUpdate())
+  ipcMain.handle(IPC.appDownloadUpdate, (event) =>
+    toResult(() =>
+      downloadUpdate((progress) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC.appUpdateProgress, progress)
+      })
+    )
+  )
+  ipcMain.on(IPC.appCancelUpdate, () => cancelUpdate())
+  ipcMain.handle(IPC.appInstallUpdate, () => toResult(async () => installUpdateNow()))
   ipcMain.on(IPC.appOpenRepoPage, (_event, url: unknown) => {
     if (isRepoUrl(url)) void shell.openExternal(url)
   })

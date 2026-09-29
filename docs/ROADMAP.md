@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.0.0 pubblicata il 2026-09-28 (Step 1–9 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.1.0 pubblicata il 2026-09-29 (Step 1–10 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -23,9 +23,10 @@ Le milestone 0–6 sono completate:
 - firma GPG/SSH di commit e tag, opzioni del commit, reword, template, .gitignore e stash parziali (Step 6);
 - worktree, selettore rapido dei repository e workspace (Step 7);
 - caricamento a pagine per storie di ogni dimensione, aperture più rapide e bundle diviso (Step 8);
-- temi pronti e personalizzati con verifica del contrasto, scorciatoie personalizzabili, navigazione completa da tastiera, editor della configurazione git e diff tool esterno (Step 9).
+- temi pronti e personalizzati con verifica del contrasto, scorciatoie personalizzabili, navigazione completa da tastiera, editor della configurazione git e diff tool esterno (Step 9);
+- aggiornamento dall'app con verifica SHA-256 e CI su ogni push (Step 10).
 
-Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è l'aggiornamento dall'app e la CI su ogni push (Step 10).
+Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è l'integrazione con GitHub: login, pull request, stato della CI e issue (Step 11).
 
 ## Principi per l'ordine
 
@@ -132,7 +133,9 @@ Obiettivo della v1.0: tutti i requisiti P0 e P1 coperti.
 - Verifica del contrasto dei tre temi; possibilità di **temi personalizzati** (UI-05)
 - Pulizia dei requisiti P1 rimasti, aggiornamento di README e screenshot
 
-## Step 10 — v1.1: Aggiornamenti e qualità del rilascio
+## Step 10 — v1.1: Aggiornamenti e qualità del rilascio ✅
+
+> Completato: l'exe portable si aggiorna da solo. "Update" scarica la nuova versione accanto all'exe, con barra di avanzamento e annullamento, e la verifica con lo SHA-256 pubblicato dal workflow di release; all'uscita, o subito con "Restart now", l'exe in uso viene rinominato in `.old` (Windows permette di rinominare un exe in esecuzione, non di sovrascriverlo), quello nuovo prende il suo nome e cartella, e il `.old` viene cancellato all'avvio successivo. Se il download fallisce o la cartella non è scrivibile resta il link alla pagina della release. Nuovo workflow CI su ogni push a main (prettier, eslint, typecheck, test, build su Windows), richiamato anche dal workflow di release, che pubblica solo se i controlli passano.
 
 - ~~Avviso di nuova versione~~ e ~~changelog~~: anticipati nello Step 5 (NFR-08)
 - **Aggiornamento dall'app**: scaricare e sostituire l'exe senza passare dal browser

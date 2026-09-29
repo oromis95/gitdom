@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { registerIpcHandlers } from './ipc'
 import { registerMenu } from './menu'
 import { closeAllTerminals } from './terminal'
+import { registerUpdateLifecycle } from './updates'
 
 // Development runs keep their own tabs, recent repositories and settings: on Windows
 // %APPDATA%\gitdom is otherwise the same folder as the packaged GitDom's %APPDATA%\GitDom
@@ -54,6 +55,7 @@ app.whenReady().then(() => {
   })
 
   registerIpcHandlers()
+  registerUpdateLifecycle()
   registerMenu()
   createWindow()
 

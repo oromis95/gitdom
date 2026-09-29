@@ -1,6 +1,7 @@
-# Builds GitDom's self-contained Windows exe.
-# Pushing a tag like v0.1.0 publishes it in a GitHub Release; running it by hand from the
-# Actions tab only attaches it to the run, as a downloadable artifact.
+# Builds GitDom's self-contained Windows exe, after the CI checks pass.
+# Pushing a tag like v0.1.0 publishes it in a GitHub Release, with its SHA-256 checksum that the
+# app's updater verifies; running it by hand from the Actions tab only attaches it to the run, as a
+# downloadable artifact.
 name: Release
 
 on:
@@ -12,7 +13,11 @@ permissions:
   contents: write
 
 jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
   windows:
+    needs: checks
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,10 +32,20 @@ jobs:
       - name: Build the portable exe
         run: npm run build:portable -- --publish never
 
+      # "<hash>  <file name>", like sha256sum: the updater refuses a download that doesn't match
+      - name: Checksum
+        shell: bash
+        run: |
+          cd dist
+          for exe in *-portable.exe; do sha256sum "$exe" > "$exe.sha256"; done
+          cat *.sha256
+
       - uses: actions/upload-artifact@v4
         with:
           name: GitDom-portable
-          path: dist/*-portable.exe
+          path: |
+            dist/*-portable.exe
+            dist/*-portable.exe.sha256
           if-no-files-found: error
 
       - name: Publish the release
@@ -53,8 +68,8 @@ jobs:
           ' CHANGELOG.md > notes.md
           if grep -q '[^[:space:]]' notes.md; then notes=(--notes-file notes.md); else notes=(--generate-notes); fi
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*-portable.exe --clobber
+            gh release upload "$GITHUB_REF_NAME" dist/*-portable.exe dist/*-portable.exe.sha256 --clobber
             if [ "${notes[0]}" = --notes-file ]; then gh release edit "$GITHUB_REF_NAME" --notes-file notes.md; fi
           else
-            gh release create "$GITHUB_REF_NAME" dist/*-portable.exe --title "GitDom $GITHUB_REF_NAME" "${notes[@]}"
+            gh release create "$GITHUB_REF_NAME" dist/*-portable.exe dist/*-portable.exe.sha256 --title "GitDom $GITHUB_REF_NAME" "${notes[@]}"
           fi

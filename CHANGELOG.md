@@ -2,6 +2,20 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## 1.1.0 — 2026-09-29
+
+### Added
+
+- **Update from the app**: when a new version is out, **Update** downloads it in the background with a progress bar, and checks it against the SHA-256 published with the release
+  - It's installed when you close GitDom, or right away with **Restart now**
+  - The exe keeps its name and folder, so shortcuts and pins keep working; the previous version is removed at the next start
+  - If the download fails or GitDom's folder isn't writable, **Download** still opens the release page
+  - This version has to be downloaded by hand one last time: from 1.1.0 on, updates come from the app
+
+### Improved
+
+- Every change to GitDom is now checked automatically on GitHub (formatting, lint, types, tests and a build), and a release is published only when the checks pass
+
 ## 1.0.0 — 2026-09-28
 
 ### Added
