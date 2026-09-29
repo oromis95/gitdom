@@ -1,0 +1,7 @@
+# LF everywhere, whatever core.autocrlf says: Prettier checks for LF, and Windows runners
+# check out with CRLF otherwise
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.icns binary

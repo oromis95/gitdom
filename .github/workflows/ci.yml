@@ -19,6 +19,14 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
+      # Before the checkout, so files keep their LF endings (.gitattributes asks for them too).
+      # The tests make commits in their own repositories; some also read the global identity
+      - name: Configure git
+        run: |
+          git config --global user.name "GitDom CI"
+          git config --global user.email "ci@gitdom.invalid"
+          git config --global core.autocrlf false
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -27,13 +35,6 @@ jobs:
           cache: npm
 
       - run: npm ci
-
-      # The tests make commits in their own repositories; some also read the global identity
-      - name: Configure git
-        run: |
-          git config --global user.name "GitDom CI"
-          git config --global user.email "ci@gitdom.invalid"
-          git config --global core.autocrlf false
 
       - name: Formatting
         run: npx prettier --check src bench
