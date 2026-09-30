@@ -8,6 +8,7 @@ import type {
   OpName,
   OpOutcome,
   OpResult,
+  RebaseStep,
   ResetMode,
   StashMode
 } from '../../shared/api'
@@ -810,6 +811,51 @@ const ops: OpImpl = {
     )
   },
 
+  async fixup(repo, hash) {
+    assertHash(hash)
+    await assertIdle(repo)
+    await currentBranch(repo)
+    if ((await tryGit(repo, ['diff', '--cached', '--quiet'])) !== null)
+      throw new Error('Stage the changes to add to the commit first')
+    const [head, commit] = await Promise.all(
+      ['HEAD', `${hash}^{commit}`].map(async (rev) =>
+        (await runGit(repo, ['rev-parse', '--verify', rev])).trim()
+      )
+    )
+    const sign = await signingProgramArgs(repo)
+    if (commit === head) {
+      const output = await runGit(repo, [...sign, 'commit', '--amend', '--no-edit'], {
+        withStderr: true
+      })
+      return { conflicts: false, output }
+    }
+    if (!(await ops.isAncestor(repo, commit, head))) {
+      throw new Error('The commit is not on the current branch: check out its branch first')
+    }
+    // Checked before committing, so that a refusal leaves the staged changes as they are
+    const base = (await firstParentOf(repo, commit)) ?? null
+    const { commits, merges } = await ops.rebaseCommits(repo, base)
+    if (merges > 0) {
+      throw new Error(
+        'This commit is, or is followed by, a merge commit: fixing it up would flatten the merges'
+      )
+    }
+    await runGit(repo, [...sign, 'commit', '-q', `--fixup=${commit}`])
+    const fix = (await runGit(repo, ['rev-parse', 'HEAD'])).trim()
+    return ops.rebaseInteractive(
+      repo,
+      base,
+      commits.flatMap((c): RebaseStep[] =>
+        c.hash === commit
+          ? [
+              { action: 'pick', hash: c.hash },
+              { action: 'fixup', hash: fix }
+            ]
+          : [{ action: 'pick', hash: c.hash }]
+      )
+    )
+  },
+
   async continueOperation(repo) {
     const operation = await readOperation(repo)
     if (!operation) throw new Error('No merge, rebase, cherry-pick or revert in progress')
@@ -1544,6 +1590,7 @@ const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise
     ...(create ? [] : [`refs/heads/${target}`])
   ],
   reword: (repo) => currentBranchRef(repo),
+  fixup: (repo) => currentBranchRef(repo),
   push: async (repo, force) => (force ? pushTarget(repo) : []),
   // Restoring a backup moves the branch too: where it was is saved first
   restoreBackup: async (_repo, _id, ref) => [ref]
@@ -1576,6 +1623,8 @@ const UNDOABLE: {
   commit: (_message, amend) => ({ label: amend ? 'Amend commit' : 'Commit', move: 'soft' }),
   // The files are the same: undo only puts the old message back
   reword: (hash) => ({ label: `Reword ${short(hash)}`, move: 'soft' }),
+  // Undo gives the added changes back as staged changes
+  fixup: (hash) => ({ label: `Fixup ${short(hash)}`, move: 'soft' }),
   checkout: (branch) => ({ label: `Checkout ${branch}` }),
   checkoutRemote: (_remote, localName) => ({ label: `Checkout ${localName}` }),
   checkoutCommit: (hash) => ({ label: `Checkout ${short(hash)}` }),

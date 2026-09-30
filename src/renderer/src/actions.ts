@@ -706,6 +706,33 @@ export async function reword(
   return outcome !== undefined && !outcome.conflicts
 }
 
+/** Adds the staged changes to a commit of the current branch. */
+export async function fixup(snapshot: RepoSnapshot, hash: string): Promise<void> {
+  const repo = snapshot.path
+  const staged = snapshot.status.staged.length
+  if (!staged) return notify('info', 'Stage the changes to add to the commit first')
+  const isHead = hash === snapshot.head.hash
+  const branch = snapshot.refs.find((r) => r.type === 'local' && r.name === snapshot.head.branch)
+  const upstream = branch?.upstream && snapshot.refs.find((r) => r.name === branch.upstream)
+  const pushed = upstream && (await call(repo, 'isAncestor', hash, upstream.fullName))
+  const message = [
+    `The ${staged === 1 ? 'staged file is' : `${staged} staged files are`} added to ${hash.slice(0, 7)}${
+      isHead ? '.' : ', and the commits after it are rewritten on top.'
+    } Its message stays the same.`,
+    ...(pushed && pushed.ok && pushed.value
+      ? ['', `It is already on ${upstream.name}: you will have to force push.`]
+      : [])
+  ].join('\n')
+  const ok = await confirm(
+    'Add staged changes to this commit',
+    message,
+    'Add to commit',
+    !!(pushed && pushed.ok && pushed.value)
+  )
+  if (!ok) return
+  await runOutcome(repo, 'Fixup', `Staged changes added to ${hash.slice(0, 7)}`, 'fixup', hash)
+}
+
 // --- Merge, rebase and history rewriting ----------------------------------------------------
 
 const MERGE_MODES: { value: MergeMode; label: string }[] = [
@@ -1160,6 +1187,11 @@ export function commitMenu(snapshot: RepoSnapshot, hash: string, subject: string
       label: `Move ${isHead ? 'this commit' : 'this and later commits'} to another branch…`,
       disabled: !snapshot.head.branch,
       onClick: () => void moveCommits(snapshot, hash, false)
+    },
+    {
+      label: 'Add staged changes to this commit (fixup)…',
+      disabled: !snapshot.head.branch || !snapshot.status.staged.length,
+      onClick: () => void fixup(snapshot, hash)
     },
     { label: 'Revert commit', onClick: () => void revert(repo, hash) },
     {

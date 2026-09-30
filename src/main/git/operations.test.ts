@@ -1210,6 +1210,48 @@ describe('complete commits', () => {
     expect(git(repo, 'rev-list', '--parents', '-n1', 'HEAD').split(' ')).toHaveLength(3)
   })
 
+  it('adds staged changes to the last commit or to an older one, undoable', async () => {
+    await expect(runOp(repo, 'fixup', [git(repo, 'rev-parse', 'HEAD')])).rejects.toThrow(
+      'Stage the changes'
+    )
+    write('a.txt', 'amended\n')
+    await runOp(repo, 'stage', [['a.txt']])
+    await runOp(repo, 'fixup', [git(repo, 'rev-parse', 'HEAD')])
+    expect(subjects()).toEqual(['two', 'one'])
+    expect(git(repo, 'show', 'HEAD:a.txt')).toBe('amended')
+
+    await commitFile('b.txt', 'b\n', 'three')
+    write('c.txt', 'c\n')
+    write('b.txt', 'dirty\n')
+    await runOp(repo, 'stage', [['c.txt']])
+    const tip = git(repo, 'rev-parse', 'HEAD')
+    const outcome = await runOp(repo, 'fixup', [git(repo, 'rev-parse', 'HEAD~2')])
+    expect(outcome.conflicts).toBe(false)
+    expect(subjects()).toEqual(['three', 'two', 'one'])
+    expect(git(repo, 'show', '--name-only', '--format=', 'HEAD~2').split('\n')).toContain('c.txt')
+    expect(git(repo, 'show', '--name-only', '--format=', 'HEAD')).toBe('b.txt')
+    expect(readFileSync(join(repo, 'b.txt'), 'utf8')).toBe('dirty\n')
+    expect((await runOp(repo, 'status', [])).staged).toEqual([])
+
+    await runOp(repo, 'undo', [])
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(tip)
+    expect((await runOp(repo, 'status', [])).staged).toEqual([{ path: 'c.txt', status: 'A' }])
+  })
+
+  it('refuses to fix up across merges, leaving the staged changes alone', async () => {
+    const one = git(repo, 'rev-parse', 'HEAD~1')
+    git(repo, 'checkout', '-q', '-b', 'side', one)
+    await commitFile('s.txt', 's\n', 'side')
+    git(repo, 'checkout', '-q', 'main')
+    git(repo, 'merge', '-q', '--no-edit', 'side')
+    const tip = git(repo, 'rev-parse', 'HEAD')
+    write('c.txt', 'c\n')
+    await runOp(repo, 'stage', [['c.txt']])
+    await expect(runOp(repo, 'fixup', [one])).rejects.toThrow('merge')
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(tip)
+    expect((await runOp(repo, 'status', [])).staged).toEqual([{ path: 'c.txt', status: 'A' }])
+  })
+
   it('adds patterns to .gitignore and stops tracking files', async () => {
     write('.gitignore', 'node_modules/\r\n*.tmp')
     write('app.log', 'x\n')

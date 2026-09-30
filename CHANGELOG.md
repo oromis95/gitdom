@@ -10,6 +10,9 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - The dialog lists the commits that move, and warns when they are already pushed
   - To a new branch nothing is rewritten; onto an existing branch they are applied on top of it, and conflicts are resolved as for a cherry-pick
   - The current branch goes back to before them; a backup is made first, and **Undo** puts everything back, even after aborting on conflicts
+- **Fixup**: forgot something in a commit? Stage it, right-click the commit and choose **Add staged changes to this commit (fixup)…**
+  - The last commit is amended; an older one gets the changes and the commits after it are rewritten on top, keeping their messages
+  - Unstaged changes are kept aside meanwhile, and **Undo** gives the changes back as staged
 
 ## 1.2.0 — 2026-09-30
 

@@ -208,6 +208,11 @@ export interface RepoOps {
    * existing one they are cherry-picked, which may stop on conflicts.
    */
   moveCommits(from: string, target: string, create: boolean, checkout: boolean): OpOutcome
+  /**
+   * Adds the staged changes to a commit of the current branch: the last one is amended,
+   * an older one gets a fixup commit squashed into it by an interactive rebase.
+   */
+  fixup(hash: string): OpOutcome
   revert(hash: string): OpOutcome
   /** A hard reset first saves uncommitted changes in a stash: returns its hash, or null. */
   reset(hash: string, mode: ResetMode): string | null
