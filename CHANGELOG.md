@@ -25,6 +25,9 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - Click a file to read it in the new **File** mode of the file view, with syntax highlighting; images are shown, binary and very large files can be saved
   - **Save as…** writes a file as it was at that commit anywhere on disk; **Latest** switches to the working tree version
   - Right-click a file for its history or its blame at that commit
+- **Blame back in time**: the arrow beside a commit in the blame shows the file as it was just before that commit, at the same line, so you can see what was there and who wrote it
+  - Go further back as many times as you like; **Back** returns one step at a time, to the line you left
+  - **Blame at this commit** also keeps the line in view
 
 ## 1.1.0 — 2026-09-29
 

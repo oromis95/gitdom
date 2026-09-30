@@ -276,6 +276,8 @@ export interface BlameLine {
   hash: string
   /** Line number in the blamed version, starting at 1 */
   lineNo: number
+  /** Line number in the version of the commit that last changed it */
+  sourceLine: number
   text: string
 }
 

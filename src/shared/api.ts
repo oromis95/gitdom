@@ -121,6 +121,16 @@ export interface RepoOps {
   lineHistory(path: string, range: string, rev: string | null): LineRevision[]
   /** Who last changed each line of a file, at a commit or in the working tree (null). */
   blame(path: string, rev: string | null): Blame
+  /**
+   * Where a line of a file at a commit was in the version before it (a blame
+   * commit's `previous`), to blame that version at the same place.
+   */
+  lineBefore(
+    hash: string,
+    path: string,
+    previous: { hash: string; path: string },
+    line: number
+  ): number
   /** Every file of a commit's tree. */
   treeFiles(rev: string): TreeFile[]
   /** A file as stored at a revision, or in the working tree (null), to show it. */

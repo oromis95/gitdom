@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { buildPatch, parseDiff } from './diff'
+import { buildPatch, lineBefore, parseDiff } from './diff'
 
 let repo: string
 const git = (...args: string[]): string =>
@@ -44,6 +44,18 @@ describe('parseDiff', () => {
     const diff = parseDiff(git('diff', '--', 'f.txt'), 'f.txt')
     const lines = diff.hunks[0].lines
     expect(lines[lines.length - 1]).toMatchObject({ type: 'add', text: 'e', noNewline: true })
+  })
+})
+
+describe('lineBefore', () => {
+  it('finds where each line was before the change', () => {
+    // Two lines added on top, b changed, d deleted and a line added at the end
+    writeFileSync(join(repo, 'f.txt'), 'x\ny\na\nB\nc\ne\nz\n')
+    const { hunks } = parseDiff(git('diff', '-U0', '--', 'f.txt'), 'f.txt')
+    expect([1, 2, 3, 4, 5, 6, 7].map((line) => lineBefore(hunks, line))).toEqual([
+      1, 1, 1, 2, 3, 5, 6
+    ])
+    expect(lineBefore([], 4)).toBe(4)
   })
 })
 

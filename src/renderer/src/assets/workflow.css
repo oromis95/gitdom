@@ -1046,6 +1046,31 @@
   flex-shrink: 0;
   color: var(--text-muted);
 }
+.blame-before {
+  order: 1;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 2px;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: pointer;
+}
+.blame-gutter:hover .blame-before {
+  opacity: 1;
+}
+.blame-before:hover {
+  background: var(--bg-selected);
+  color: var(--text);
+}
+/* The line the blame came to, going back in time */
+.blame-line.target .diff-code,
+.blame-line.target .blame-no {
+  background: var(--accent-soft);
+}
 .blame-no {
   cursor: pointer;
 }

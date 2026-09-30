@@ -802,6 +802,30 @@ describe('file inspection', () => {
     expect(atCreate.lines.map((l) => l.text)).toEqual(['one', 'two', 'three', 'four'])
   })
 
+  it('finds a line of the blame in the version before its commit', async () => {
+    const lines = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    await commitFile('old name.txt', lines.join('\n') + '\n', 'create')
+    // Renamed with two lines added on top and b changed, in the same commit
+    git(repo, 'mv', 'old name.txt', 'new name.txt')
+    await commitFile(
+      'new name.txt',
+      ['x', 'y', 'a', 'B', ...lines.slice(2)].join('\n') + '\n',
+      'edit'
+    )
+
+    const blame = await runOp(repo, 'blame', ['new name.txt', null])
+    const line = blame.lines[3]
+    const edit = blame.commits[line.hash]
+    expect([line.text, line.sourceLine, edit.summary, edit.previous?.path]).toEqual([
+      'B',
+      4,
+      'edit',
+      'old name.txt'
+    ])
+    expect(await runOp(repo, 'lineBefore', [edit.hash, edit.path, edit.previous!, 4])).toBe(2)
+    expect(await runOp(repo, 'lineBefore', [edit.hash, edit.path, edit.previous!, 8])).toBe(6)
+  })
+
   it('follows some lines, or a function, through the commits that changed them', async () => {
     await commitFile('old name.txt', 'one\ntwo\nthree\nfour\n', 'create')
     git(repo, 'mv', 'old name.txt', 'new name.txt')

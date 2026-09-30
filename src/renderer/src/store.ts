@@ -54,6 +54,17 @@ export interface FileInspect {
   revPath?: string
   /** Lines followed in 'lines' mode: "start,end" or ":function", numbered as in `rev` */
   range?: string
+  /** Line to show in the blame, numbered as in `rev` */
+  line?: number
+  /** Versions the blame went back in time from, the latest last, to return to them */
+  back?: BlameStep[]
+}
+
+/** A version of a file the blame was showing, and the line it was at */
+export interface BlameStep {
+  rev: string | null
+  revPath?: string
+  line?: number
 }
 
 export type RecoveryView = 'reflog' | 'backups'

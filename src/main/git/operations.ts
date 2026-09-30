@@ -10,7 +10,7 @@ import type {
   ResetMode,
   StashMode
 } from '../../shared/api'
-import { parseDiff } from '../../shared/diff'
+import { lineBefore, parseDiff } from '../../shared/diff'
 import {
   FILE_LOG_FORMAT,
   REFLOG_FORMAT,
@@ -599,6 +599,26 @@ const ops: OpImpl = {
       path
     ])
     return parseBlame(output, path)
+  },
+
+  async lineBefore(repo, hash, path, previous, line) {
+    assertHash(hash)
+    assertHash(previous.hash)
+    assertArg(path, 'path')
+    assertArg(previous.path, 'path')
+    const output = await runGit(repo, [
+      '--literal-pathspecs',
+      'diff',
+      '--no-ext-diff',
+      '--no-color',
+      '-M',
+      '-U0',
+      previous.hash,
+      hash,
+      '--',
+      ...new Set([previous.path, path])
+    ])
+    return lineBefore(parseDiff(output, path).hunks, line)
   },
 
   async treeFiles(repo, rev) {
@@ -1369,6 +1389,7 @@ const READ_ONLY = new Set<OpName>([
   'fileAt',
   'saveFileAt',
   'blame',
+  'lineBefore',
   'lastCommitMessage',
   'commitTemplate',
   'conflictMarkers',

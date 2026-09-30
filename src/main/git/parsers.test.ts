@@ -212,7 +212,7 @@ describe('parseBlame', () => {
       `previous ${'b'.repeat(40)} old f.txt`,
       'filename f.txt',
       '\tline one\r',
-      `${a} 2 2`,
+      `${a} 5 2`,
       '\tline two',
       `${z} 3 3 1`,
       'author Not Committed Yet',
@@ -225,9 +225,9 @@ describe('parseBlame', () => {
     ].join('\n')
     const blame = parseBlame(out, 'f.txt')
     expect(blame.lines).toEqual([
-      { hash: a, lineNo: 1, text: 'line one' },
-      { hash: a, lineNo: 2, text: 'line two' },
-      { hash: z, lineNo: 3, text: '\tindented' }
+      { hash: a, lineNo: 1, sourceLine: 1, text: 'line one' },
+      { hash: a, lineNo: 2, sourceLine: 5, text: 'line two' },
+      { hash: z, lineNo: 3, sourceLine: 3, text: '\tindented' }
     ])
     expect(blame.commits[a]).toEqual({
       hash: a,

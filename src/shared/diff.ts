@@ -50,6 +50,25 @@ export function parseDiff(output: string, path: string): FileDiff {
   return file
 }
 
+/**
+ * Where a line of the new side of a diff was on the old side, from hunks without
+ * context (`git diff -U0`). A changed line maps to the lines it replaced, an added
+ * one to where it was inserted.
+ */
+export function lineBefore(hunks: Hunk[], line: number): number {
+  let delta = 0
+  for (const h of hunks) {
+    // With no lines on a side, its start is the line before the change
+    const newNext = h.newLines ? h.newStart + h.newLines : h.newStart + 1
+    const oldNext = h.oldLines ? h.oldStart + h.oldLines : h.oldStart + 1
+    if (line < (h.newLines ? h.newStart : newNext)) break
+    if (line < newNext)
+      return h.oldLines ? h.oldStart + Math.min(line - h.newStart, h.oldLines - 1) : oldNext
+    delta = oldNext - newNext
+  }
+  return Math.max(1, line + delta)
+}
+
 export interface HunkSelection {
   hunk: Hunk
   /** Indexes into hunk.lines; undefined selects every changed line */

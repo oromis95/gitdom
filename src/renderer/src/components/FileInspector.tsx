@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Braces,
   ChevronsUpDown,
@@ -7,12 +7,15 @@ import {
   History,
   ListTree,
   ScanText,
+  StepBack,
+  Undo2,
   X
 } from 'lucide-react'
 import type { Result } from '../../../shared/api'
 import type {
   Blame,
   BlameCommit,
+  BlameLine,
   DiffLine,
   FileRevision,
   LineRevision,
@@ -83,7 +86,7 @@ function FileHistory({
   const current = revisions?.find((r) => r.hash === inspect.rev)
 
   const open = (r: FileRevision): void => {
-    inspectFile({ ...inspect, rev: r.hash, revPath: r.path })
+    inspectFile({ ...inspect, rev: r.hash, revPath: r.path, line: undefined, back: undefined })
     select(r.hash)
   }
   const blameAt = (r: FileRevision): void =>
@@ -188,7 +191,16 @@ function FileLines({
     {
       label: 'Blame at this commit',
       disabled: r.diff.change === 'deleted',
-      onClick: () => inspectFile({ ...inspect, mode: 'blame', rev: r.hash, revPath: r.path })
+      onClick: () =>
+        inspectFile({
+          ...inspect,
+          mode: 'blame',
+          rev: r.hash,
+          revPath: r.path,
+          // Where the lines followed were at that commit
+          line: r.diff.hunks[0]?.newStart,
+          back: undefined
+        })
     },
     { label: 'Show commit in graph', onClick: () => showInGraph(r.hash) },
     'separator',
@@ -329,20 +341,56 @@ function FileBlame({
   )
   const age = useMemo(() => (blame ? ageScale(Object.values(blame.commits)) : () => 1), [blame])
 
-  const menuFor = (c: BlameCommit): MenuItem[] =>
+  // Shows the line the blame came to, once per version
+  const body = useRef<HTMLDivElement>(null)
+  const shown = useRef('')
+  const target = blame && inspect.line ? Math.min(inspect.line, blame.lines.length) : 0
+  useEffect(() => {
+    const key = `${blameKey}\0${target}`
+    if (!target || shown.current === key) return
+    const row = body.current?.querySelector(`[data-line="${target}"]`)
+    if (!row) return
+    shown.current = key
+    row.scrollIntoView({ block: 'center' })
+  })
+
+  /** Blames another version at a line, remembering this one to come back */
+  const goTo = (rev: string, revPath: string, line: number, from: BlameLine): void =>
+    inspectFile({
+      ...inspect,
+      rev,
+      revPath,
+      line,
+      back: [
+        ...(inspect.back ?? []),
+        { rev: inspect.rev, revPath: inspect.revPath, line: from.lineNo }
+      ]
+    })
+  const blameBefore = async (c: BlameCommit, line: BlameLine): Promise<void> => {
+    if (!c.previous) return
+    const before = await window.api.op(
+      repo,
+      'lineBefore',
+      c.hash,
+      c.path,
+      c.previous,
+      line.sourceLine
+    )
+    goTo(c.previous.hash, c.previous.path, before.ok ? before.value : line.sourceLine, line)
+  }
+
+  const menuFor = (c: BlameCommit, line: BlameLine): MenuItem[] =>
     c.uncommitted
       ? [{ label: 'Show uncommitted changes', onClick: () => showInGraph(WIP_HASH) }]
       : [
           {
             label: 'Blame before this change',
             disabled: !c.previous,
-            onClick: () =>
-              c.previous &&
-              inspectFile({ ...inspect, rev: c.previous.hash, revPath: c.previous.path })
+            onClick: () => void blameBefore(c, line)
           },
           {
             label: 'Blame at this commit',
-            onClick: () => inspectFile({ ...inspect, rev: c.hash, revPath: c.path })
+            onClick: () => goTo(c.hash, c.path, line.sourceLine, line)
           },
           { label: 'Show commit in graph', onClick: () => showInGraph(c.hash) },
           'separator',
@@ -382,9 +430,10 @@ function FileBlame({
       ) : (
         <div className="diff-hint">
           Click line numbers to follow those lines through the history (Shift+click for a range).
+          The arrow beside a commit shows the blame from before it.
         </div>
       )}
-      <div className="diff-body blame-body">
+      <div className="diff-body blame-body" ref={body}>
         <div className="blame-lines">
           {blame!.lines.map((line, i) => {
             const commit = blame!.commits[line.hash]
@@ -393,7 +442,10 @@ function FileBlame({
             return (
               <div
                 key={i}
-                className={`blame-line${first ? ' first' : ''}${selected === hash ? ' active' : ''}`}
+                data-line={line.lineNo}
+                className={`blame-line${first ? ' first' : ''}${selected === hash ? ' active' : ''}${
+                  line.lineNo === target ? ' target' : ''
+                }`}
               >
                 <span
                   className="blame-gutter"
@@ -406,8 +458,21 @@ function FileBlame({
                       : `${commit.summary}\n${commit.authorName} <${commit.authorEmail}>\n${formatDate(commit.authorDate)}\n${commit.hash}`
                   }
                   onClick={() => select(hash)}
-                  onContextMenu={(e) => openMenu(e, menuFor(commit))}
+                  onContextMenu={(e) => openMenu(e, menuFor(commit, line))}
                 >
+                  {first && commit.previous && (
+                    <button
+                      className="blame-before"
+                      title="Blame before this change"
+                      aria-label="Blame before this change"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void blameBefore(commit, line)
+                      }}
+                    >
+                      <StepBack size={12} />
+                    </button>
+                  )}
                   {first &&
                     (commit.uncommitted ? (
                       <span className="blame-summary muted">Uncommitted changes</span>
@@ -532,6 +597,7 @@ export default function FileInspector({
     return () => window.removeEventListener('keydown', onKey)
   }, [inspectFile])
 
+  const back = inspect.back?.[inspect.back.length - 1]
   const mode = (m: FileInspect['mode']): void => {
     if (m !== inspect.mode) inspectFile({ ...inspect, mode: m })
   }
@@ -572,9 +638,34 @@ export default function FileInspector({
           <button
             className="btn btn-small"
             title="Show the working tree version"
-            onClick={() => inspectFile({ ...inspect, rev: null, revPath: undefined })}
+            onClick={() =>
+              inspectFile({
+                ...inspect,
+                rev: null,
+                revPath: undefined,
+                line: undefined,
+                back: undefined
+              })
+            }
           >
             Latest
+          </button>
+        )}
+        {inspect.mode === 'blame' && back && (
+          <button
+            className="btn btn-small"
+            title={`Back to ${back.rev ? back.rev.slice(0, 7) : 'the working tree'}`}
+            onClick={() =>
+              inspectFile({
+                ...inspect,
+                rev: back.rev,
+                revPath: back.revPath,
+                line: back.line,
+                back: inspect.back!.slice(0, -1)
+              })
+            }
+          >
+            <Undo2 size={13} /> Back
           </button>
         )}
         <span className="toolbar-spacer" />

@@ -343,16 +343,24 @@ export function parseBlame(output: string, path: string): Blame {
   const lines: BlameLine[] = []
   let commit: BlameCommit | null = null
   let lineNo = 0
+  let sourceLine = 0
   for (const line of output.split('\n')) {
     if (line.startsWith('\t')) {
       // The content line closes each entry; CRLF files keep their \r
-      if (commit) lines.push({ hash: commit.hash, lineNo, text: line.slice(1).replace(/\r$/, '') })
+      if (commit)
+        lines.push({
+          hash: commit.hash,
+          lineNo,
+          sourceLine,
+          text: line.slice(1).replace(/\r$/, '')
+        })
       continue
     }
-    const header = /^([0-9a-f]{40,64}) \d+ (\d+)/.exec(line)
+    const header = /^([0-9a-f]{40,64}) (\d+) (\d+)/.exec(line)
     if (header) {
       const hash = header[1]
-      lineNo = Number(header[2])
+      sourceLine = Number(header[2])
+      lineNo = Number(header[3])
       commit = commits[hash] ??= {
         hash,
         authorName: '',
