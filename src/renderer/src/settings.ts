@@ -37,6 +37,8 @@ export interface Settings extends ToolSettings {
   hoverCards: boolean
   /** Look for a newer GitDom release on GitHub at startup */
   checkUpdates: boolean
+  /** A tip at startup, and now and then after an action a feature builds on */
+  showTips: boolean
   /** Stash and reapply local changes in the way of a checkout without asking (STASH-06) */
   autoStash: boolean
   /** Branches and tags grouped in folders by their slashes, or a flat list (SIDE-11) */
@@ -68,6 +70,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graphAvatars: true,
   hoverCards: true,
   checkUpdates: true,
+  showTips: true,
   autoStash: false,
   gitPath: '',
   editor: '',

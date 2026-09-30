@@ -558,6 +558,7 @@ export interface MenuApi {
 
 /** File menu entries handled by the renderer. */
 export type MenuCommand =
+  | 'tips'
   | 'open'
   | 'clone'
   | 'init'

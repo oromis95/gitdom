@@ -24,13 +24,17 @@ import { NO_GRAPH_FILTER, WIP_HASH, useApp } from './store'
 import { useSettings } from './settings'
 import { confirm, notify, openMenuAt, prompt, showForm, useUi, type MenuItem } from './ui'
 import { checkoutInWorktree, createWorktree, openWorktree, worktreeOf } from './worktrees'
+import { tipAfter } from './tips'
 
 function call<K extends OpName>(
   repo: string,
   name: K,
   ...args: OpArgs<K>
 ): Promise<Result<OpResult<K>>> {
-  return window.api.op(repo, name, ...args)
+  return window.api.op(repo, name, ...args).then((result) => {
+    if (result.ok) tipAfter(name)
+    return result
+  })
 }
 
 function fail(result: { error: string; details?: string }): void {

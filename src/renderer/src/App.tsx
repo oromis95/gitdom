@@ -20,6 +20,7 @@ import { HoverLayer } from './components/HoverCards'
 import TerminalDock from './components/TerminalDock'
 import ActivityDock from './components/ActivityDock'
 import Updates from './components/Updates'
+import Tips from './components/Tips'
 import Splash, { HighwayLogo } from './components/Splash'
 import { restoreSession, useActiveTab, useApp } from './store'
 import { fetchAll } from './actions'
@@ -29,6 +30,7 @@ import { stepZoom, useSettings } from './settings'
 import { splashEnabled, useTheme } from './theme'
 import { startActivityLog, toggleActivity, useActivity } from './activity'
 import { checkForUpdates, showWhatsNew, startupChecks } from './updates'
+import { showTip, startupTip } from './tips'
 import { useShortcut, useShortcutLabel } from './shortcuts'
 import { focusPanel, type Panel } from './focus'
 
@@ -141,6 +143,10 @@ function App(): React.JSX.Element {
     startupChecks()
   }, [])
 
+  useEffect(() => {
+    if (!splash) startupTip()
+  }, [splash])
+
   useEffect(
     () =>
       window.api.menu.onCommand((command) => {
@@ -152,6 +158,7 @@ function App(): React.JSX.Element {
           useApp.getState().openRecovery(command)
         } else if (command === 'statistics') useApp.getState().openStatistics(true)
         else if (command === 'whatsNew') showWhatsNew()
+        else if (command === 'tips') showTip()
         else if (command === 'checkUpdates') void checkForUpdates(true)
         else stepZoom(command === 'zoomIn' ? 1 : command === 'zoomOut' ? -1 : 0)
       }),
@@ -302,6 +309,7 @@ function App(): React.JSX.Element {
       <Overlays />
       <HoverLayer />
       <Updates />
+      <Tips />
       {splash && <Splash onDone={() => setSplash(false)} />}
     </div>
   )

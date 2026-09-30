@@ -18,6 +18,7 @@ import { openWorkspace, saveWorkspace, useWorkspaces } from './workspaces'
 import { toggleTerminal, useTerminal } from './terminal'
 import { toggleActivity, useActivity } from './activity'
 import { checkForUpdates, showWhatsNew } from './updates'
+import { showTip } from './tips'
 import {
   adoptGlobalIdentity,
   applyProfile,
@@ -281,6 +282,7 @@ export function buildCommands(): Command[] {
   add('View', 'Zoom out', () => stepZoom(-1), shortcutLabel('zoomOut'))
   add('View', 'Reset zoom', () => stepZoom(0), shortcutLabel('zoomReset'))
   add('Preferences', 'Preferences…', () => openPreferences(), shortcutLabel('preferences'))
+  add('Help', 'Tips: what GitDom can do', () => showTip())
   add('Help', "What's new in GitDom", () => showWhatsNew())
   add('Help', 'Check for updates', () => void checkForUpdates(true))
   const splash = splashEnabled()

@@ -14,6 +14,7 @@ import {
 import { setSplashEnabled, setTheme, splashEnabled, themeOptions, useTheme } from '../theme'
 import { useUi } from '../ui'
 import { checkForUpdates, showWhatsNew } from '../updates'
+import { showTip } from '../tips'
 import ThemeSettings from './ThemeSettings'
 import ShortcutSettings from './ShortcutSettings'
 import ConfigSettings from './ConfigSettings'
@@ -191,6 +192,30 @@ function Appearance({ s }: { s: Settings }): React.JSX.Element {
           />
           Show the logo when GitDom starts
         </label>
+      </Row>
+      <Row
+        label="Tips"
+        hint="A feature explained at startup, and now and then after an action it builds on"
+      >
+        <label className="modal-check">
+          <input
+            type="checkbox"
+            checked={s.showTips}
+            onChange={(e) => updateSettings({ showTips: e.target.checked })}
+          />
+          Show tips
+        </label>
+        <div className="pref-buttons">
+          <button
+            className="btn btn-small"
+            onClick={() => {
+              useUi.setState({ preferences: false })
+              showTip()
+            }}
+          >
+            See all the tips
+          </button>
+        </div>
       </Row>
       <Row
         label="Author pictures"

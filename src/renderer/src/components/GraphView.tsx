@@ -33,6 +33,7 @@ import { readableOn } from '../themes'
 import { buildRefLabels, type RefLabel } from '../graph/refLabels'
 import { NO_GRAPH_FILTER, WIP_HASH, useApp } from '../store'
 import { openMenu, openMenuAt, type MenuItem } from '../ui'
+import { tipAfter } from '../tips'
 import {
   DEFAULT_SETTINGS,
   GRAPH_COLUMN_WIDTH,
@@ -740,7 +741,10 @@ export default function GraphView({
                     : 'Code added or removed') + (searchShortcut ? ` (${searchShortcut})` : '')
             }
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => {
+              setSearchText(e.target.value)
+              if (searchMode !== 'code' && e.target.value.length > 2) tipAfter('search')
+            }}
             onKeyDown={onSearchKey}
           />
           {searchMode === 'code' && (

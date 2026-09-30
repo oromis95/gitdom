@@ -109,6 +109,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - **Update** downloads it in the background and checks it against the release's SHA-256; it's installed when you close GitDom, or right away with **Restart now**. The exe keeps its name and folder, so your shortcuts keep working
 - If the download is blocked, or GitDom's folder isn't writable, **Download** opens the release page instead
 - **Help → What's New** lists what each version added; the full list is in [CHANGELOG.md](CHANGELOG.md)
+- **Tips** explain a feature at a time with a small animation: one at startup, and one now and then right after doing something it builds on. **Help → Tips** lists them all; they can be turned off from the dialog or in Preferences
 
 **Keyboard**
 

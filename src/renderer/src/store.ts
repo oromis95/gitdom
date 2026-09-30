@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { notify } from './ui'
+import { tipAfter } from './tips'
 import type { DiffSource, GraphFilter, RepoSnapshot } from '../../shared/types'
 
 export const WIP_HASH = 'WIP'
@@ -353,6 +354,7 @@ export const useApp = create<AppState>((set, get) => {
     openDiff(target) {
       const tab = get().tabs[get().active]
       if (tab) updateTab(tab.path, { diff: target ?? undefined })
+      if (target?.source.kind === 'commit') tipAfter('commitDiff')
     },
 
     compare(target) {
@@ -362,6 +364,7 @@ export const useApp = create<AppState>((set, get) => {
 
     inspectFile(inspect) {
       const tab = get().tabs[get().active]
+      if (inspect) tipAfter(inspect.mode)
       if (tab) {
         updateTab(tab.path, {
           inspect: inspect ?? undefined,

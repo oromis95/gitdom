@@ -6,6 +6,7 @@ import './assets/safety.css'
 import './assets/studio.css'
 import './assets/motion.css'
 import './assets/hover.css'
+import './assets/tips.css'
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

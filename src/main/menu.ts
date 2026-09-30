@@ -89,6 +89,7 @@ function build(): void {
   const help: MenuItemConstructorOptions = {
     label: 'Help',
     submenu: [
+      { label: 'Tips', click: send('tips') },
       { label: "What's New", click: send('whatsNew') },
       { label: 'Check for Updates…', click: send('checkUpdates') },
       { type: 'separator' },
