@@ -1,7 +1,8 @@
 // Graph search (GRAPH-17): what the renderer matches itself, and the parts of a text to mark.
 import type { Commit } from '../../../shared/types'
 
-export type SearchMode = 'commit' | 'file'
+/** Commit messages and authors, changed file paths, or the code added and removed */
+export type SearchMode = 'commit' | 'file' | 'code'
 
 /** Normalized search text: empty when there's nothing to search. */
 export function searchKey(text: string): string {

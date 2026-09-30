@@ -59,6 +59,11 @@
   color: var(--text);
   background: var(--bg-hover);
 }
+.graph-tool.active,
+.graph-tool.active:not(:disabled):hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
 .graph-tool:disabled {
   opacity: 0.4;
   cursor: default;

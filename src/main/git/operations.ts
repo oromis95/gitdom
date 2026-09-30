@@ -47,6 +47,8 @@ const FILE_HISTORY_LIMIT = 5000
 /** Each commit of a line history carries a diff: fewer of them */
 const LINE_HISTORY_LIMIT = 500
 const REFLOG_LIMIT = 2000
+/** The running search in the changes of each repository: a new one, or clearing it, stops it */
+const contentSearches = new Map<string, AbortController>()
 const CONFLICT_MARKER_RE = /^(<{7}|>{7})( |$)/m
 
 /** Rejects values git would parse as options. */
@@ -293,6 +295,43 @@ async function worktreeImage(repo: string, path: string): Promise<string | null>
   return `data:${imageType(path)};base64,${(await readFile(full)).toString('base64')}`
 }
 
+/**
+ * Commits whose changes add or remove `text` (`-S`, the commits where it appeared or went away),
+ * or whose changed lines match a regular expression (`-G`), ignoring case. Git diffs every commit
+ * for this, so a long history takes a while: a newer search, or cancelSearch, stops it.
+ */
+async function searchChanges(
+  repo: string,
+  field: 'code' | 'regex',
+  text: string,
+  filter: Parameters<typeof logRevisions>[0]
+): Promise<string[]> {
+  const controller = new AbortController()
+  contentSearches.set(repo, controller)
+  try {
+    const output = await runGit(
+      repo,
+      [
+        'log',
+        `-n${COMMIT_LIMIT}`,
+        '--format=%H',
+        '-i',
+        field === 'code' ? `-S${text}` : `-G${text}`,
+        ...logRevisions(filter),
+        '--'
+      ],
+      { signal: controller.signal }
+    )
+    return output.split('\n').filter(Boolean)
+  } catch (e) {
+    const invalid = e instanceof GitError && /invalid regex: (.*)/.exec(e.stderr)
+    if (invalid) throw new Error(`Invalid regular expression: ${invalid[1].trim()}`)
+    throw e
+  } finally {
+    if (contentSearches.get(repo) === controller) contentSearches.delete(repo)
+  }
+}
+
 const ops: OpImpl = {
   status: (repo) => loadStatus(repo),
 
@@ -397,8 +436,11 @@ const ops: OpImpl = {
   },
 
   async searchCommits(repo, field, text, filter) {
+    const inChanges = field === 'code' || field === 'regex'
+    if (inChanges) contentSearches.get(repo)?.abort()
     if (!text.trim()) return []
     if (/[\0\n\r]/.test(text)) throw new Error('Invalid search text')
+    if (inChanges) return searchChanges(repo, field, text, filter)
     const match =
       field === 'message'
         ? ['-i', '-F', `--grep=${text}`]
@@ -413,6 +455,10 @@ const ops: OpImpl = {
       ...match
     ])
     return output.split('\n').filter(Boolean)
+  },
+
+  async cancelSearch(repo) {
+    contentSearches.get(repo)?.abort()
   },
 
   moreCommits(repo, skip, filter) {
@@ -1262,6 +1308,7 @@ const READ_ONLY = new Set<OpName>([
   'readConflictFile',
   'isAncestor',
   'searchCommits',
+  'cancelSearch',
   'compareFiles',
   'imagePair',
   'reflog',

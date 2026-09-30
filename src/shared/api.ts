@@ -92,9 +92,17 @@ export interface RepoOps {
   compareFiles(from: string, to: string): FileChange[]
   /**
    * Commits of the graph whose full message, or whose changed file paths, contain `text`
-   * (GRAPH-17); author, subject and hash are matched in the renderer.
+   * (GRAPH-17); author, subject and hash are matched in the renderer. `code` finds the commits
+   * that add or remove `text`, `regex` those whose changed lines match it: both ignore case, and
+   * a newer search in the changes stops the running one.
    */
-  searchCommits(field: 'message' | 'file', text: string, filter?: GraphFilter): string[]
+  searchCommits(
+    field: 'message' | 'file' | 'code' | 'regex',
+    text: string,
+    filter?: GraphFilter
+  ): string[]
+  /** Stops the running search in the changes, if any. */
+  cancelSearch(): void
   /** The next page of the graph's commits, from `skip` on (GRAPH-08). */
   moreCommits(skip: number, filter?: GraphFilter): { commits: Commit[]; more: boolean }
   commitDetail(hash: string): CommitDetail

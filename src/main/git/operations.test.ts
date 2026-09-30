@@ -477,6 +477,31 @@ describe('stash and tags', () => {
     await expect(runOp(repo, 'searchCommits', ['message', 'a\nb'])).rejects.toThrow()
   })
 
+  it('finds the commits that add or remove some code, or whose changed lines match', async () => {
+    await commitFile('app.js', 'const total = 1\n', 'create')
+    const create = git(repo, 'rev-parse', 'HEAD')
+    await commitFile('app.js', 'const total = 2\n', 'edit')
+    const edit = git(repo, 'rev-parse', 'HEAD')
+    await commitFile('app.js', 'const sum = 2\n', 'rename')
+    const rename = git(repo, 'rev-parse', 'HEAD')
+
+    // -S: where "total" appeared and went away, not where it only changed line
+    expect(await runOp(repo, 'searchCommits', ['code', 'TOTAL'])).toEqual([rename, create])
+    expect(await runOp(repo, 'searchCommits', ['code', 'total = 2'])).toEqual([rename, edit])
+    // -G: any added or removed line that matches
+    expect(await runOp(repo, 'searchCommits', ['regex', 'total = [0-9]'])).toEqual([
+      rename,
+      edit,
+      create
+    ])
+    expect(await runOp(repo, 'searchCommits', ['regex', '^const (sum|x)'])).toEqual([rename])
+    expect(await runOp(repo, 'searchCommits', ['code', '-p'])).toEqual([])
+    await expect(runOp(repo, 'searchCommits', ['regex', 'total ('])).rejects.toThrow(
+      /Invalid regular expression/
+    )
+    await runOp(repo, 'cancelSearch', [])
+  })
+
   it('creates lightweight and annotated tags and deletes them', async () => {
     await runOp(repo, 'createTag', ['v1', 'HEAD', null])
     await runOp(repo, 'createTag', ['v2', 'HEAD', 'Release 2'])

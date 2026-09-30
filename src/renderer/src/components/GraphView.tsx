@@ -10,6 +10,7 @@ import {
   Laptop,
   LoaderCircle,
   Pencil,
+  Regex,
   Search,
   Tag,
   X
@@ -48,6 +49,8 @@ const OVERSCAN = 6
 const REF_MIME = 'application/x-gitdom-ref'
 /** Pause in typing before git searches messages or files */
 const SEARCH_DELAY = 250
+/** Searching the code diffs every commit: wait for a pause in the typing */
+const CODE_SEARCH_DELAY = 600
 /** Rows before the end of the loaded commits at which the next page is requested (GRAPH-08) */
 const LOAD_AHEAD = 400
 
@@ -246,10 +249,16 @@ export default function GraphView({
   const [hoverRow, setHoverRow] = useState<number | null>(null)
   const [searchText, setSearchText] = useState('')
   const [searchMode, setSearchMode] = useState<SearchMode>('commit')
+  /** In the code: changed lines matching a regular expression, instead of the text coming or going */
+  const [searchRegex, setSearchRegex] = useState(false)
   /** List only the matches, without the graph lines */
   const [onlyMatches, setOnlyMatches] = useState(false)
   /** What git found for a query: full messages or changed files */
-  const [found, setFound] = useState<{ query: string; hashes: Set<string> } | null>(null)
+  const [found, setFound] = useState<{
+    query: string
+    hashes: Set<string>
+    error?: string
+  } | null>(null)
   /** Bumped when an author picture arrives, to redraw the nodes */
   const [avatarTick, setAvatarTick] = useState(0)
 
@@ -261,24 +270,36 @@ export default function GraphView({
   )
 
   // --- Search (GRAPH-17) ---
-  const key = searchKey(searchText)
-  const query = `${searchMode}:${key}`
+  // Code keeps its case: git ignores it anyway, and a regex like \S depends on it
+  const key = searchMode === 'code' ? searchText.trim() : searchKey(searchText)
+  const codeField = searchRegex ? 'regex' : 'code'
+  const query = `${searchMode === 'code' ? codeField : searchMode}:${key}`
   // Single letters are matched here only: every message has some
   const asksGit = key !== '' && (searchMode === 'file' || key.length > 1)
 
   useEffect(() => {
     if (!asksGit) return
     let stale = false
-    const timer = setTimeout(async () => {
-      const field = searchMode === 'commit' ? 'message' : 'file'
-      const result = await window.api.op(snapshot.path, 'searchCommits', field, key, graphFilter)
-      if (!stale) setFound({ query, hashes: new Set(result.ok ? result.value : []) })
-    }, SEARCH_DELAY)
+    const timer = setTimeout(
+      async () => {
+        const field =
+          searchMode === 'commit' ? 'message' : searchMode === 'file' ? 'file' : codeField
+        const result = await window.api.op(snapshot.path, 'searchCommits', field, key, graphFilter)
+        if (stale) return
+        setFound(
+          result.ok
+            ? { query, hashes: new Set(result.value) }
+            : { query, hashes: new Set(), error: result.error }
+        )
+      },
+      searchMode === 'code' ? CODE_SEARCH_DELAY : SEARCH_DELAY
+    )
     return () => {
       stale = true
       clearTimeout(timer)
+      if (searchMode === 'code') void window.api.op(snapshot.path, 'cancelSearch')
     }
-  }, [asksGit, snapshot.path, snapshot.commits, graphFilter, key, searchMode, query])
+  }, [asksGit, snapshot.path, snapshot.commits, graphFilter, key, searchMode, codeField, query])
 
   const matched = useMemo<Set<string> | null>(() => {
     if (!key) return null
@@ -691,11 +712,16 @@ export default function GraphView({
   }
 
   const position = matchRows.indexOf(selectedRow)
+  const searchError = found?.query === query ? found.error : undefined
   const counter = searching
     ? 'Searching…'
-    : matchRows.length === 0
-      ? 'No results'
-      : `${position >= 0 ? position + 1 : '–'} / ${matchRows.length}`
+    : searchError
+      ? searchError.startsWith('Invalid regular expression')
+        ? 'Invalid regex'
+        : 'Search failed'
+      : matchRows.length === 0
+        ? 'No results'
+        : `${position >= 0 ? position + 1 : '–'} / ${matchRows.length}`
 
   return (
     <div className="graph">
@@ -705,17 +731,37 @@ export default function GraphView({
           <input
             ref={searchRef}
             placeholder={
-              searchMode === 'commit'
-                ? `Search messages, authors, SHA${searchShortcut ? ` (${searchShortcut})` : ''}`
-                : `Search changed files${searchShortcut ? ` (${searchShortcut})` : ''}`
+              (searchMode === 'commit'
+                ? 'Search messages, authors, SHA'
+                : searchMode === 'file'
+                  ? 'Search changed files'
+                  : searchRegex
+                    ? 'Regex in the changed lines'
+                    : 'Code added or removed') + (searchShortcut ? ` (${searchShortcut})` : '')
             }
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={onSearchKey}
           />
+          {searchMode === 'code' && (
+            <button
+              className={`graph-tool${searchRegex ? ' active' : ''}`}
+              title={
+                searchRegex
+                  ? 'Regular expression: commits whose added or removed lines match it. Click to find where a text appeared or went away instead'
+                  : 'Click to search with a regular expression, in every added or removed line'
+              }
+              aria-pressed={searchRegex}
+              onClick={() => setSearchRegex(!searchRegex)}
+            >
+              <Regex size={14} />
+            </button>
+          )}
           {key && (
             <>
-              <span className="graph-search-count">{counter}</span>
+              <span className="graph-search-count" title={searchError}>
+                {counter}
+              </span>
               <button
                 className="graph-tool"
                 title="Previous match (Shift+Enter)"
@@ -739,18 +785,20 @@ export default function GraphView({
           )}
         </div>
         <span className="segmented">
-          {(['commit', 'file'] as const).map((mode) => (
+          {(['commit', 'file', 'code'] as const).map((mode) => (
             <button
               key={mode}
               className={searchMode === mode ? 'active' : ''}
               title={
                 mode === 'commit'
                   ? 'Search commit messages, authors and SHA'
-                  : 'Search the paths of the changed files'
+                  : mode === 'file'
+                    ? 'Search the paths of the changed files'
+                    : 'Find the commits where some code appeared or went away'
               }
               onClick={() => setSearchMode(mode)}
             >
-              {mode === 'commit' ? 'Commits' : 'Files'}
+              {mode === 'commit' ? 'Commits' : mode === 'file' ? 'Files' : 'Code'}
             </button>
           ))}
         </span>

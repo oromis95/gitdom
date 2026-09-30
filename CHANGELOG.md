@@ -18,6 +18,9 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - Each commit that changed those lines, newest first, with just the part of the diff that touches them; the lines follow the file through edits and renames
   - Long runs of unchanged lines are folded, and open with a click
   - Click a commit to show it, or right-click to see the blame at that commit
+- **Search the code**: **Code** beside the graph search finds the commits that added or removed some text, such as when a function was introduced or the last call to it went away
+  - With the regex button, the commits whose added or removed lines match a regular expression
+  - Case doesn't matter; a search stops as soon as you type something else or clear it
 
 ## 1.1.0 — 2026-09-29
 
