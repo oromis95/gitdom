@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Braces, ChevronsUpDown, History, ListTree, ScanText, X } from 'lucide-react'
+import {
+  Braces,
+  ChevronsUpDown,
+  Download,
+  FileText,
+  History,
+  ListTree,
+  ScanText,
+  X
+} from 'lucide-react'
 import type { Result } from '../../../shared/api'
 import type {
   Blame,
@@ -13,6 +22,8 @@ import { WIP_HASH, useActiveTab, useApp, type FileInspect } from '../store'
 import { fromTerminal, notify, openMenu, prompt, type MenuItem } from '../ui'
 import { highlightHunks, highlightLines } from '../highlight'
 import { foldContext, functionRange, rangeLabel } from '../lineRange'
+import { formatBytes } from '../statistics'
+import { saveFileAt } from '../actions'
 import DiffView from './DiffView'
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
@@ -438,7 +449,70 @@ function FileBlame({
   )
 }
 
-/** History or blame of a file, in place of the graph. */
+/** The file itself, at a commit or in the working tree. */
+function FileContents({
+  snapshot,
+  inspect
+}: {
+  snapshot: RepoSnapshot
+  inspect: FileInspect
+}): React.JSX.Element {
+  const repo = snapshot.path
+  const path = inspect.revPath ?? inspect.path
+  const reload = inspect.rev ? '' : JSON.stringify(snapshot.status) + snapshot.head.hash
+  const result = useLoaded(`${path}\0${inspect.rev}\0${reload}`, () =>
+    window.api.op(repo, 'fileAt', inspect.rev, path)
+  )
+  const file = result?.ok ? result.value : null
+  const lines = useMemo(
+    () => (file?.text ? file.text.replace(/\r?\n$/, '').split(/\r?\n/) : []),
+    [file]
+  )
+  const highlighted = useMemo(() => highlightLines(path, lines), [path, lines])
+
+  if (!result) return <div className="center-message">Loading…</div>
+  if (!result.ok) return <div className="banner-error">{result.error}</div>
+  const save = inspect.rev && (
+    <button className="btn btn-small" onClick={() => void saveFileAt(repo, inspect.rev!, path)}>
+      <Download size={13} /> Save as…
+    </button>
+  )
+  if (file!.tooLarge || file!.binary)
+    return (
+      <div className="center-message file-unshown">
+        <span>
+          {file!.tooLarge ? 'Too large to show' : 'Binary file'}: {formatBytes(file!.size)}
+        </span>
+        {save}
+      </div>
+    )
+  return (
+    <div className="diff-body blame-body">
+      {file!.image && (
+        <div className="file-image">
+          <img className="checkerboard" src={file!.image} alt={path} />
+          <span className="muted">{formatBytes(file!.size)}</span>
+        </div>
+      )}
+      {!file!.image && !lines.length && <div className="center-message">Empty file</div>}
+      {lines.length > 0 && (
+        <div className="blame-lines">
+          {lines.map((_, i) => (
+            <div key={i} className="blame-line">
+              <span className="diff-no">{i + 1}</span>
+              <span
+                className="diff-code"
+                dangerouslySetInnerHTML={{ __html: highlighted[i] || ' ' }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** A file, its history or its blame, in place of the graph. */
 export default function FileInspector({
   snapshot,
   inspect
@@ -483,7 +557,7 @@ export default function FileInspector({
           {shownPath !== inspect.path && <span className="muted">{shownPath} → </span>}
           {inspect.path}
         </span>
-        {inspect.mode === 'blame' && (
+        {(inspect.mode === 'blame' || inspect.mode === 'file') && (
           <span className="diff-source">
             {inspect.rev ? `at ${inspect.rev.slice(0, 7)}` : 'working tree'}
           </span>
@@ -494,10 +568,10 @@ export default function FileInspector({
             {inspect.rev ? ` at ${inspect.rev.slice(0, 7)}` : ''}
           </span>
         )}
-        {inspect.mode === 'blame' && inspect.rev && (
+        {(inspect.mode === 'blame' || inspect.mode === 'file') && inspect.rev && (
           <button
             className="btn btn-small"
-            title="Blame the working tree version"
+            title="Show the working tree version"
             onClick={() => inspectFile({ ...inspect, rev: null, revPath: undefined })}
           >
             Latest
@@ -511,7 +585,23 @@ export default function FileInspector({
         >
           <Braces size={13} /> Function…
         </button>
+        {inspect.mode === 'file' && inspect.rev && (
+          <button
+            className="btn btn-small"
+            title="Save the file as it was at this commit"
+            onClick={() => void saveFileAt(snapshot.path, inspect.rev!, shownPath)}
+          >
+            <Download size={13} /> Save as…
+          </button>
+        )}
         <div className="segmented">
+          <button
+            className={inspect.mode === 'file' ? 'active' : ''}
+            onClick={() => mode('file')}
+            title="The file itself"
+          >
+            <FileText size={14} /> File
+          </button>
           <button
             className={inspect.mode === 'history' ? 'active' : ''}
             onClick={() => mode('history')}
@@ -542,6 +632,8 @@ export default function FileInspector({
         <FileHistory snapshot={snapshot} inspect={inspect} />
       ) : inspect.mode === 'lines' ? (
         <FileLines snapshot={snapshot} inspect={inspect} />
+      ) : inspect.mode === 'file' ? (
+        <FileContents snapshot={snapshot} inspect={inspect} />
       ) : (
         <FileBlame snapshot={snapshot} inspect={inspect} />
       )}

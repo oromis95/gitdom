@@ -734,6 +734,48 @@ describe('runOp', () => {
 })
 
 describe('file inspection', () => {
+  it('lists the files of a commit, shows one as it was and saves it', async () => {
+    mkdirSync(join(repo, 'docs'))
+    await commitFile('docs/read me.md', '\uFEFFfirst\n', 'create')
+    const first = git(repo, 'rev-parse', 'HEAD')
+    writeFileSync(join(repo, 'logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1]))
+    writeFileSync(join(repo, 'data.bin'), Buffer.from([1, 0, 2]))
+    write('docs/read me.md', 'second\n')
+    await runOp(repo, 'stage', [['.']])
+    await runOp(repo, 'commit', ['more', false])
+    write('docs/read me.md', 'third\n')
+
+    expect(await runOp(repo, 'treeFiles', [first])).toEqual([
+      { path: 'docs/read me.md', size: 9, kind: 'file' }
+    ])
+    expect((await runOp(repo, 'treeFiles', ['HEAD'])).map((f) => f.path)).toEqual([
+      'data.bin',
+      'docs/read me.md',
+      'logo.png'
+    ])
+    const old = await runOp(repo, 'fileAt', [first, 'docs/read me.md'])
+    expect(old).toMatchObject({ text: 'first\n', binary: false, image: null, tooLarge: false })
+    expect((await runOp(repo, 'fileAt', ['HEAD', 'docs/read me.md'])).text).toBe('second\n')
+    expect((await runOp(repo, 'fileAt', [null, 'docs/read me.md'])).text).toBe('third\n')
+    expect(await runOp(repo, 'fileAt', ['HEAD', 'data.bin'])).toMatchObject({
+      text: null,
+      binary: true,
+      size: 3
+    })
+    const logo = await runOp(repo, 'fileAt', ['HEAD', 'logo.png'])
+    expect([logo.binary, logo.image?.startsWith('data:image/png;base64,')]).toEqual([false, true])
+    await expect(runOp(repo, 'fileAt', [first, 'logo.png'])).rejects.toThrow()
+    await expect(runOp(repo, 'fileAt', [null, '../outside.txt'])).rejects.toThrow(/Invalid path/)
+    await expect(runOp(repo, 'treeFiles', ['HEAD:docs'])).rejects.toThrow(/Invalid revision/)
+
+    const dest = join(root, 'saved.bin')
+    await runOp(repo, 'saveFileAt', ['HEAD', 'data.bin', dest])
+    expect([...readFileSync(dest)]).toEqual([1, 0, 2])
+    await expect(runOp(repo, 'saveFileAt', ['HEAD', 'data.bin', 'relative.bin'])).rejects.toThrow(
+      /Invalid destination/
+    )
+  })
+
   it('follows a file across a rename and blames it at a commit and in the working tree', async () => {
     await commitFile('old name.txt', 'one\ntwo\nthree\nfour\n', 'create')
     git(repo, 'mv', 'old name.txt', 'new name.txt')

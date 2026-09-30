@@ -1,6 +1,6 @@
 // Repository operations exposed to the renderer through the `repo:op` IPC channel.
 import { mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
-import { relative, resolve } from 'path'
+import { isAbsolute, relative, resolve } from 'path'
 import type {
   MergeMode,
   OpArgs,
@@ -19,9 +19,10 @@ import {
   parseLineLog,
   parseNameStatus,
   parseReflog,
+  parseTreeFiles,
   withNumstat
 } from './parsers'
-import type { DiffOptions, FileDiff, ImagePair } from '../../shared/types'
+import type { DiffOptions, FileContent, FileDiff, ImagePair } from '../../shared/types'
 import { GitError, runGit, tryGit } from './exec'
 import { toolSettings } from '../settings'
 import {
@@ -283,6 +284,43 @@ async function blobImage(repo: string, spec: string, path: string): Promise<stri
   if (size > IMAGE_LIMIT) throw new Error(`${path} is too large to preview`)
   const data = await runGit(repo, ['cat-file', 'blob', spec], { encoding: 'base64' })
   return `data:${imageType(path)};base64,${data}`
+}
+
+/** Files larger than this are not shown, only saved */
+const VIEW_LIMIT = 5 * 1024 * 1024
+
+async function blobBytes(repo: string, spec: string): Promise<Buffer> {
+  return Buffer.from(
+    await runGit(repo, ['cat-file', 'blob', spec], { encoding: 'base64' }),
+    'base64'
+  )
+}
+
+const tooLarge = (size: number): FileContent => ({
+  size,
+  text: null,
+  image: null,
+  binary: false,
+  tooLarge: true
+})
+
+/** A file's bytes as GitDom shows them: an image, text, or neither when it's binary. */
+function fileContent(path: string, data: Buffer): FileContent {
+  const extension = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
+  const image = path.includes('.') && extension in IMAGE_TYPES
+  // Like git: a NUL byte near the start makes a file binary
+  const binary = data.subarray(0, 8000).includes(0)
+  return {
+    size: data.length,
+    // SVG is both: a picture and its source
+    text:
+      binary || (image && extension !== 'svg')
+        ? null
+        : data.toString('utf8').replace(/^\uFEFF/, ''),
+    image: image ? `data:${imageType(path)};base64,${data.toString('base64')}` : null,
+    binary: binary && !image,
+    tooLarge: false
+  }
 }
 
 /** An image in the working tree as a data URL, or null when it was deleted. */
@@ -561,6 +599,33 @@ const ops: OpImpl = {
       path
     ])
     return parseBlame(output, path)
+  },
+
+  async treeFiles(repo, rev) {
+    assertRev(rev)
+    return parseTreeFiles(await runGit(repo, ['ls-tree', '-r', '-l', '-z', '--full-tree', rev]))
+  },
+
+  async fileAt(repo, rev, path) {
+    assertArg(path, 'path')
+    if (!rev) {
+      const full = resolve(repo, path)
+      if (relative(repo, full).startsWith('..')) throw new Error(`Invalid path: ${path}`)
+      const { size } = await stat(full)
+      return size > VIEW_LIMIT ? tooLarge(size) : fileContent(path, await readFile(full))
+    }
+    assertRev(rev)
+    const spec = `${rev}:${path}`
+    const size = Number((await runGit(repo, ['cat-file', '-s', spec])).trim())
+    if (size > VIEW_LIMIT) return tooLarge(size)
+    return fileContent(path, await blobBytes(repo, spec))
+  },
+
+  async saveFileAt(repo, rev, path, dest) {
+    assertRev(rev)
+    assertArg(path, 'path')
+    if (!isAbsolute(dest)) throw new Error(`Invalid destination: ${dest}`)
+    await writeFile(dest, await blobBytes(repo, `${rev}:${path}`))
   },
 
   async stage(repo, paths) {
@@ -1300,6 +1365,9 @@ const READ_ONLY = new Set<OpName>([
   'tagInfo',
   'fileHistory',
   'lineHistory',
+  'treeFiles',
+  'fileAt',
+  'saveFileAt',
   'blame',
   'lastCommitMessage',
   'commitTemplate',

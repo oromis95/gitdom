@@ -1,8 +1,8 @@
 // External programs: the editor (DIFF-12), the file manager, and checks on the git executable (SET-04).
 import { execFile, spawn } from 'child_process'
 import { homedir } from 'os'
-import { relative, resolve } from 'path'
-import { ipcMain, shell } from 'electron'
+import { basename, relative, resolve } from 'path'
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import {
   IPC,
   type ConfigEntry,
@@ -195,6 +195,15 @@ export function registerToolHandlers(): void {
         ])
       })
   )
+
+  ipcMain.handle(IPC.toolsPickSavePath, async (event, title: string, name: string) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    const options: Electron.SaveDialogOptions = { title, defaultPath: basename(String(name)) }
+    const result = window
+      ? await dialog.showSaveDialog(window, options)
+      : await dialog.showSaveDialog(options)
+    return result.canceled || !result.filePath ? null : result.filePath
+  })
 
   ipcMain.on(IPC.toolsShowInFolder, (_event, repo: string, path: string | null) => {
     try {

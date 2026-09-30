@@ -1252,6 +1252,16 @@ export function savePullMode(mode: PullMode): void {
 }
 
 /** Opens a file of the repository, or the repository itself (null), in the external editor. */
+/** Saves a file as it was at a commit, where the user picks. */
+export async function saveFileAt(repo: string, rev: string, path: string): Promise<void> {
+  const name = path.split('/').pop()!
+  const dest = await window.api.tools.pickSavePath(`Save ${name} from ${rev.slice(0, 7)}`, name)
+  if (!dest) return
+  const result = await window.api.op(repo, 'saveFileAt', rev, path, dest)
+  if (result.ok) notify('info', `Saved ${dest}`)
+  else notify('error', result.error)
+}
+
 export async function openInEditor(repo: string, path: string | null): Promise<void> {
   const result = await window.api.tools.openInEditor(repo, path)
   if (!result.ok) notify('error', `Couldn't open the editor: ${result.error}`, result.details)

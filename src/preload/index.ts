@@ -41,6 +41,7 @@ const api: GitDomApi = {
     mergeTools: () => ipcRenderer.invoke(IPC.toolsMergeTools),
     openInEditor: (repo, path) => ipcRenderer.invoke(IPC.toolsOpenInEditor, repo, path),
     showInFolder: (repo, path) => ipcRenderer.send(IPC.toolsShowInFolder, repo, path),
+    pickSavePath: (title, name) => ipcRenderer.invoke(IPC.toolsPickSavePath, title, name),
     setZoom: (factor) => webFrame.setZoomFactor(factor),
     configList: (scope, repo) => ipcRenderer.invoke(IPC.toolsConfigList, scope, repo),
     configSet: (scope, repo, key, value, old) =>

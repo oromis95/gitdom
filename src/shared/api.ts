@@ -7,6 +7,7 @@ import type {
   DiffOptions,
   DiffSource,
   FileChange,
+  FileContent,
   FileDiff,
   FileRevision,
   LineRevision,
@@ -19,6 +20,7 @@ import type {
   StatisticsOptions,
   StatisticsProgress,
   TagInfo,
+  TreeFile,
   WorkingTreeStatus
 } from './types'
 
@@ -119,6 +121,12 @@ export interface RepoOps {
   lineHistory(path: string, range: string, rev: string | null): LineRevision[]
   /** Who last changed each line of a file, at a commit or in the working tree (null). */
   blame(path: string, rev: string | null): Blame
+  /** Every file of a commit's tree. */
+  treeFiles(rev: string): TreeFile[]
+  /** A file as stored at a revision, or in the working tree (null), to show it. */
+  fileAt(rev: string | null, path: string): FileContent
+  /** Writes a file as stored at a revision to `dest`, an absolute path picked by the user. */
+  saveFileAt(rev: string, path: string, dest: string): void
 
   stage(paths: string[]): void
   unstage(paths: string[]): void
@@ -371,6 +379,8 @@ export interface ToolsApi {
   openInEditor(repo: string, path: string | null): Promise<Result<void>>
   /** Shows a file, or the repository folder, in the system file manager. */
   showInFolder(repo: string, path: string | null): void
+  /** Shows a save dialog for a file named `name`; resolves the chosen path, or null. */
+  pickSavePath(title: string, name: string): Promise<string | null>
   /** Zoom factor of the window, 1 for 100%. */
   setZoom(factor: number): void
   /** Entries of the user's (global) or a repository's (local) git configuration (SET-03). */
@@ -577,6 +587,7 @@ export const IPC = {
   toolsMergeTools: 'tools:merge-tools',
   toolsOpenInEditor: 'tools:open-in-editor',
   toolsShowInFolder: 'tools:show-in-folder',
+  toolsPickSavePath: 'tools:pick-save-path',
   toolsConfigList: 'tools:config-list',
   toolsConfigSet: 'tools:config-set',
   toolsConfigUnset: 'tools:config-unset',

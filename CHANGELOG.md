@@ -21,6 +21,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 - **Search the code**: **Code** beside the graph search finds the commits that added or removed some text, such as when a function was introduced or the last call to it went away
   - With the regex button, the commits whose added or removed lines match a regular expression
   - Case doesn't matter; a search stops as soon as you type something else or clear it
+- **Browse the files of a commit**: **All files** in the commit panel shows the whole project as it was then, as a folder tree with sizes and a filter
+  - Click a file to read it in the new **File** mode of the file view, with syntax highlighting; images are shown, binary and very large files can be saved
+  - **Save as…** writes a file as it was at that commit anywhere on disk; **Latest** switches to the working tree version
+  - Right-click a file for its history or its blame at that commit
 
 ## 1.1.0 — 2026-09-29
 

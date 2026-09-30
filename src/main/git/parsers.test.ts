@@ -3,6 +3,7 @@ import {
   parseBlame,
   parseFileLog,
   parseLineLog,
+  parseTreeFiles,
   parseIdentity,
   parseLfsPatterns,
   parseLog,
@@ -179,6 +180,22 @@ describe('parseLineLog', () => {
     const out = `${R}c1${F}p${F}Ann${F}ann@x.it${F}1700000000${F}Edit${F}\n\ndiff --git a/old name.ts b/new name.ts\n--- a/old name.ts\t\n+++ b/new name.ts\t\n@@ -1 +1 @@\n-a\n+b\n`
     const [revision] = parseLineLog(out, 'new name.ts')
     expect([revision.path, revision.diff.oldPath]).toEqual(['new name.ts', 'old name.ts'])
+  })
+})
+
+describe('parseTreeFiles', () => {
+  it('reads files, links and submodules, with their sizes', () => {
+    const out = [
+      '100644 blob aaa      12\tsrc/a b.ts',
+      '120000 blob bbb       5\tlink',
+      '160000 commit ccc       -\tlib',
+      ''
+    ].join('\0')
+    expect(parseTreeFiles(out)).toEqual([
+      { path: 'src/a b.ts', size: 12, kind: 'file' },
+      { path: 'link', size: 5, kind: 'link' },
+      { path: 'lib', size: 0, kind: 'submodule' }
+    ])
   })
 })
 

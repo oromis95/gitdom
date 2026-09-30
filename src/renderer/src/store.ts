@@ -46,9 +46,9 @@ export interface CompareTarget {
 export interface FileInspect {
   /** Path in the working tree, or in the commit the file was opened from */
   path: string
-  /** Commits that changed the file, who last changed each line, or the history of some lines */
-  mode: 'history' | 'blame' | 'lines'
-  /** Commit to blame at, and the revision selected in the history; null for the working tree */
+  /** The file, commits that changed it, who last changed each line, or the history of some lines */
+  mode: 'file' | 'history' | 'blame' | 'lines'
+  /** Commit to show or blame at, and the revision selected in the history; null for the working tree */
   rev: string | null
   /** Path of the file at `rev`, when it was renamed since */
   revPath?: string
