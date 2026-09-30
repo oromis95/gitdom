@@ -683,6 +683,89 @@ describe('undo and redo', () => {
     expect(git(repo, 'rev-parse', 'HEAD')).toBe(second)
   })
 
+  it('moves commits made on the wrong branch to a new or an existing one', async () => {
+    await runOp(repo, 'createBranch', ['feature', null, false])
+    await commitFile('b.txt', 'b1\n', 'b1')
+    await commitFile('b.txt', 'b2\n', 'b2')
+    const b1 = git(repo, 'rev-parse', 'HEAD~1')
+    const moving = await runOp(repo, 'commitsToMove', [b1])
+    expect([moving.branch, moving.commits.map((c) => c.subject), moving.merges]).toEqual([
+      'main',
+      ['b1', 'b2'],
+      0
+    ])
+    await expect(runOp(repo, 'commitsToMove', [git(repo, 'rev-parse', 'HEAD~2')])).rejects.toThrow(
+      /first commit/
+    )
+
+    // To a new branch, staying on main with an uncommitted change
+    write('a.txt', 'changed\n')
+    await runOp(repo, 'moveCommits', [b1, 'fix', true, false])
+    expect([git(repo, 'branch', '--show-current'), subjects(), subjects('fix')]).toEqual([
+      'main',
+      'init',
+      'b2\nb1\ninit'
+    ])
+    expect(git(repo, 'status', '--porcelain')).toBe('M a.txt')
+    expect(await labels()).toMatchObject({ undo: 'Move commits to fix' })
+    await runOp(repo, 'undo', [])
+    expect([subjects(), git(repo, 'branch', '--list', 'fix')]).toEqual(['b2\nb1\ninit', ''])
+    git(repo, 'checkout', '--', 'a.txt')
+
+    // To a new branch, checked out
+    await runOp(repo, 'moveCommits', [b1, 'fix', true, true])
+    expect([git(repo, 'branch', '--show-current'), subjects(), subjects('main')]).toEqual([
+      'fix',
+      'b2\nb1\ninit',
+      'init'
+    ])
+    await runOp(repo, 'undo', [])
+    expect([git(repo, 'branch', '--show-current'), subjects()]).toEqual(['main', 'b2\nb1\ninit'])
+
+    // To an existing branch
+    await expect(runOp(repo, 'moveCommits', [b1, 'main', false, false])).rejects.toThrow(
+      /already on main/
+    )
+    git(repo, 'branch', 'copy')
+    await expect(runOp(repo, 'moveCommits', [b1, 'copy', false, false])).rejects.toThrow(
+      /copy already has these commits/
+    )
+    await runOp(repo, 'moveCommits', [b1, 'feature', false, false])
+    expect([git(repo, 'branch', '--show-current'), subjects(), subjects('main')]).toEqual([
+      'feature',
+      'b2\nb1\ninit',
+      'init'
+    ])
+    await runOp(repo, 'undo', [])
+    expect([git(repo, 'branch', '--show-current'), subjects(), subjects('feature')]).toEqual([
+      'main',
+      'b2\nb1\ninit',
+      'init'
+    ])
+  })
+
+  it('moves commits through conflicts, and undo takes them back even after an abort', async () => {
+    await runOp(repo, 'createBranch', ['other', null, true])
+    await commitFile('a.txt', 'other\n', 'on other')
+    await runOp(repo, 'checkout', ['main', 'none'])
+    await commitFile('a.txt', 'main\n', 'wrong')
+    const wrong = git(repo, 'rev-parse', 'HEAD')
+
+    expect((await runOp(repo, 'moveCommits', [wrong, 'other', false, false])).conflicts).toBe(true)
+    await runOp(repo, 'abortOperation', [])
+    expect([git(repo, 'branch', '--show-current'), subjects('main')]).toEqual(['other', 'init'])
+    expect(await labels()).toMatchObject({ undo: 'Move commits to other' })
+    await runOp(repo, 'undo', [])
+    expect([git(repo, 'branch', '--show-current'), subjects()]).toEqual(['main', 'wrong\ninit'])
+
+    // Resolved and continued, the move is complete
+    await runOp(repo, 'moveCommits', [wrong, 'other', false, false])
+    write('a.txt', 'both\n')
+    await runOp(repo, 'stage', [['a.txt']])
+    await runOp(repo, 'continueOperation', [])
+    expect([subjects(), subjects('main')]).toEqual(['wrong\non other\ninit', 'init'])
+  })
+
   it('realigns the index when undoing and redoing a mixed reset', async () => {
     await commitFile('f.txt', 'f\n', 'second')
     await runOp(repo, 'reset', [git(repo, 'rev-parse', 'HEAD~1'), 'mixed'])

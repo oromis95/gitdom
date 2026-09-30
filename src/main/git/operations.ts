@@ -2,6 +2,7 @@
 import { mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { isAbsolute, relative, resolve } from 'path'
 import type {
+  CommitsToMove,
   MergeMode,
   OpArgs,
   OpName,
@@ -135,6 +136,29 @@ async function withConflicts(
     }
     throw e
   }
+}
+
+/** The commits of the current branch from `from` to HEAD, along its first parents. */
+async function commitsToMove(repo: string, from: string): Promise<CommitsToMove> {
+  assertHash(from)
+  const branch = await currentBranch(repo)
+  const base = (await tryGit(repo, ['rev-parse', '-q', '--verify', `${from}^`]))?.trim()
+  if (!base) throw new Error('The first commit of the repository cannot be moved')
+  const commits = (
+    await runGit(repo, ['log', '--reverse', '--first-parent', '--format=%H%x00%s', `${base}..HEAD`])
+  )
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [hash, subject] = line.split('\0')
+      return { hash, subject }
+    })
+  if (commits[0]?.hash !== from)
+    throw new Error(`Pick a commit of ${branch}, not of a branch merged into it`)
+  const merges = Number(
+    (await runGit(repo, ['rev-list', '--count', '--merges', `${base}..HEAD`])).trim()
+  )
+  return { branch, base, commits, merges }
 }
 
 /** Runs a pathspec-taking command with paths passed on stdin, avoiding command line length limits. */
@@ -992,6 +1016,40 @@ const ops: OpImpl = {
     return withConflicts(repo, ['cherry-pick', ...(merges ? ['-m', '1'] : []), ...hashes])
   },
 
+  async commitsToMove(repo, from) {
+    return commitsToMove(repo, from)
+  },
+
+  async moveCommits(repo, from, target, create, checkout) {
+    await assertIdle(repo)
+    const { branch, base, commits, merges } = await commitsToMove(repo, from)
+    const tip = commits[commits.length - 1].hash
+    if (create) {
+      await assertBranchName(repo, target)
+      if (checkout) {
+        await runGit(repo, ['checkout', '-q', '-b', target, '--'])
+        await runGit(repo, ['branch', '-f', branch, base])
+      } else {
+        // --keep keeps the uncommitted changes, and refuses when the commits touch them
+        await runGit(repo, ['reset', '-q', '--keep', base, '--'])
+        await runGit(repo, ['branch', target, tip])
+      }
+      return { conflicts: false, output: '' }
+    }
+
+    assertArg(target, 'branch')
+    if (target === branch) throw new Error(`The commits are already on ${branch}`)
+    if ((await tryGit(repo, ['rev-parse', '-q', '--verify', `refs/heads/${target}`])) === null)
+      throw new Error(`No branch named ${target}`)
+    if (merges) throw new Error('Merge commits can only be moved to a new branch')
+    if (await ops.isAncestor(repo, from, `refs/heads/${target}`))
+      throw new Error(`${target} already has these commits`)
+    await runGit(repo, ['checkout', '-q', target, '--'])
+    // Taken back first: if the cherry-pick stops on conflicts, the move is done once continued
+    await runGit(repo, ['branch', '-f', branch, base])
+    return withConflicts(repo, ['cherry-pick', ...commits.map((c) => c.hash)])
+  },
+
   async revert(repo, hash) {
     assertHash(hash)
     await assertIdle(repo)
@@ -1481,6 +1539,10 @@ const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise
   reset: (repo) => currentBranchRef(repo),
   rebase: (repo) => currentBranchRef(repo),
   rebaseInteractive: (repo) => currentBranchRef(repo),
+  moveCommits: async (repo, _from, target, create) => [
+    ...(await currentBranchRef(repo)),
+    ...(create ? [] : [`refs/heads/${target}`])
+  ],
   reword: (repo) => currentBranchRef(repo),
   push: async (repo, force) => (force ? pushTarget(repo) : []),
   // Restoring a backup moves the branch too: where it was is saved first
@@ -1533,6 +1595,7 @@ const UNDOABLE: {
         ? `Cherry-pick ${short(hashes[0])}`
         : `Cherry-pick ${hashes.length} commits`
   }),
+  moveCommits: (_from, target) => ({ label: `Move commits to ${target}` }),
   revert: (hash) => ({ label: `Revert ${short(hash)}` }),
   reset: (hash, mode) => ({
     label: `Reset to ${short(hash)} (${mode})`,
@@ -1549,8 +1612,19 @@ async function recorded<K extends OpName>(
   work: () => Promise<OpResult<K>>
 ): Promise<OpResult<K>> {
   if (name === 'abortOperation') {
-    await history.takePending(repo)
-    return work()
+    const pending = await history.takePending(repo)
+    const result = await work()
+    // An abort puts back only what the stopped command changed: an action that did more before
+    // it, like moving commits, can still be undone (nothing is recorded if nothing changed)
+    if (pending)
+      await history.record(
+        repo,
+        pending.label,
+        pending.before,
+        await history.captureRefs(repo),
+        pending.move
+      )
+    return result
   }
   if (name === 'continueOperation' || name === 'skipOperation') {
     try {

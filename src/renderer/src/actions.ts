@@ -768,6 +768,77 @@ export async function cherryPick(repo: string, hashes: string[]): Promise<void> 
   await runOutcome(repo, 'Cherry-pick', `Cherry-picked ${what}`, 'cherryPick', hashes)
 }
 
+/** Most commits listed when moving them */
+const MOVE_LIST_LIMIT = 8
+
+/**
+ * Moves a commit and the ones after it on the current branch to a new or an existing
+ * branch, for commits made on the wrong branch.
+ */
+export async function moveCommits(
+  snapshot: RepoSnapshot,
+  from: string,
+  create: boolean
+): Promise<void> {
+  const repo = snapshot.path
+  const result = await call(repo, 'commitsToMove', from)
+  if (!result.ok) return fail(result)
+  const { branch, base, commits, merges } = result.value
+  const others = snapshot.refs.filter((r) => r.type === 'local' && r.name !== branch)
+  if (!create && merges) return notify('error', 'Merge commits can only be moved to a new branch')
+  if (!create && !others.length)
+    return notify('info', 'There is no other branch: move the commits to a new one')
+
+  const local = snapshot.refs.find((r) => r.type === 'local' && r.name === branch)
+  const upstream = local?.upstream && snapshot.refs.find((r) => r.name === local.upstream)
+  const pushed = upstream && (await call(repo, 'isAncestor', from, upstream.fullName))
+  const newest = [...commits].reverse()
+  const list = newest.slice(0, MOVE_LIST_LIMIT).map((c) => `${c.hash.slice(0, 7)}  ${c.subject}`)
+  if (newest.length > MOVE_LIST_LIMIT) list.push(`…and ${newest.length - MOVE_LIST_LIMIT} more`)
+  const one = commits.length === 1
+  const message = [
+    `${one ? 'This commit leaves' : `These ${commits.length} commits leave`} ${branch}, which goes back to ${base.slice(0, 7)}:`,
+    ...list,
+    ...(create
+      ? []
+      : ['', `GitDom checks out the branch you pick and applies ${one ? 'it' : 'them'} on top.`]),
+    ...(pushed && pushed.ok && pushed.value
+      ? [
+          '',
+          `${one ? 'It is' : 'They are'} already on ${upstream.name}: you will have to force push ${branch}.`
+        ]
+      : [])
+  ].join('\n')
+  const values = await showForm({
+    title: create ? 'Move to a new branch' : 'Move to another branch',
+    message,
+    fields: create
+      ? [{ key: 'target', label: 'New branch name', placeholder: 'feature/my-change' }]
+      : [
+          {
+            key: 'target',
+            label: 'Branch',
+            options: others.map((r) => ({ value: r.name, label: r.name })),
+            initial: others[0].name
+          }
+        ],
+    checks: create ? [{ key: 'checkout', label: 'Check out the new branch', initial: true }] : [],
+    confirmLabel: one ? 'Move commit' : `Move ${commits.length} commits`
+  })
+  if (!values) return
+  const target = String(values.target).trim()
+  await runOutcome(
+    repo,
+    'Move',
+    `Moved ${one ? '1 commit' : `${commits.length} commits`} to ${target}`,
+    'moveCommits',
+    from,
+    target,
+    create,
+    !!values.checkout
+  )
+}
+
 export async function revert(repo: string, hash: string): Promise<void> {
   await runOutcome(repo, 'Revert', `Reverted ${hash.slice(0, 7)}`, 'revert', hash)
 }
@@ -1080,6 +1151,16 @@ export function commitMenu(snapshot: RepoSnapshot, hash: string, subject: string
     { label: 'Create worktree here…', onClick: () => void createWorktree(snapshot, hash, short) },
     'separator',
     { label: 'Cherry-pick commit', disabled: isHead, onClick: () => void cherryPick(repo, [hash]) },
+    {
+      label: `Move ${isHead ? 'this commit' : 'this and later commits'} to a new branch…`,
+      disabled: !snapshot.head.branch,
+      onClick: () => void moveCommits(snapshot, hash, true)
+    },
+    {
+      label: `Move ${isHead ? 'this commit' : 'this and later commits'} to another branch…`,
+      disabled: !snapshot.head.branch,
+      onClick: () => void moveCommits(snapshot, hash, false)
+    },
     { label: 'Revert commit', onClick: () => void revert(repo, hash) },
     {
       label: `Interactive rebase ${branch} from here…`,

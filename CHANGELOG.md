@@ -2,6 +2,15 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- **Commits made on the wrong branch**: right-click a commit of the current branch and choose **Move this and later commits to a new branch…** or **…to another branch…**
+  - The dialog lists the commits that move, and warns when they are already pushed
+  - To a new branch nothing is rewritten; onto an existing branch they are applied on top of it, and conflicts are resolved as for a cherry-pick
+  - The current branch goes back to before them; a backup is made first, and **Undo** puts everything back, even after aborting on conflicts
+
 ## 1.2.0 — 2026-09-30
 
 ### Added

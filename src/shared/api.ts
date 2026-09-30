@@ -38,6 +38,15 @@ export type MergeMode = 'ff' | 'no-ff' | 'ff-only' | 'squash'
 export type ResetMode = 'soft' | 'mixed' | 'hard'
 
 /** Result of operations that may stop on conflicts, leaving the repository mid-operation. */
+export interface CommitsToMove {
+  branch: string
+  /** Where the branch goes back to: the parent of the first commit moved */
+  base: string
+  commits: { hash: string; subject: string }[]
+  /** Merge commits among them, which only a new branch can take */
+  merges: number
+}
+
 export interface OpOutcome {
   conflicts: boolean
   /** git's output */
@@ -188,6 +197,17 @@ export interface RepoOps {
   rebaseCommits(base: string | null): { commits: RebaseCommit[]; merges: number }
   /** Applies commits on top of HEAD, in the given order. */
   cherryPick(hashes: string[]): OpOutcome
+  /**
+   * The commits of the current branch from `from` to HEAD, oldest first, that moving
+   * them to another branch would take away, and where the branch would go back to.
+   */
+  commitsToMove(from: string): CommitsToMove
+  /**
+   * Moves the commits from `from` to HEAD to another branch and takes the current branch
+   * back before them. A new branch is created on them (checked out if asked); on an
+   * existing one they are cherry-picked, which may stop on conflicts.
+   */
+  moveCommits(from: string, target: string, create: boolean, checkout: boolean): OpOutcome
   revert(hash: string): OpOutcome
   /** A hard reset first saves uncommitted changes in a stash: returns its hash, or null. */
   reset(hash: string, mode: ResetMode): string | null
