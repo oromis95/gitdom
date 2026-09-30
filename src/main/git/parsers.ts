@@ -290,7 +290,9 @@ export function parseFileLog(output: string, path: string): FileRevision[] {
 /** A path from a diff header (`+++ b/path`); null for /dev/null or a quoted path. */
 function diffHeaderPath(line: string | undefined, prefix: string): string | null {
   if (!line?.startsWith(prefix) || line.startsWith(`${prefix}"`)) return null
-  return line.slice(prefix.length)
+  // Some git versions end the path with a tab when it has spaces, like GNU diff does; a tab that
+  // belongs to the name would be quoted
+  return line.slice(prefix.length).replace(/\t$/, '')
 }
 
 /**

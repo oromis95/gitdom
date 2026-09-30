@@ -27,9 +27,9 @@ jobs:
           git config --global user.email "ci@gitdom.invalid"
           git config --global core.autocrlf false
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

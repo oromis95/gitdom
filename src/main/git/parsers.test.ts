@@ -174,6 +174,12 @@ describe('parseLineLog', () => {
     ])
     expect(revisions[1].diff.hunks[0].lines.map((l) => l.newNo)).toEqual([2, 3])
   })
+
+  it('drops the tab some git versions put after paths with spaces', () => {
+    const out = `${R}c1${F}p${F}Ann${F}ann@x.it${F}1700000000${F}Edit${F}\n\ndiff --git a/old name.ts b/new name.ts\n--- a/old name.ts\t\n+++ b/new name.ts\t\n@@ -1 +1 @@\n-a\n+b\n`
+    const [revision] = parseLineLog(out, 'new name.ts')
+    expect([revision.path, revision.diff.oldPath]).toEqual(['new name.ts', 'old name.ts'])
+  })
 })
 
 describe('parseBlame', () => {
