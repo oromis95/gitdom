@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.1.0 pubblicata il 2026-09-29 (Step 1–10 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.2.0 pubblicata il 2026-09-30 (Step 1–11 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -24,9 +24,10 @@ Le milestone 0–6 sono completate:
 - worktree, selettore rapido dei repository e workspace (Step 7);
 - caricamento a pagine per storie di ogni dimensione, aperture più rapide e bundle diviso (Step 8);
 - temi pronti e personalizzati con verifica del contrasto, scorciatoie personalizzabili, navigazione completa da tastiera, editor della configurazione git e diff tool esterno (Step 9);
-- aggiornamento dall'app con verifica SHA-256 e CI su ogni push (Step 10).
+- aggiornamento dall'app con verifica SHA-256 e CI su ogni push (Step 10);
+- statistiche del repository, storia di righe e funzioni, ricerca nel codice, file a qualsiasi commit e blame a ritroso (Step 11).
 
-Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è capire meglio il repository: statistiche, storia di singole righe e ricerca nel contenuto dei commit (Step 11).
+Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è correggere gli errori senza paura: commit sul branch sbagliato, fixup, dividere un commit, anteprima dei conflitti e controlli prima del commit (Step 12).
 
 ## Principi per l'ordine
 
@@ -142,7 +143,9 @@ Obiettivo della v1.0: tutti i requisiti P0 e P1 coperti.
 - **Aggiornamento dall'app**: scaricare e sostituire l'exe senza passare dal browser
 - **CI su ogni push**: lint, typecheck e test su GitHub Actions, non solo al momento del rilascio
 
-## Step 11 — v1.2: Capire il repository
+## Step 11 — v1.2: Capire il repository ✅
+
+> Completato: **View → Statistics** mostra al posto del grafo commit, autori, calendario dell'attività, crescita del codice, ore dei commit, linguaggi, file caldi e bus factor, per il branch corrente o tutti e per periodo, da un solo `git log --numstat` annullabile. Nel blame si scelgono delle righe (o si scrive il nome di una funzione) per vederne tutta la storia con `git log -L`. "Code" accanto alla ricerca del grafo trova i commit che aggiungono o tolgono un testo (`-S`) o le cui righe cambiate corrispondono a una regex (`-G`). "All files" nel pannello del commit mostra l'albero del progetto a quel commit, con filtro e dimensioni; la nuova modalità "File" apre il file com'era (testo evidenziato, immagini, binari da salvare) e "Save as…" lo salva dove si vuole. La freccia accanto a un commit nel blame mostra la versione prima di quel commit alla stessa riga, calcolata dalla sua diff, e "Back" torna indietro un passo alla volta.
 
 Tutto in locale, dai dati che git ha già. Le analisi lunghe mostrano l'avanzamento e si possono annullare.
 
