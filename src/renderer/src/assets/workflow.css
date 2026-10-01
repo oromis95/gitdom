@@ -745,6 +745,39 @@
 }
 
 /* --- Split commit -------------------------------------------------------------------- */
+.modal.hunk-editor {
+  width: 720px;
+  max-width: calc(100vw - 40px);
+}
+.hunk-editor-where {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.hunk-editor-text {
+  width: 100%;
+  padding: 8px 10px;
+  resize: vertical;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-code);
+  font-size: 12.5px;
+  line-height: 1.5;
+  tab-size: 4;
+  white-space: pre;
+}
+.hunk-editor-text:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.hunk-editor-hint {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.hunk-editor-reset {
+  margin-right: auto;
+}
 .modal.split-editor {
   width: 720px;
   max-height: 80vh;

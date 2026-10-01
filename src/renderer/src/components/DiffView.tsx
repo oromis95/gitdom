@@ -17,6 +17,7 @@ import { DIFF_CONTEXT_MAX, updateSettings, useSettings } from '../settings'
 import { confirm, fromTerminal } from '../ui'
 import { discardFiles, markResolved, openDiffTool, resolveWith, run } from '../actions'
 import ImageDiff from './ImageDiff'
+import HunkEditor from './HunkEditor'
 
 /** Line indexes shown side by side (DIFF-01): removed lines on the left, facing the added ones. */
 function splitRows(lines: DiffLine[]): [number | null, number | null][] {
@@ -97,6 +98,8 @@ export default function DiffView({
     lines: new Map()
   })
   const [anchor, setAnchor] = useState<{ hunk: number; line: number } | null>(null)
+  /** The hunk being edited before staging, with the diff it came from */
+  const [editing, setEditing] = useState<{ diff: FileDiff; hunk: Hunk } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -296,6 +299,15 @@ export default function DiffView({
                       Discard {unit}
                       {suffix}
                     </button>
+                    {!count && (
+                      <button
+                        className="btn btn-small"
+                        title="Change the lines before staging them; the file stays as it is"
+                        onClick={() => setEditing({ diff: diff!, hunk })}
+                      >
+                        Edit…
+                      </button>
+                    )}
                     <button
                       className="btn btn-small btn-stage"
                       onClick={() => void applyHunk(hunk, hunkSelection, 'stage')}
@@ -509,6 +521,14 @@ export default function DiffView({
       <div ref={bodyRef} className={`diff-body${wrap ? ' wrap' : ''}`} tabIndex={0}>
         {body}
       </div>
+      {editing && (
+        <HunkEditor
+          repo={repo}
+          diff={editing.diff}
+          hunk={editing.hunk}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   )
 }

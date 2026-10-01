@@ -19,6 +19,9 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 - **Reorder commits**: drag a commit of the current branch up or down in the graph; a line shows where it goes, and a confirmation says how many commits are replayed
   - Commits can move back to the last merge, which a rebase would flatten; uncommitted changes are kept aside meanwhile
   - Conflicts are resolved as in a rebase; a backup is made first, and **Undo** puts the old order back
+- **Edit a hunk before staging**: **Edit…** in the header of an unstaged hunk opens its lines, to change them before they are staged
+  - Leave out a debug line, fix a typo: what gets staged is the edited text, while the file on disk keeps all its changes
+  - **Ctrl+Enter** stages, **Reset** starts over; Tab indents
 - **Tips**: the features that are easy to miss, one at a time, each with a small animation showing how it works and the steps to use it
   - One at startup, and now and then one right after doing something it builds on, such as blaming back in time after opening a blame
   - **Help → Tips** (or "Tips" in the command palette) lists them all; turn them off with the checkbox in the dialog or in **Preferences**

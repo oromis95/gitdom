@@ -126,3 +126,59 @@ export function buildPatch(
 
   return hasChanges ? out.join('\n') + '\n' : null
 }
+
+/** The lines of a hunk as they are in the working tree: what staging all of it would store. */
+export const hunkNewText = (hunk: Hunk): string[] =>
+  hunk.lines.filter((l) => l.type !== 'del').map((l) => l.text)
+
+/**
+ * Builds a patch, to be applied with `git apply --cached --recount`, that stores `edited` in the
+ * index in place of what the hunk changes, whatever the working tree holds. Lines the edit
+ * leaves as they were in the index stay context. Returns null when the edit changes nothing.
+ */
+export function buildEditedPatch(file: FileDiff, hunk: Hunk, edited: string[]): string | null {
+  const oldSide = hunk.lines.filter((l) => l.type !== 'add')
+  const before = oldSide.map((l) => l.text)
+  const oldNoEol = !!oldSide[oldSide.length - 1]?.noNewline
+  // A missing newline at the end of the file stays as it is in the working tree
+  const newNoEol = !!hunk.lines.filter((l) => l.type !== 'del').pop()?.noNewline
+  const same = before.length === edited.length && before.every((text, i) => text === edited[i])
+  if (same && oldNoEol === newNoEol) return null
+
+  // The last line carries the newline marker: with one, it can't be shared context
+  const marked = oldNoEol || newNoEol
+  const shared = Math.min(before.length, edited.length) - (marked ? 1 : 0)
+  let start = 0
+  while (start < shared && before[start] === edited[start]) start++
+  let end = 0
+  if (!marked)
+    while (
+      end < shared - start &&
+      before[before.length - 1 - end] === edited[edited.length - 1 - end]
+    )
+      end++
+
+  const body = before.slice(0, start).map((text) => ' ' + text)
+  const removed = before.slice(start, before.length - end)
+  const added = edited.slice(start, edited.length - end)
+  removed.forEach((text, i) => {
+    body.push('-' + text)
+    if (oldNoEol && i === removed.length - 1) body.push('\\ No newline at end of file')
+  })
+  added.forEach((text, i) => {
+    body.push('+' + text)
+    if (newNoEol && i === added.length - 1) body.push('\\ No newline at end of file')
+  })
+  body.push(...before.slice(before.length - end).map((text) => ' ' + text))
+
+  const oldPath = file.oldPath ?? file.path
+  return (
+    [
+      `diff --git a/${oldPath} b/${file.path}`,
+      `--- a/${oldPath}`,
+      `+++ b/${file.path}`,
+      `@@ -${hunk.oldStart},${before.length} +${hunk.oldStart},${edited.length} @@`,
+      ...body
+    ].join('\n') + '\n'
+  )
+}

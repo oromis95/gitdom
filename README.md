@@ -42,6 +42,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 **Everyday workflow**
 
 - Stage and unstage whole files, single hunks or single lines; discard all the changes at once
+- Edit a hunk before staging it: stage the lines as they should be, while the file on disk keeps its changes
 - Commit, amend, and a WIP row for your uncommitted changes
 - Commit options: skip the hooks (`--no-verify`), sign, commit as another author
 - Commit message template (`commit.template`) and quick reuse of a recent message

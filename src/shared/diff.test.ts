@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { buildPatch, lineBefore, parseDiff } from './diff'
+import { buildEditedPatch, buildPatch, hunkNewText, lineBefore, parseDiff } from './diff'
 
 let repo: string
 const git = (...args: string[]): string =>
@@ -102,5 +102,42 @@ describe('buildPatch', () => {
     writeFileSync(join(repo, 'f.txt'), 'a\nB\nc\nd\ne\n')
     const diff = parseDiff(git('diff', '--', 'f.txt'), 'f.txt')
     expect(buildPatch(diff, [{ hunk: diff.hunks[0], lines: new Set([0]) }], false)).toBeNull()
+  })
+})
+
+describe('buildEditedPatch', () => {
+  const edit = (worktree: string, change: (lines: string[]) => string[]): string | null => {
+    writeFileSync(join(repo, 'f.txt'), worktree)
+    const diff = parseDiff(git('diff', '--', 'f.txt'), 'f.txt')
+    return buildEditedPatch(diff, diff.hunks[0], change(hunkNewText(diff.hunks[0])))
+  }
+
+  it('stages the edited lines, leaving the working tree alone', () => {
+    const patch = edit('a\nB\nc\nd\ne\nf\n', (lines) =>
+      lines.filter((l) => l !== 'f').map((l) => (l === 'B' ? 'Bee' : l))
+    )
+    apply(patch!, '--cached')
+    expect(git('show', ':f.txt')).toBe('a\nBee\nc\nd\ne\n')
+    expect(git('diff', '--', 'f.txt')).toContain('+f')
+  })
+
+  it('keeps the missing newline at the end of the file on both sides', () => {
+    apply(
+      edit('a\nb\nc\nd\nE', (lines) => [...lines.slice(0, -1), 'Ex'])!,
+      '--cached'
+    )
+    expect(git('show', ':f.txt')).toBe('a\nb\nc\nd\nEx')
+    writeFileSync(join(repo, 'f.txt'), 'a\nb\nc\nd\nE')
+    git('commit', '-qam', 'no newline')
+    apply(
+      edit('a\nb\nc\nd\nE\nf\n', (lines) => [...lines, 'g'])!,
+      '--cached'
+    )
+    expect(git('show', ':f.txt')).toBe('a\nb\nc\nd\nE\nf\ng\n')
+  })
+
+  it('returns null when the edit leaves the index as it is', () => {
+    const patch = edit('a\nB\nc\nd\ne\n', (lines) => lines.map((l) => (l === 'B' ? 'b' : l)))
+    expect(patch).toBeNull()
   })
 })
