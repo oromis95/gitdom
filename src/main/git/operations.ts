@@ -1394,6 +1394,25 @@ const ops: OpImpl = {
     return (await tryGit(repo, ['merge-base', '--is-ancestor', ancestor, descendant])) !== null
   },
 
+  async mergePreview(repo, ours, theirs) {
+    assertArg(ours, 'commit')
+    assertArg(theirs, 'commit')
+    let output: string
+    try {
+      // Exit code 1 means conflicts; anything else, git couldn't do it
+      output = await runGit(
+        repo,
+        ['merge-tree', '--write-tree', '--name-only', '--no-messages', '-z', ours, theirs],
+        { okExitCodes: [1] }
+      )
+    } catch {
+      return null
+    }
+    // The merged tree comes first, then each conflicted file
+    const [, ...paths] = output.split('\0')
+    return { conflicts: [...new Set(paths.filter(Boolean))] }
+  },
+
   async deleteBranch(repo, name, force) {
     await assertBranchName(repo, name)
     await runGit(repo, ['branch', force ? '-D' : '-d', name])

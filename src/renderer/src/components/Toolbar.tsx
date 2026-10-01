@@ -13,9 +13,12 @@ import {
   Redo2,
   RefreshCw,
   SquareTerminal,
+  TriangleAlert,
   Undo2
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { PullMode } from '../../../shared/api'
+import type { RepoSnapshot } from '../../../shared/types'
 import type { RepoTab } from '../store'
 import { useApp } from '../store'
 import { openMenu, useUi } from '../ui'
@@ -57,6 +60,42 @@ function Tool({
     >
       {icon}
       {label}
+    </button>
+  )
+}
+
+/**
+ * Warns when the current branch and the main one changed the same lines: merging or rebasing
+ * would stop on conflicts. Checked again whenever either moves.
+ */
+function MainConflicts({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element | null {
+  const main = actions.mainBranchOf(snapshot)
+  const head = snapshot.head.hash
+  const key = main && head ? `${snapshot.path}:${head}:${main.hash}` : null
+  const [found, setFound] = useState<{ key: string; conflicts: string[] } | null>(null)
+  useEffect(() => {
+    if (!key || !main || !head) return
+    let cancelled = false
+    void window.api.op(snapshot.path, 'mergePreview', head, main.hash).then((result) => {
+      if (!cancelled && result.ok && result.value)
+        setFound({ key, conflicts: result.value.conflicts })
+    })
+    return () => {
+      cancelled = true
+    }
+    // The key covers the repository and both commits
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+  if (!main || found?.key !== key || !found.conflicts.length) return null
+  const count = found.conflicts.length
+  return (
+    <button
+      className="conflict-watch"
+      title={`Merging ${main.name} or rebasing onto it would stop on conflicts in:\n${found.conflicts.join('\n')}`}
+      onClick={(e) => openMenu(e, actions.mainConflictsMenu(snapshot, main, found.conflicts))}
+    >
+      <TriangleAlert size={14} />
+      {count === 1 ? '1 conflict' : `${count} conflicts`} with {main.name}
     </button>
   )
 }
@@ -168,6 +207,7 @@ export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
           {branch}
         </span>
       </div>
+      {snapshot && <MainConflicts snapshot={snapshot} />}
     </>
   )
   const tools = (

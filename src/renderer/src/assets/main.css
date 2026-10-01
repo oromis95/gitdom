@@ -204,6 +204,24 @@ input {
   font-weight: 600;
   white-space: nowrap;
 }
+.conflict-watch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 12px;
+  padding: 3px 9px;
+  background: transparent;
+  border: 1px solid var(--orange);
+  border-radius: 12px;
+  color: var(--orange);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.conflict-watch:hover {
+  background: var(--bg-hover);
+}
 .crumb-sep {
   color: var(--text-muted);
   margin-right: 12px;

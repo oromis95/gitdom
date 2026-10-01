@@ -525,6 +525,23 @@ describe('merge, rebase and commit operations', () => {
     await commitFile('m.txt', 'm\n', 'm1')
   })
 
+  it('previews the conflicts of a merge without touching the working tree', async () => {
+    expect(await runOp(repo, 'mergePreview', ['main', 'feature'])).toEqual({ conflicts: [] })
+    await commitFile('f.txt', 'main side\n', 'm2')
+    await commitFile('a.txt', 'main a\n', 'm3')
+    git(repo, 'checkout', '-q', 'feature')
+    await commitFile('a.txt', 'feature a\n', 'f3')
+    git(repo, 'checkout', '-q', 'main')
+    write('m.txt', 'dirty\n')
+    expect(await runOp(repo, 'mergePreview', ['HEAD', 'feature'])).toEqual({
+      conflicts: ['a.txt', 'f.txt']
+    })
+    expect(git(repo, 'status', '--porcelain')).toBe('M m.txt')
+    git(repo, 'checkout', '-q', '--orphan', 'alone')
+    git(repo, 'commit', '-q', '-m', 'alone')
+    expect(await runOp(repo, 'mergePreview', ['alone', 'feature'])).toBeNull()
+  })
+
   it('fast-forwards a branch that is not checked out, refusing diverged ones', async () => {
     const init = git(repo, 'rev-parse', 'main~1')
     await runOp(repo, 'createBranch', ['behind', init, false])

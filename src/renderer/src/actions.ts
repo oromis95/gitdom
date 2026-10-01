@@ -832,11 +832,67 @@ const MERGE_MODES: { value: MergeMode; label: string }[] = [
   { value: 'squash', label: 'Squash into a single commit (not committed yet)' }
 ]
 
+/** What merging `theirs` into `ours` would leave in conflict, as a line for a confirmation. */
+async function conflictNote(repo: string, ours: string, theirs: string): Promise<string> {
+  const preview = await call(repo, 'mergePreview', ours, theirs)
+  if (!preview.ok || !preview.value) return ''
+  const { conflicts } = preview.value
+  if (!conflicts.length) return 'No conflicts expected.'
+  const shown = conflicts.slice(0, 5).join(', ')
+  const more = conflicts.length > 5 ? ` and ${conflicts.length - 5} more` : ''
+  return `Expect conflicts in ${conflicts.length === 1 ? '1 file' : `${conflicts.length} files`}: ${shown}${more}.`
+}
+
+/**
+ * The branch the current one goes back into: main or master, on the remote of its upstream when
+ * there is one. Null on that branch itself, or when there is none.
+ */
+export function mainBranchOf(snapshot: RepoSnapshot): Ref | null {
+  const name = snapshot.head.branch
+  if (!name) return null
+  const current = snapshot.refs.find((r) => r.type === 'local' && r.name === name)
+  const remote = current?.upstream?.split('/')[0] ?? 'origin'
+  for (const candidate of [`${remote}/main`, `${remote}/master`, 'main', 'master']) {
+    const ref = snapshot.refs.find(
+      (r) => (r.type === 'remote' || r.type === 'local') && r.name === candidate
+    )
+    if (!ref) continue
+    return ref.name === name || ref.name === current?.upstream ? null : ref
+  }
+  return null
+}
+
+/** The files the current branch and the main one both changed in ways that would conflict. */
+export function mainConflictsMenu(
+  snapshot: RepoSnapshot,
+  main: Ref,
+  conflicts: string[]
+): MenuItem[] {
+  const repo = snapshot.path
+  const branch = snapshot.head.branch
+  return [
+    ...conflicts.slice(0, 12).map((path) => ({ label: path, onClick: () => {}, disabled: true })),
+    ...(conflicts.length > 12
+      ? [{ label: `…and ${conflicts.length - 12} more`, onClick: () => {}, disabled: true }]
+      : []),
+    'separator' as const,
+    {
+      label: `Merge ${main.name} into ${branch}…`,
+      onClick: () => void merge(repo, snapshot, main.name)
+    },
+    {
+      label: `Rebase ${branch} onto ${main.name}…`,
+      onClick: () => void rebase(repo, snapshot, main.name)
+    }
+  ]
+}
+
 export async function merge(repo: string, snapshot: RepoSnapshot, ref: string): Promise<void> {
   const into = snapshot.head.branch ?? 'the detached HEAD'
+  const note = await conflictNote(repo, 'HEAD', ref)
   const values = await showForm({
     title: 'Merge',
-    message: `Merge ${ref} into ${into}.`,
+    message: [`Merge ${ref} into ${into}.`, note].filter(Boolean).join('\n'),
     fields: [{ key: 'mode', label: 'Mode', options: MERGE_MODES, initial: 'ff' }],
     confirmLabel: 'Merge'
   })
@@ -852,9 +908,15 @@ export async function merge(repo: string, snapshot: RepoSnapshot, ref: string): 
 
 export async function rebase(repo: string, snapshot: RepoSnapshot, onto: string): Promise<void> {
   const branch = snapshot.head.branch
+  const note = await conflictNote(repo, onto, 'HEAD')
   const ok = await confirm(
     'Rebase',
-    `Rebase ${branch} onto ${onto}? The commits of ${branch} that are not in ${onto} are rewritten on top of it.`,
+    [
+      `Rebase ${branch} onto ${onto}? The commits of ${branch} that are not in ${onto} are rewritten on top of it.`,
+      note
+    ]
+      .filter(Boolean)
+      .join('\n'),
     'Rebase'
   )
   if (ok) await runOutcome(repo, 'Rebase', `Rebased ${branch} onto ${onto}`, 'rebase', onto)

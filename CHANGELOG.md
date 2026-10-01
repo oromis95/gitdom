@@ -22,6 +22,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 - **Edit a hunk before staging**: **Edit…** in the header of an unstaged hunk opens its lines, to change them before they are staged
   - Leave out a debug line, fix a typo: what gets staged is the edited text, while the file on disk keeps all its changes
   - **Ctrl+Enter** stages, **Reset** starts over; Tab indents
+- **Conflict preview**: know before merging or rebasing whether it will stop on conflicts
+  - The merge and rebase dialogs say which files will conflict, or that none is expected
+  - Beside the branch name, a warning shows when the current branch and main (or master, on the remote when there is one) changed the same lines; click it for the files, and to merge or rebase
+  - Worked out with `git merge-tree` (git 2.38 or later), without touching your files
 - **Tips**: the features that are easy to miss, one at a time, each with a small animation showing how it works and the steps to use it
   - One at startup, and now and then one right after doing something it builds on, such as blaming back in time after opening a blame
   - **Help → Tips** (or "Tips" in the command palette) lists them all; turn them off with the checkbox in the dialog or in **Preferences**

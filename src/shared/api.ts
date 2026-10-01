@@ -256,6 +256,12 @@ export interface RepoOps {
   fastForwardBranch(branch: string, to: string): void
   /** Whether `ancestor` is reachable from `descendant` (a commit is its own ancestor). */
   isAncestor(ancestor: string, descendant: string): boolean
+  /**
+   * The files that merging `theirs` into `ours` would leave in conflict, worked out without
+   * touching the working tree or the index; null when git can't tell (older than 2.38,
+   * unrelated histories).
+   */
+  mergePreview(ours: string, theirs: string): { conflicts: string[] } | null
   deleteRemoteBranch(remote: string, branch: string): void
   setUpstream(branch: string, upstream: string | null): void
 

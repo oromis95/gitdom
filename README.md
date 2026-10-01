@@ -56,6 +56,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 **Advanced operations**
 
 - Merge, rebase and interactive rebase
+- Conflict preview: the merge and rebase dialogs say which files will conflict, and a warning beside the branch shows when it and main changed the same lines
 - Conflict resolution view
 - Cherry-pick, revert and reset (soft, mixed, hard)
 - Commits made on the wrong branch: move them to a new branch or onto another one, and the current branch goes back to before them
