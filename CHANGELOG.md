@@ -4,6 +4,13 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 
 ## Unreleased
 
+### Added
+
+- **Branches overview** (**View → Branches Overview**, or the list button on the Local section): every local branch with its last commit, age, and how many commits it is ahead and behind main
+  - Branches merged into main are marked, even when they landed as a squash or a rebase; those not touched for 90 days and those whose upstream is gone have their own filters
+  - Compare with any other branch, sort by name, age, ahead or behind, and click a row to show the branch in the graph
+  - **Choose merged**, then delete the ticked branches at once: the current branch, main and those checked out in a worktree are kept, a backup is made first and **Undo** brings them back
+
 ### Fixed
 
 - Release notes list the commits in the order of the history, also when some were made in the same second

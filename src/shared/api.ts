@@ -112,6 +112,35 @@ export interface CleanPreview {
   nested: string[]
 }
 
+export interface BranchInfo {
+  name: string
+  hash: string
+  /** Last commit: Unix seconds, author and summary */
+  date: number
+  author: string
+  subject: string
+  upstream: string | null
+  /** The upstream was deleted on the remote, e.g. after its pull request was merged */
+  upstreamGone: boolean
+  /** Commits only on the branch, and only on the base; null without a base */
+  ahead: number | null
+  behind: number | null
+  /** In the base: every commit (merged), or every change though not the commits (squashed) */
+  merged: boolean
+  squashed: boolean
+  /** The base itself, or the local branch following it */
+  isBase: boolean
+  current: boolean
+  /** Another worktree has it checked out */
+  worktree: string | null
+}
+
+export interface BranchOverview {
+  /** What the branches are compared with: main or master unless chosen, null when neither */
+  base: string | null
+  branches: BranchInfo[]
+}
+
 export type ChangeScope = 'git' | 'worktree'
 
 /**
@@ -299,6 +328,13 @@ export interface RepoOps {
    * unrelated histories).
    */
   mergePreview(ours: string, theirs: string): { conflicts: string[] } | null
+  /** The local branches with their last commit, compared with `base` (main or master if null). */
+  branchOverview(base: string | null): BranchOverview
+  /**
+   * Deletes local branches even if not merged: the caller warns first, a backup keeps their
+   * commits and undo restores them. Throws listing the ones git refused, after deleting the rest.
+   */
+  deleteBranches(names: string[]): void
   deleteRemoteBranch(remote: string, branch: string): void
   setUpstream(branch: string, upstream: string | null): void
 
@@ -645,6 +681,7 @@ export type MenuCommand =
   | 'statistics'
   | 'ignored'
   | 'clean'
+  | 'branches'
   | 'whatsNew'
   | 'checkUpdates'
 

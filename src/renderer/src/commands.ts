@@ -209,6 +209,11 @@ export function buildCommands(): Command[] {
     add('Recovery', 'Backups saved before resets, rebases and force pushes', () =>
       app.openRecovery('backups')
     )
+    add(
+      'Repository',
+      'Branches overview: age, ahead and behind main, merged; delete old ones',
+      () => actions.showBranchOverview(repo)
+    )
     add('Repository', 'Statistics: authors, activity, languages and hot files', () =>
       app.openStatistics(true)
     )

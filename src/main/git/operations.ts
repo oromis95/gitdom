@@ -2,6 +2,7 @@
 import { lstat, mkdir, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { isAbsolute, relative, resolve } from 'path'
 import type {
+  BranchInfo,
   CommitsToMove,
   MergeMode,
   OpArgs,
@@ -64,6 +65,8 @@ const MOST_IGNORED = 2000
 const MOST_CLEAN = 2000
 /** Files counted in each folder before its size is shown as partial: node_modules can hold 100k */
 const CLEAN_COUNT_BUDGET = 5000
+/** Unmerged branches checked for a squash merge: one merge-tree each */
+const MOST_SQUASH_CHECKS = 200
 /** Moves a file to the Recycle Bin: set to Electron's at startup, unset in the tests */
 let trash: ((path: string) => Promise<void>) | null = null
 
@@ -239,6 +242,31 @@ async function entrySize(file: string): Promise<{ size: number; files: number; p
     }
   }
   return { size, files, partial: false }
+}
+
+/**
+ * The branch others are compared with: the default branch of origin (or the first remote), then
+ * main or master on it, then locally.
+ */
+async function defaultBase(repo: string): Promise<string | null> {
+  const remotes = (await runGit(repo, ['remote'])).split('\n').filter(Boolean)
+  const remote = remotes.includes('origin') ? 'origin' : remotes[0]
+  if (remote) {
+    const head = await tryGit(repo, [
+      'symbolic-ref',
+      '-q',
+      '--short',
+      `refs/remotes/${remote}/HEAD`
+    ])
+    if (head?.trim()) return head.trim()
+  }
+  const candidates = remote ? [`refs/remotes/${remote}/main`, `refs/remotes/${remote}/master`] : []
+  for (const ref of [...candidates, 'refs/heads/main', 'refs/heads/master']) {
+    if ((await tryGit(repo, ['show-ref', '--verify', '-q', ref])) !== null) {
+      return ref.replace(/^refs\/(heads|remotes)\//, '')
+    }
+  }
+  return null
 }
 
 async function hasHead(repo: string): Promise<boolean> {
@@ -1560,6 +1588,101 @@ const ops: OpImpl = {
     await runGit(repo, ['branch', force ? '-D' : '-d', name])
   },
 
+  async branchOverview(repo, chosen) {
+    if (chosen !== null) assertRev(chosen)
+    const base = chosen ?? (await defaultBase(repo))
+    const fields = [
+      '%(refname:short)',
+      '%(objectname)',
+      '%(committerdate:unix)',
+      '%(authorname)',
+      '%(upstream:short)',
+      '%(upstream:track)',
+      '%(HEAD)',
+      '%(worktreepath)',
+      base ? `%(ahead-behind:${base})` : '',
+      // Last: a summary can hold anything but a newline
+      '%(subject)'
+    ]
+    const list = (format: string[]): Promise<string> =>
+      runGit(repo, ['for-each-ref', `--format=${format.join('%00')}`, 'refs/heads'])
+    // %(ahead-behind) needs git 2.41: before it, each branch is counted on its own
+    const counted = base ? await list(fields).catch(() => null) : null
+    const output = counted ?? (await list(fields.map((f, i) => (i === 8 ? '' : f))))
+    const baseTree = base ? (await tryGit(repo, ['rev-parse', `${base}^{tree}`]))?.trim() : null
+    // The branch the base is, or follows: never offered for deletion
+    const baseNames = base ? [base, base.replace(/^[^/]+\//, '')] : []
+    const branches = output
+      .split('\n')
+      .filter(Boolean)
+      .map((line): BranchInfo => {
+        const [name, hash, date, author, upstream, track, head, worktree, counts, subject] =
+          line.split('\0')
+        const [ahead, behind]: (number | null)[] = counts
+          ? counts.split(' ').map(Number)
+          : [null, null]
+        const isBase = baseNames.includes(name) || (!!upstream && upstream === base)
+        return {
+          name,
+          hash,
+          date: Number(date),
+          author,
+          subject,
+          upstream: upstream || null,
+          upstreamGone: track === '[gone]',
+          ahead,
+          behind,
+          merged: !isBase && ahead === 0,
+          squashed: false,
+          isBase,
+          current: head === '*',
+          worktree: head !== '*' && worktree ? worktree : null
+        }
+      })
+    if (base && counted === null) {
+      await Promise.all(
+        branches.map(async (branch) => {
+          const counts = await tryGit(repo, [
+            'rev-list',
+            '--left-right',
+            '--count',
+            `${branch.hash}...${base}`
+          ])
+          if (!counts) return
+          const [ahead, behind] = counts.trim().split(/\s+/).map(Number)
+          Object.assign(branch, { ahead, behind, merged: !branch.isBase && ahead === 0 })
+        })
+      )
+    }
+    // Merged with a squash or a rebase: merging it again would leave the base as it is
+    if (base && baseTree) {
+      const unmerged = branches.filter((b) => !b.isBase && (b.ahead ?? 0) > 0)
+      await Promise.all(
+        unmerged.slice(0, MOST_SQUASH_CHECKS).map(async (branch) => {
+          const tree = await tryGit(repo, ['merge-tree', '--write-tree', base, branch.hash])
+          branch.squashed = tree?.split('\n')[0].trim() === baseTree
+        })
+      )
+    }
+    return { base, branches }
+  },
+
+  async deleteBranches(repo, names) {
+    if (!Array.isArray(names) || !names.length) throw new Error('No branches to delete')
+    for (const name of names) await assertBranchName(repo, name)
+    const refused: string[] = []
+    for (const name of names) {
+      // git refuses the current branch and the ones other worktrees have checked out
+      const deleted = await tryGit(repo, ['branch', '-D', name])
+      if (deleted === null) refused.push(name)
+    }
+    if (refused.length) {
+      throw new Error(
+        `Not deleted, as checked out here or in another worktree: ${refused.join(', ')}`
+      )
+    }
+  },
+
   async deleteRemoteBranch(repo, remote, branch) {
     assertArg(remote, 'remote')
     await assertBranchName(repo, branch)
@@ -1966,7 +2089,8 @@ const READ_ONLY = new Set<OpName>([
   'previousTag',
   'ignoreRule',
   'ignoredFiles',
-  'cleanPreview'
+  'cleanPreview',
+  'branchOverview'
 ])
 
 /**
@@ -2058,7 +2182,8 @@ const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise
   reorderCommits: (repo) => currentBranchRef(repo),
   push: async (repo, force) => (force ? pushTarget(repo) : []),
   // Restoring a backup moves the branch too: where it was is saved first
-  restoreBackup: async (_repo, _id, ref) => [ref]
+  restoreBackup: async (_repo, _id, ref) => [ref],
+  deleteBranches: async (_repo, names) => names.map((name) => `refs/heads/${name}`)
 }
 
 /** Runs an operation, backing up the refs it may rewrite; the backup is dropped if they didn't move. */
@@ -2099,6 +2224,9 @@ const UNDOABLE: {
   createBranch: (name) => ({ label: `Create branch ${name}` }),
   renameBranch: (oldName, newName) => ({ label: `Rename ${oldName} to ${newName}` }),
   deleteBranch: (name) => ({ label: `Delete branch ${name}` }),
+  deleteBranches: (names) => ({
+    label: names.length === 1 ? `Delete branch ${names[0]}` : `Delete ${names.length} branches`
+  }),
   fastForwardBranch: (branch, to) => ({ label: `Fast-forward ${branch} to ${to}` }),
   createTag: (name) => ({ label: `Create tag ${name}` }),
   deleteTag: (name) => ({ label: `Delete tag ${name}` }),

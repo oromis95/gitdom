@@ -23,7 +23,7 @@ import Updates from './components/Updates'
 import Tips from './components/Tips'
 import Splash, { HighwayLogo } from './components/Splash'
 import { restoreSession, useActiveTab, useApp } from './store'
-import { fetchAll, showCleanUp, showIgnoredFiles } from './actions'
+import { fetchAll, showBranchOverview, showCleanUp, showIgnoredFiles } from './actions'
 import { identityMenu } from './identity'
 import { openMenu, openPreferences, openRepoDialog } from './ui'
 import { stepZoom, useSettings } from './settings'
@@ -163,6 +163,9 @@ function App(): React.JSX.Element {
         } else if (command === 'clean') {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) showCleanUp(repo)
+        } else if (command === 'branches') {
+          const repo = useApp.getState().tabs[useApp.getState().active]?.path
+          if (repo) showBranchOverview(repo)
         } else if (command === 'whatsNew') showWhatsNew()
         else if (command === 'tips') showTip()
         else if (command === 'checkUpdates') void checkForUpdates(true)

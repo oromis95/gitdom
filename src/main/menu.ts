@@ -61,6 +61,7 @@ function build(): void {
       { label: 'Activity Log', ...shown('activity'), click: send('activity') },
       { label: 'Reflog', click: send('reflog') },
       { label: 'Backups', click: send('backups') },
+      { label: 'Branches Overview', click: send('branches') },
       { label: 'Statistics', click: send('statistics') },
       { label: 'Ignored Files', click: send('ignored') },
       { label: 'Clean Up Untracked Files…', click: send('clean') },

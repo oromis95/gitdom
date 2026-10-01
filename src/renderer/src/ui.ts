@@ -76,6 +76,11 @@ export interface IgnoredSession {
   path: string
 }
 
+/** The branch overview of a repository. */
+export interface BranchesSession {
+  repo: string
+}
+
 /** The clean up dialog, and the files it starts with. */
 export interface CleanSession {
   repo: string
@@ -110,6 +115,7 @@ interface UiState {
   releaseNotes: ReleaseNotesSession | null
   ignored: IgnoredSession | null
   clean: CleanSession | null
+  branches: BranchesSession | null
   /** Command palette open */
   palette: boolean
   /** Clone or new repository dialog open */
@@ -129,6 +135,7 @@ export const useUi = create<UiState>((set, get) => ({
   releaseNotes: null,
   ignored: null,
   clean: null,
+  branches: null,
   palette: false,
   repoDialog: null,
   preferences: false,

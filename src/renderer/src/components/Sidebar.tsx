@@ -10,6 +10,7 @@ import {
   Folder,
   FolderGit2,
   GitBranch,
+  ListChecks,
   Globe,
   HardDrive,
   Laptop,
@@ -171,6 +172,7 @@ function Section({
   icon,
   count,
   onAdd,
+  onOverview,
   children
 }: {
   title: string
@@ -178,6 +180,8 @@ function Section({
   count: number
   /** Shows a + button in the header, e.g. to create a branch */
   onAdd?: { title: string; run: () => void }
+  /** Shows a button for an overview of the section, e.g. of the branches */
+  onOverview?: { title: string; run: () => void }
   children: React.ReactNode
 }): React.JSX.Element {
   const [open, setOpen] = useState(true)
@@ -188,6 +192,19 @@ function Section({
         {icon}
         {title}
         <span className="section-count">{count}</span>
+        {onOverview && (
+          <span
+            role="button"
+            className="section-add"
+            title={onOverview.title}
+            onClick={(e) => {
+              e.stopPropagation()
+              onOverview.run()
+            }}
+          >
+            <ListChecks size={15} />
+          </span>
+        )}
         {onAdd && (
           <span
             role="button"
@@ -287,6 +304,14 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
           title="Local"
           icon={<Laptop size={15} />}
           count={locals.length}
+          onOverview={
+            locals.length > 0
+              ? {
+                  title: 'Branches overview',
+                  run: () => actions.showBranchOverview(snapshot.path)
+                }
+              : undefined
+          }
           onAdd={
             snapshot.head.hash
               ? {

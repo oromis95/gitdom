@@ -2360,3 +2360,159 @@ button.ignored-source:hover {
   color: var(--text-dim);
   white-space: nowrap;
 }
+.modal.branch-overview {
+  width: 1040px;
+  max-width: calc(100vw - 40px);
+  max-height: 88vh;
+}
+.branch-overview-options {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.branch-overview-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.branch-overview-query {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 9px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+}
+.branch-overview-query:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.branch-overview-heading {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.branch-overview-table {
+  min-height: 80px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.branch-overview-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1.3fr) minmax(0, 2fr) 104px 56px 56px 76px;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  cursor: pointer;
+}
+.branch-overview-row:last-child {
+  border-bottom: none;
+}
+.branch-overview-row:hover {
+  background: var(--bg-hover);
+}
+.branch-overview-row.picked {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}
+.branch-overview-row input {
+  margin: 0;
+}
+.branch-overview-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg);
+  color: var(--text-dim);
+  cursor: default;
+}
+.branch-overview-head:hover {
+  background: var(--bg);
+}
+.branch-overview-head button {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.branch-overview-head button:hover,
+.branch-overview-head button.sorted {
+  color: var(--text);
+}
+.branch-overview-head .bo-ahead,
+.branch-overview-head .bo-behind {
+  justify-content: flex-end;
+}
+.bo-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.bo-name svg {
+  flex: none;
+  color: var(--text-dim);
+}
+.bo-branch {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bo-tag {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.bo-tag.bo-gone {
+  color: var(--orange);
+}
+.bo-upstream {
+  flex: none;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.bo-commit {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bo-author {
+  margin-left: 8px;
+  color: var(--text-dim);
+}
+.bo-age {
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.bo-age.stale {
+  color: var(--orange);
+}
+.bo-ahead,
+.bo-behind {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.bo-merged {
+  padding: 0 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--green);
+  font-size: 11px;
+}
+.bo-merged.squashed {
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--green) 50%, transparent);
+}

@@ -53,6 +53,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Clean up untracked and ignored files: a preview with sizes, then to the Recycle Bin or deleted for good
 - Stash everything, only the staged changes, or a single file; optionally stash automatically on checkout
 - Branches, checkout, tags and stashes from the sidebar, shown as folders (`feature/…`) or as a flat list; check out a tag to look at that version
+- Branches overview (**View → Branches Overview**, or the list button on the Local section): each branch with its age, how far ahead and behind main it is, and whether it is merged, squash-merged or its upstream is gone; tick the old ones and delete them at once, with a backup and Undo
 - Release notes: the commits between two tags (or since the last one), grouped by type into Markdown ready to copy
 - Pull (merge, fast-forward only or rebase), push, and a periodic background fetch
 

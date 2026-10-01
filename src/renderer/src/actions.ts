@@ -1270,6 +1270,11 @@ export function showIgnoredFiles(repo: string, path: string): void {
   useUi.setState({ ignored: { repo, path } })
 }
 
+/** Opens the overview of the local branches. */
+export function showBranchOverview(repo: string): void {
+  useUi.setState({ branches: { repo } })
+}
+
 /** Opens the clean up of untracked or ignored files. */
 export function showCleanUp(repo: string, scope: CleanScope = 'untracked'): void {
   useUi.setState({ clean: { repo, scope } })

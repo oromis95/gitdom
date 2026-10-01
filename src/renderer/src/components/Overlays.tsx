@@ -10,6 +10,7 @@ const SplitEditor = lazy(() => import('./SplitEditor'))
 const ReleaseNotes = lazy(() => import('./ReleaseNotes'))
 const IgnoredFiles = lazy(() => import('./IgnoredFiles'))
 const CleanUp = lazy(() => import('./CleanUp'))
+const BranchOverview = lazy(() => import('./BranchOverview'))
 const Preferences = lazy(() => import('./Preferences'))
 
 function Toasts(): React.JSX.Element {
@@ -279,6 +280,7 @@ export default function Overlays(): React.JSX.Element {
         <ReleaseNotes />
         <IgnoredFiles />
         <CleanUp />
+        <BranchOverview />
         <Preferences />
       </Suspense>
       <CommandPalette />

@@ -328,6 +328,48 @@ describe('staging and commit', () => {
 describe('branches', () => {
   beforeEach(() => commitFile('a.txt', 'a\n', 'init'))
 
+  it('gives an overview of the branches against main, and deletes many at once', async () => {
+    git(repo, 'branch', 'merged')
+    git(repo, 'checkout', '-q', '-b', 'feature')
+    await commitFile('f.txt', '1\n', 'feature one')
+    await commitFile('f.txt', '2\n', 'feature two')
+    git(repo, 'checkout', '-q', '-b', 'squashed', 'main')
+    await commitFile('s.txt', 's\n', 'squash me')
+    git(repo, 'checkout', '-q', '-b', 'gone', 'main')
+    git(repo, 'remote', 'add', 'origin', join(repo, 'missing'))
+    git(repo, 'config', 'branch.gone.remote', 'origin')
+    git(repo, 'config', 'branch.gone.merge', 'refs/heads/gone')
+    git(repo, 'checkout', '-q', 'main')
+    // The squashed branch lands on main as a different commit with the same change
+    await commitFile('s.txt', 's\n', 'squash me (#1)')
+
+    const { base, branches } = await runOp(repo, 'branchOverview', [null])
+    expect(base).toBe('main')
+    const byName = Object.fromEntries(branches.map((b) => [b.name, b]))
+    expect(byName.main).toMatchObject({ isBase: true, current: true, merged: false })
+    expect(byName.merged).toMatchObject({ ahead: 0, behind: 1, merged: true, isBase: false })
+    expect(byName.feature).toMatchObject({
+      ahead: 2,
+      behind: 1,
+      merged: false,
+      squashed: false,
+      subject: 'feature two'
+    })
+    expect(byName.squashed).toMatchObject({ ahead: 1, merged: false, squashed: true })
+    expect(byName.gone).toMatchObject({ upstream: 'origin/gone', upstreamGone: true })
+
+    // Compared with another branch
+    const other = await runOp(repo, 'branchOverview', ['feature'])
+    expect(other.branches.find((b) => b.name === 'main')).toMatchObject({ ahead: 1, behind: 2 })
+
+    await expect(runOp(repo, 'deleteBranches', [['merged', 'main']])).rejects.toThrow(/main/)
+    expect(git(repo, 'branch', '--list', 'merged')).toBe('')
+    await runOp(repo, 'deleteBranches', [['feature', 'squashed']])
+    expect(git(repo, 'branch', '--format=%(refname:short)')).toBe('gone\nmain')
+    expect(await runOp(repo, 'undo', [])).toBe('Delete 2 branches')
+    expect(git(repo, 'rev-parse', 'feature')).toBe(byName.feature.hash)
+  })
+
   it('creates, renames and deletes branches', async () => {
     await runOp(repo, 'createBranch', ['feature/x', null, false])
     await runOp(repo, 'renameBranch', ['feature/x', 'feature/y'])
