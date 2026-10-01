@@ -12,6 +12,13 @@ import type {
   ResetMode,
   StashMode
 } from '../../shared/api'
+import {
+  LARGE_BINARY,
+  capWarnings,
+  scanStaged,
+  sizeWarning,
+  type CommitWarning
+} from '../../shared/commitChecks'
 import { lineBefore, parseDiff } from '../../shared/diff'
 import {
   FILE_LOG_FORMAT,
@@ -759,6 +766,51 @@ const ops: OpImpl = {
     if (!path) return null
     // A template that can't be read is ignored, as git itself would fail the commit
     return readFile(resolve(repo, path), 'utf8').catch(() => null)
+  },
+
+  async commitChecks(repo, kinds) {
+    const warnings: CommitWarning[] = []
+    const cached = ['-c', 'core.quotePath=false', 'diff', '--cached', '--no-renames']
+    const listed = (await runGit(repo, [...cached, '--name-only', '-z'])).split('\0')
+    const paths = listed.filter(Boolean)
+    if (!paths.length) return warnings
+    if (kinds.secrets || kinds.debugCode) {
+      const diff = await runGit(repo, [...cached, '-U0', '--no-color', '--no-ext-diff'])
+      warnings.push(...scanStaged(diff, paths, kinds))
+    }
+    if (kinds.largeFiles) {
+      // Sizes of the staged blobs; binaries are those numstat can't count lines of
+      const raw = (await runGit(repo, [...cached, '--raw', '--no-abbrev', '-z'])).split('\0')
+      const blobs: { path: string; hash: string }[] = []
+      for (let i = 0; i + 1 < raw.length; i += 2) {
+        const [, , , hash, status] = raw[i].split(' ')
+        if (status !== 'D' && /^[0-9a-f]{40,64}$/.test(hash)) blobs.push({ path: raw[i + 1], hash })
+      }
+      const sizes = (
+        await runGit(repo, ['cat-file', '--batch-check=%(objectsize)'], {
+          input: blobs.map((b) => b.hash).join('\n') + '\n'
+        })
+      ).split('\n')
+      const big = blobs
+        .map((b, i) => ({ ...b, size: Number(sizes[i]) || 0 }))
+        .filter((b) => b.size > LARGE_BINARY)
+      if (big.length) {
+        const numstat = (await runGit(repo, [...cached, '--numstat', '-z'])).split('\0')
+        const binary = new Set(numstat.filter((l) => l.startsWith('-\t-\t')).map((l) => l.slice(4)))
+        const attrs = (
+          await runGit(repo, ['check-attr', '--cached', '-z', '--stdin', 'filter'], {
+            input: big.map((b) => b.path).join('\0') + '\0'
+          })
+        ).split('\0')
+        const lfs = new Set<string>()
+        for (let i = 0; i + 2 < attrs.length; i += 3) if (attrs[i + 2] === 'lfs') lfs.add(attrs[i])
+        for (const b of big) {
+          const warning = sizeWarning(b.path, b.size, binary.has(b.path), lfs.has(b.path))
+          if (warning) warnings.push(warning)
+        }
+      }
+    }
+    return capWarnings(warnings)
   },
 
   async reword(repo, hash, message) {

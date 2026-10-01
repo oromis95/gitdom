@@ -23,6 +23,7 @@ import type {
   TreeFile,
   WorkingTreeStatus
 } from './types'
+import type { CommitWarning } from './commitChecks'
 
 /**
  * IPC results carry errors as values: Electron would otherwise mangle the message of thrown errors.
@@ -162,6 +163,15 @@ export interface RepoOps {
   /** Returns git's output, including hook output. */
   commit(message: string, amend: boolean, options?: CommitOptions): string
   lastCommitMessage(): string
+  /**
+   * Secrets, leftover debug code and big files among the staged changes: warnings only, the
+   * commit is never blocked. The message is checked in the renderer, as it's typed.
+   */
+  commitChecks(kinds: {
+    secrets: boolean
+    debugCode: boolean
+    largeFiles: boolean
+  }): CommitWarning[]
   /** Content of the commit message template (commit.template), null when none is set. */
   commitTemplate(): string | null
   /**

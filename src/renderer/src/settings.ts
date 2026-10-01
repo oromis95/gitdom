@@ -2,6 +2,7 @@
 // Theme, pull mode and the startup logo keep their own keys (theme.ts, actions.ts).
 import { create } from 'zustand'
 import type { ToolSettings } from '../../shared/api'
+import type { CommitCheckKind } from '../../shared/commitChecks'
 
 export interface Settings extends ToolSettings {
   /** Interface font family; empty for the default */
@@ -41,6 +42,11 @@ export interface Settings extends ToolSettings {
   showTips: boolean
   /** Stash and reapply local changes in the way of a checkout without asking (STASH-06) */
   autoStash: boolean
+  /** Warnings before a commit, each kind can be turned off; they never block it */
+  checkSecrets: boolean
+  checkLargeFiles: boolean
+  checkDebugCode: boolean
+  checkMessage: boolean
   /** Branches and tags grouped in folders by their slashes, or a flat list (SIDE-11) */
   sidebarTree: boolean
 }
@@ -72,11 +78,27 @@ export const DEFAULT_SETTINGS: Settings = {
   checkUpdates: true,
   showTips: true,
   autoStash: false,
+  checkSecrets: true,
+  checkLargeFiles: true,
+  checkDebugCode: true,
+  checkMessage: true,
   gitPath: '',
   editor: '',
   mergeTool: '',
   diffTool: ''
 }
+
+/** The checks before a commit, with the setting that turns each off */
+export const COMMIT_CHECKS: {
+  kind: CommitCheckKind
+  key: 'checkSecrets' | 'checkLargeFiles' | 'checkDebugCode' | 'checkMessage'
+  label: string
+}[] = [
+  { kind: 'secrets', key: 'checkSecrets', label: 'Passwords, keys and tokens' },
+  { kind: 'largeFiles', key: 'checkLargeFiles', label: 'Big files and binaries outside LFS' },
+  { kind: 'debugCode', key: 'checkDebugCode', label: 'console.log, debugger and TODO' },
+  { kind: 'message', key: 'checkMessage', label: 'Message style' }
+]
 
 export const ZOOM_STEPS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]
 export const CODE_FONT_SIZES = { min: 9, max: 24 }

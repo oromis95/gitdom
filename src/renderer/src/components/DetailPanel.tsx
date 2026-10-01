@@ -44,6 +44,7 @@ import { hoverCard } from '../hover'
 import { relativeTime } from '../time'
 import { formatBytes } from '../statistics'
 import ResizeHandle from './ResizeHandle'
+import CommitWarnings from './CommitWarnings'
 import { AuthorCard } from './HoverCards'
 import {
   abortOperation,
@@ -799,6 +800,7 @@ function CommitBox({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element 
         value={description}
         onChange={(e) => setDraft(repo, { description: e.target.value })}
       />
+      <CommitWarnings snapshot={snapshot} summary={summary} description={description} />
       <button
         className="primary"
         disabled={!canCommit}

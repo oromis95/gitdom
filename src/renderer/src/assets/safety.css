@@ -663,3 +663,7 @@
   font-size: 12.5px;
   color: var(--text-muted);
 }
+.pref-control:has(> .pref-checks) {
+  flex-direction: column;
+  gap: 6px;
+}

@@ -45,6 +45,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Edit a hunk before staging it: stage the lines as they should be, while the file on disk keeps its changes
 - Commit, amend, and a WIP row for your uncommitted changes
 - Commit options: skip the hooks (`--no-verify`), sign, commit as another author
+- Checks before committing: secrets, big files and binaries outside LFS, leftover `console.log` and TODOs, the message style; warnings only, each kind can be turned off
 - Commit message template (`commit.template`) and quick reuse of a recent message
 - Edit the message of any commit on the current branch from its details (reword)
 - Sign commits and tags with GPG, SSH or X.509 keys, and see whether each signature is verified

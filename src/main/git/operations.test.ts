@@ -108,6 +108,27 @@ describe('staging and commit', () => {
     expect((await runOp(repo, 'status', [])).unstaged).toEqual([{ path: 'a.txt', status: '?' }])
   })
 
+  it('checks the staged changes for secrets, debug code and big files', async () => {
+    const all = { secrets: true, debugCode: true, largeFiles: true }
+    await commitFile('app.js', 'start()\n', 'init')
+    expect(await runOp(repo, 'commitChecks', [all])).toEqual([])
+    write('app.js', "start()\nconsole.log('x')\n")
+    write('unstaged.js', 'debugger\n')
+    write('.gitattributes', '*.bin filter=lfs diff=lfs merge=lfs -text\n')
+    writeFileSync(join(repo, 'photo.raw'), Buffer.alloc(600 * 1024))
+    writeFileSync(join(repo, 'big.bin'), Buffer.alloc(600 * 1024))
+    write('.env', 'KEY=1\n')
+    git(repo, 'add', 'app.js', '.gitattributes', 'photo.raw', 'big.bin', '.env')
+    expect(await runOp(repo, 'commitChecks', [all])).toEqual([
+      { kind: 'secrets', text: 'Looks like an environment file', path: '.env' },
+      { kind: 'debugCode', text: 'Adds console.log', path: 'app.js', line: 2 },
+      { kind: 'largeFiles', text: 'Binary file of 600 KB: consider Git LFS', path: 'photo.raw' }
+    ])
+    expect(
+      await runOp(repo, 'commitChecks', [{ secrets: false, debugCode: false, largeFiles: true }])
+    ).toHaveLength(1)
+  })
+
   it('commits, amends and reads the last message', async () => {
     await commitFile('a.txt', 'a\n', 'first')
     write('b.txt', 'b\n')

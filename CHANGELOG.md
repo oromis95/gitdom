@@ -26,6 +26,12 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - The merge and rebase dialogs say which files will conflict, or that none is expected
   - Beside the branch name, a warning shows when the current branch and main (or master, on the remote when there is one) changed the same lines; click it for the files, and to merge or rebase
   - Worked out with `git merge-tree` (git 2.38 or later), without touching your files
+- **Checks before committing**: warnings in the commit panel about what is going to be committed; they never block the commit
+  - Passwords, keys and tokens on the added lines (AWS, GitHub, GitLab, Slack, Google, Stripe and more), and files such as `.env` or SSH keys
+  - Big files, and binaries over 512 KB that are not stored with Git LFS
+  - `console.log`, `debugger` and TODOs left in the changes
+  - The message: a summary with a period at the end or too vague, long description lines, and a missing `feat:`/`fix:` type when the recent commits use Conventional Commits
+  - Click a file to see its staged changes; dismiss a warning, or turn off its kind from the warning itself or in **Preferences → Git**
 - **Tips**: the features that are easy to miss, one at a time, each with a small animation showing how it works and the steps to use it
   - One at startup, and now and then one right after doing something it builds on, such as blaming back in time after opening a blame
   - **Help → Tips** (or "Tips" in the command palette) lists them all; turn them off with the checkbox in the dialog or in **Preferences**

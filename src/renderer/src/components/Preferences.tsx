@@ -5,6 +5,7 @@ import type { MergeToolInfo, PullMode } from '../../../shared/api'
 import { savePullMode, savedPullMode } from '../actions'
 import {
   CODE_FONT_SIZES,
+  COMMIT_CHECKS,
   DEFAULT_SETTINGS,
   ZOOM_STEPS,
   updateSettings,
@@ -330,6 +331,18 @@ function Git({ s }: { s: Settings }): React.JSX.Element {
           />
           Stash and reapply them on checkout without asking
         </label>
+      </Row>
+      <Row label="Before committing" hint="Warnings in the commit panel: they never block it">
+        {COMMIT_CHECKS.map(({ key, label }) => (
+          <label key={key} className="modal-check pref-checks">
+            <input
+              type="checkbox"
+              checked={s[key]}
+              onChange={(e) => updateSettings({ [key]: e.target.checked })}
+            />
+            {label}
+          </label>
+        ))}
       </Row>
       <Row label="Updates" hint={`GitDom ${__APP_VERSION__}`}>
         <label className="modal-check">
