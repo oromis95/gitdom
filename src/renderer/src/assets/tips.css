@@ -1191,6 +1191,128 @@
   }
 }
 
+/* --- Reorder commits ---------------------------------------------------------------------- */
+
+.ta-reorder-moved {
+  transform: translateY(30px);
+  animation-name: ta-reorder-moved;
+}
+@keyframes ta-reorder-moved {
+  0%,
+  20% {
+    opacity: 1;
+    transform: none;
+  }
+  22%,
+  44% {
+    opacity: 0.4;
+    transform: none;
+  }
+  56%,
+  100% {
+    opacity: 1;
+    transform: translateY(30px);
+  }
+}
+.ta-reorder-up {
+  transform: translateY(-30px);
+  animation-name: ta-reorder-up;
+}
+@keyframes ta-reorder-up {
+  0%,
+  44% {
+    transform: none;
+  }
+  56%,
+  100% {
+    transform: translateY(-30px);
+  }
+}
+.ta-reorder-ghost {
+  z-index: 3;
+  background: var(--bg-elevated);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  animation-name: ta-reorder-ghost;
+}
+@keyframes ta-reorder-ghost {
+  0%,
+  20% {
+    opacity: 0;
+    transform: none;
+  }
+  22% {
+    opacity: 0.85;
+    transform: none;
+  }
+  40% {
+    opacity: 0.85;
+    transform: translate(4px, 38px);
+  }
+  43%,
+  100% {
+    opacity: 0;
+    transform: translate(4px, 38px);
+  }
+}
+.ta-reorder-line {
+  position: absolute;
+  left: 100px;
+  width: 300px;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  animation-name: ta-reorder-line;
+}
+@keyframes ta-reorder-line {
+  0%,
+  29%,
+  44%,
+  100% {
+    opacity: 0;
+  }
+  31%,
+  42% {
+    opacity: 1;
+  }
+}
+.ta-reorderCommits .ta-cursor {
+  animation-name: ta-reorder-cursor;
+}
+@keyframes ta-reorder-cursor {
+  0%,
+  6% {
+    opacity: 0;
+    transform: translate(380px, 170px);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(380px, 170px);
+  }
+  18% {
+    transform: translate(200px, 58px);
+  }
+  21% {
+    transform: translate(200px, 58px) scale(0.9);
+  }
+  40% {
+    transform: translate(204px, 96px) scale(0.9);
+  }
+  43%,
+  60% {
+    opacity: 1;
+    transform: translate(204px, 96px);
+  }
+  68%,
+  100% {
+    opacity: 0;
+    transform: translate(204px, 96px);
+  }
+}
+.ta-reorderCommits .ta-toast {
+  animation-name: ta-toast-late;
+}
+
 /* --- Drag a branch ------------------------------------------------------------------------ */
 
 .ta-ghost {

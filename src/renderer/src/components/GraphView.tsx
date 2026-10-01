@@ -48,6 +48,8 @@ import GraphMinimap, { type MinimapMarker } from './GraphMinimap'
 const OVERSCAN = 6
 /** Drag and drop payload: the full name of the dragged branch */
 const REF_MIME = 'application/x-gitdom-ref'
+/** Drag and drop payload: the hash of a commit being moved along the current branch */
+const COMMIT_MIME = 'application/x-gitdom-commit'
 /** Pause in typing before git searches messages or files */
 const SEARCH_DELAY = 250
 /** Searching the code diffs every commit: wait for a pause in the typing */
@@ -382,6 +384,26 @@ export default function GraphView({
     return firstParentChain(layout, firstParents, rowIndex, hoverRow)
   }, [hoverRow, filtering, rows, layout, rowIndex])
 
+  // The commits that can be dragged to reorder them: the current branch from HEAD back to its
+  // last merge, which a rebase would flatten
+  const movable = useMemo(() => {
+    if (!snapshot.head.branch || !headShown || filtering || snapshot.operation) return []
+    const byHash = new Map(snapshot.commits.map((c) => [c.hash, c]))
+    const chain: Commit[] = []
+    for (let c = byHash.get(headHash!); c && c.parents.length <= 1;) {
+      chain.push(c)
+      c = c.parents[0] ? byHash.get(c.parents[0]) : undefined
+    }
+    return chain.length > 1 ? chain : []
+  }, [snapshot.head.branch, snapshot.operation, snapshot.commits, headShown, headHash, filtering])
+  const movableIndex = useMemo(() => new Map(movable.map((c, i) => [c.hash, i])), [movable])
+  const [dragged, setDragged] = useState<string | null>(null)
+  const [dropAt, setDropAt] = useState<{ hash: string; after: boolean } | null>(null)
+  const endDrag = (): void => {
+    setDragged(null)
+    setDropAt(null)
+  }
+
   // Commits that disappeared after a reload can't stay picked
   const pickedNow = picked.filter((h) => rowIndex.has(h))
   const clearPicked = (): void => setPicked([])
@@ -582,7 +604,13 @@ export default function GraphView({
     if (loadsMore && nearEnd && !loadingMore) onLoadMore()
   }, [loadsMore, nearEnd, loadingMore, onLoadMore])
   const commitCard = (commit: Commit): ReturnType<typeof hoverCard> =>
-    hoverCard(() => <CommitCard snapshot={snapshot} commit={commit} />)
+    hoverCard(() => (
+      <CommitCard
+        snapshot={snapshot}
+        commit={commit}
+        hint={movableIndex.has(commit.hash) ? 'Drag to move it along the branch' : undefined}
+      />
+    ))
   const authorCard = (commit: Commit): ReturnType<typeof hoverCard> =>
     hoverCard(() => (
       <AuthorCard snapshot={snapshot} name={commit.authorName} email={commit.authorEmail} />
@@ -601,6 +629,9 @@ export default function GraphView({
     if (i === selectedRow) classes.push('selected')
     if (pickedNow.includes(hash)) classes.push('picked')
     if (faded) classes.push('faded')
+    const canMove = movableIndex.has(hash)
+    if (dragged === hash) classes.push('dragged')
+    if (dropAt?.hash === hash) classes.push(dropAt.after ? 'drop-after' : 'drop-before')
 
     visible.push(
       <div
@@ -608,6 +639,36 @@ export default function GraphView({
         className={classes.join(' ')}
         style={{ top: i * ROW_HEIGHT, height: ROW_HEIGHT }}
         onMouseDown={(e) => clickRow(e, hash)}
+        draggable={canMove}
+        onDragStart={(e) => {
+          if (!canMove || e.target !== e.currentTarget) return
+          e.dataTransfer.setData(COMMIT_MIME, hash)
+          e.dataTransfer.effectAllowed = 'move'
+          setDragged(hash)
+        }}
+        onDragEnd={endDrag}
+        onDragOver={(e) => {
+          if (!canMove || !dragged || !e.dataTransfer.types.includes(COMMIT_MIME)) return
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+          const box = e.currentTarget.getBoundingClientRect()
+          const after = e.clientY > box.top + box.height / 2
+          if (dropAt?.hash !== hash || dropAt.after !== after) setDropAt({ hash, after })
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null) && dropAt?.hash === hash)
+            setDropAt(null)
+        }}
+        onDrop={(e) => {
+          const source = e.dataTransfer.getData(COMMIT_MIME)
+          const from = movableIndex.get(source)
+          const to = movableIndex.get(hash)
+          const after = dropAt?.after ?? false
+          endDrag()
+          if (from === undefined || to === undefined) return
+          e.preventDefault()
+          void actions.reorderCommits(snapshot, movable, from, to, after)
+        }}
         onContextMenu={(e) => {
           if (row.kind === 'commit') commitContextMenu(e, row.commit)
           else if (row.kind === 'stash') {

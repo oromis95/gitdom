@@ -199,6 +199,23 @@ function SplitCommit(): React.JSX.Element {
   )
 }
 
+function ReorderCommits(): React.JSX.Element {
+  return (
+    <>
+      <Lane from={0} to={3} />
+      <Label i={0} name="main" />
+      <Row i={0} subject="add login tests" />
+      <Row i={1} subject="fix typo in README" className="ta-reorder-moved" />
+      <Row i={2} subject="add login" className="ta-reorder-up" />
+      <Row i={3} subject="init" />
+      <div className="ta-reorder-line" style={{ top: top(3) - 5 }} />
+      <Row i={1} subject="fix typo in README" className="ta-reorder-ghost" />
+      <Toast text="Commits reordered" />
+      <Cursor />
+    </>
+  )
+}
+
 function DragBranch(): React.JSX.Element {
   return (
     <>
@@ -389,6 +406,7 @@ const SCENES: Record<string, () => React.JSX.Element> = {
   moveCommits: MoveCommits,
   fixup: Fixup,
   splitCommit: SplitCommit,
+  reorderCommits: ReorderCommits,
   dragBranch: DragBranch,
   lineHistory: LineHistory,
   blameBack: BlameBack,

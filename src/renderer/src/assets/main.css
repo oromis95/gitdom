@@ -379,6 +379,15 @@ input {
 .graph-row.selected {
   background: var(--bg-selected);
 }
+.graph-row.dragged {
+  opacity: 0.4;
+}
+.graph-row.drop-before {
+  box-shadow: inset 0 2px var(--accent);
+}
+.graph-row.drop-after {
+  box-shadow: inset 0 -2px var(--accent);
+}
 
 .cell-refs {
   display: flex;

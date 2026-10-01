@@ -232,10 +232,13 @@ export function AuthorCard({
 
 export function CommitCard({
   snapshot,
-  commit
+  commit,
+  hint
 }: {
   snapshot: RepoSnapshot
   commit: Commit
+  /** What can be done with the commit right there */
+  hint?: string
 }): React.JSX.Element {
   const preview = usePreview(snapshot.path, commit.hash)
   const body = preview && preview !== 'error' ? preview.body : ''
@@ -258,6 +261,7 @@ export function CommitCard({
         </div>
       )}
       <FilesPreview preview={preview} />
+      {hint && <div className="hover-hint">{hint}</div>}
     </>
   )
 }

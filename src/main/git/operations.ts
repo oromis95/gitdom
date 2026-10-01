@@ -1008,6 +1008,28 @@ const ops: OpImpl = {
     return { first, second }
   },
 
+  async reorderCommits(repo, base, order) {
+    if (base) assertHash(base)
+    order.forEach((hash) => assertHash(hash))
+    const { commits, merges } = await ops.rebaseCommits(repo, base)
+    if (merges > 0) {
+      throw new Error('Commits can be moved only after the last merge: it would be flattened')
+    }
+    const current = commits.map((c) => c.hash)
+    const same = (a: string[], b: string[]): boolean =>
+      a.length === b.length && a.every((hash, i) => hash === b[i])
+    // Every commit exactly once: a missing one would be dropped by the rebase
+    if (!same([...order].sort(), [...current].sort())) {
+      throw new Error('The branch has changed since: try again')
+    }
+    if (same(order, current)) throw new Error('The commits are already in this order')
+    return ops.rebaseInteractive(
+      repo,
+      base,
+      order.map((hash) => ({ action: 'pick', hash }))
+    )
+  },
+
   async continueOperation(repo) {
     const operation = await readOperation(repo)
     if (!operation) throw new Error('No merge, rebase, cherry-pick or revert in progress')
@@ -1744,6 +1766,7 @@ const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise
   reword: (repo) => currentBranchRef(repo),
   fixup: (repo) => currentBranchRef(repo),
   splitCommit: (repo) => currentBranchRef(repo),
+  reorderCommits: (repo) => currentBranchRef(repo),
   push: async (repo, force) => (force ? pushTarget(repo) : []),
   // Restoring a backup moves the branch too: where it was is saved first
   restoreBackup: async (_repo, _id, ref) => [ref]
@@ -1780,6 +1803,7 @@ const UNDOABLE: {
   fixup: (hash) => ({ label: `Fixup ${short(hash)}`, move: 'soft' }),
   // The files are the same before and after
   splitCommit: (hash) => ({ label: `Split ${short(hash)}`, move: 'soft' }),
+  reorderCommits: () => ({ label: 'Reorder commits' }),
   checkout: (branch) => ({ label: `Checkout ${branch}` }),
   checkoutRemote: (_remote, localName) => ({ label: `Checkout ${localName}` }),
   checkoutCommit: (hash) => ({ label: `Checkout ${short(hash)}` }),

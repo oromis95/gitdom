@@ -12,6 +12,7 @@ import type {
   StashMode
 } from '../../shared/api'
 import type {
+  Commit,
   DiffSource,
   FileChange,
   Ref,
@@ -778,6 +779,48 @@ export async function runSplitCommit(
   // The commit is gone: show the second of the two
   useApp.getState().select(result.value.second, true)
   notify('success', `Split ${hash.slice(0, 7)} in two commits`)
+}
+
+/**
+ * Moves a commit of the current branch, dragged in the graph, before or after another one.
+ * `chain` is the branch from HEAD back to its last merge, newest first, as the graph lists it.
+ */
+export async function reorderCommits(
+  snapshot: RepoSnapshot,
+  chain: Commit[],
+  from: number,
+  to: number,
+  after: boolean
+): Promise<void> {
+  const repo = snapshot.path
+  const order = chain.filter((_, i) => i !== from)
+  const at = (after ? to + 1 : to) - (to > from ? 1 : 0)
+  order.splice(at, 0, chain[from])
+  // Only the commits from the oldest one that moved are rewritten
+  const deepest = order.findLastIndex((c, i) => c.hash !== chain[i].hash)
+  if (deepest < 0) return
+  const oldest = chain[deepest]
+  const branch = snapshot.refs.find((r) => r.type === 'local' && r.name === snapshot.head.branch)
+  const upstream = branch?.upstream && snapshot.refs.find((r) => r.name === branch.upstream)
+  const pushed = upstream && (await call(repo, 'isAncestor', oldest.hash, upstream.fullName))
+  const isPushed = !!(pushed && pushed.ok && pushed.value)
+  const message = [
+    `"${chain[from].subject}" moves ${after ? 'below' : 'above'} "${chain[to].subject}".`,
+    `${deepest + 1} commits are replayed in the new order. If they change the same lines, the rebase stops on the conflicts.`,
+    ...(isPushed ? ['', `They are already on ${upstream.name}: you will have to force push.`] : [])
+  ].join('\n')
+  if (!(await confirm('Reorder commits', message, 'Reorder', isPushed))) return
+  await runOutcome(
+    repo,
+    'Reorder',
+    'Commits reordered',
+    'reorderCommits',
+    oldest.parents[0] ?? null,
+    order
+      .slice(0, deepest + 1)
+      .reverse()
+      .map((c) => c.hash)
+  )
 }
 
 // --- Merge, rebase and history rewriting ----------------------------------------------------

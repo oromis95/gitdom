@@ -224,6 +224,11 @@ export interface RepoOps {
     firstMessage: string,
     secondMessage: string
   ): { first: string; second: string }
+  /**
+   * Puts the commits after `base` in another order, oldest first: they must be the same commits,
+   * with no merge among them. A rebase replays them, which may stop on conflicts.
+   */
+  reorderCommits(base: string | null, order: string[]): OpOutcome
   revert(hash: string): OpOutcome
   /** A hard reset first saves uncommitted changes in a stash: returns its hash, or null. */
   reset(hash: string, mode: ResetMode): string | null

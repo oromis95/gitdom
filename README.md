@@ -60,6 +60,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Commits made on the wrong branch: move them to a new branch or onto another one, and the current branch goes back to before them
 - Fixup: add the staged changes to an older commit of the current branch, keeping its message
 - Split a commit in two, file by file, each with its own message
+- Reorder the commits of the current branch by dragging them in the graph
 - Drag a branch onto another to fast-forward, merge or rebase
 - Undo / redo of the last operations
 

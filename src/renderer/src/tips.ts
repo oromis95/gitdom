@@ -84,6 +84,17 @@ export const TIPS: Tip[] = [
     after: ['reword']
   },
   {
+    id: 'reorderCommits',
+    title: 'Put the commits in a better order',
+    text: 'Drag a commit up or down the current branch, so that the changes that belong together sit side by side before you push.',
+    steps: [
+      'Drag a commit of the current branch in the graph',
+      'A line shows where it will go: drop it there and confirm',
+      'Commits can move back to the last merge; Undo puts the old order back'
+    ],
+    after: ['fixup', 'splitCommit']
+  },
+  {
     id: 'dragBranch',
     title: 'Drag a branch onto another',
     text: 'Merging, rebasing or fast-forwarding is a drag away, right in the graph.',

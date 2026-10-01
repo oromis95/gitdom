@@ -1331,6 +1331,41 @@ describe('complete commits', () => {
     ).rejects.toThrow('merge commit')
   })
 
+  it('reorders the commits of the branch, keeping the uncommitted changes, undoable', async () => {
+    await commitFile('b.txt', 'b\n', 'three')
+    await commitFile('c.txt', 'c\n', 'four')
+    write('b.txt', 'dirty\n')
+    const tip = git(repo, 'rev-parse', 'HEAD')
+    const [four, three, two] = git(repo, 'rev-list', 'HEAD~3..HEAD').split('\n')
+    const outcome = await runOp(repo, 'reorderCommits', [
+      git(repo, 'rev-parse', 'HEAD~3'),
+      [three, four, two]
+    ])
+    expect(outcome.conflicts).toBe(false)
+    expect(subjects()).toEqual(['two', 'four', 'three', 'one'])
+    expect(git(repo, 'show', 'HEAD:a.txt')).toBe('2')
+    expect(readFileSync(join(repo, 'b.txt'), 'utf8')).toBe('dirty\n')
+    expect((await runOp(repo, 'backups', []))[0].refs[0]).toMatchObject({ hash: tip })
+    await runOp(repo, 'undo', [])
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(tip)
+  })
+
+  it('refuses a reorder that would lose a commit or flatten a merge', async () => {
+    await commitFile('b.txt', 'b\n', 'three')
+    const [three, two] = git(repo, 'rev-list', 'HEAD~2..HEAD').split('\n')
+    const base = git(repo, 'rev-parse', 'HEAD~2')
+    await expect(runOp(repo, 'reorderCommits', [base, [three]])).rejects.toThrow('changed')
+    await expect(runOp(repo, 'reorderCommits', [base, [three, three]])).rejects.toThrow('changed')
+    await expect(runOp(repo, 'reorderCommits', [base, [two, three]])).rejects.toThrow('already')
+    git(repo, 'checkout', '-q', '-b', 'side', base)
+    await commitFile('s.txt', 's\n', 'side')
+    git(repo, 'checkout', '-q', 'main')
+    git(repo, 'merge', '-q', '--no-edit', 'side')
+    const tip = git(repo, 'rev-parse', 'HEAD')
+    await expect(runOp(repo, 'reorderCommits', [base, [three, two]])).rejects.toThrow('merge')
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(tip)
+  })
+
   it('adds patterns to .gitignore and stops tracking files', async () => {
     write('.gitignore', 'node_modules/\r\n*.tmp')
     write('app.log', 'x\n')
