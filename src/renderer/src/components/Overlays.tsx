@@ -8,6 +8,7 @@ import RepoDialogs from './RepoDialogs'
 const RebaseEditor = lazy(() => import('./RebaseEditor'))
 const SplitEditor = lazy(() => import('./SplitEditor'))
 const ReleaseNotes = lazy(() => import('./ReleaseNotes'))
+const IgnoredFiles = lazy(() => import('./IgnoredFiles'))
 const Preferences = lazy(() => import('./Preferences'))
 
 function Toasts(): React.JSX.Element {
@@ -275,6 +276,7 @@ export default function Overlays(): React.JSX.Element {
         <RebaseEditor />
         <SplitEditor />
         <ReleaseNotes />
+        <IgnoredFiles />
         <Preferences />
       </Suspense>
       <CommandPalette />

@@ -23,7 +23,7 @@ import Updates from './components/Updates'
 import Tips from './components/Tips'
 import Splash, { HighwayLogo } from './components/Splash'
 import { restoreSession, useActiveTab, useApp } from './store'
-import { fetchAll } from './actions'
+import { fetchAll, showIgnoredFiles } from './actions'
 import { identityMenu } from './identity'
 import { openMenu, openPreferences, openRepoDialog } from './ui'
 import { stepZoom, useSettings } from './settings'
@@ -157,7 +157,10 @@ function App(): React.JSX.Element {
         else if (command === 'reflog' || command === 'backups') {
           useApp.getState().openRecovery(command)
         } else if (command === 'statistics') useApp.getState().openStatistics(true)
-        else if (command === 'whatsNew') showWhatsNew()
+        else if (command === 'ignored') {
+          const repo = useApp.getState().tabs[useApp.getState().active]?.path
+          if (repo) showIgnoredFiles(repo, '')
+        } else if (command === 'whatsNew') showWhatsNew()
         else if (command === 'tips') showTip()
         else if (command === 'checkUpdates') void checkForUpdates(true)
         else stepZoom(command === 'zoomIn' ? 1 : command === 'zoomOut' ? -1 : 0)

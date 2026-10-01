@@ -20,6 +20,7 @@ import {
   type CommitWarning
 } from '../../shared/commitChecks'
 import { lineBefore, parseDiff } from '../../shared/diff'
+import { parseCheckIgnore } from '../../shared/ignore'
 import {
   FILE_LOG_FORMAT,
   REFLOG_FORMAT,
@@ -57,6 +58,8 @@ const FILE_HISTORY_LIMIT = 5000
 /** Each commit of a line history carries a diff: fewer of them */
 const LINE_HISTORY_LIMIT = 500
 const REFLOG_LIMIT = 2000
+/** Ignored files and folders listed with their rule */
+const MOST_IGNORED = 2000
 /** The running search in the changes of each repository: a new one, or clearing it, stops it */
 const contentSearches = new Map<string, AbortController>()
 const CONFLICT_MARKER_RE = /^(<{7}|>{7})( |$)/m
@@ -1660,6 +1663,35 @@ const ops: OpImpl = {
     }
   },
 
+  async ignoreRule(repo, path) {
+    assertArg(path, 'path')
+    // --no-index: the rules apply to tracked files too, which is what makes them confusing
+    const [output, tracked] = await Promise.all([
+      runGit(repo, ['check-ignore', '-v', '-n', '-z', '--no-index', '--stdin'], {
+        input: path + '\0',
+        okExitCodes: [1]
+      }),
+      runGit(repo, ['ls-files', '-z', '--', path])
+    ])
+    return { rule: parseCheckIgnore(output)[0] ?? null, tracked: tracked !== '' }
+  },
+
+  async ignoredFiles(repo) {
+    // Folders ignored as a whole come once, with a trailing slash, rather than their contents
+    const status = await runGit(repo, ['status', '--porcelain=v1', '-z', '--ignored'])
+    const paths = status
+      .split('\0')
+      .filter((entry) => entry.startsWith('!! '))
+      .map((entry) => entry.slice(3))
+    const listed = paths.slice(0, MOST_IGNORED)
+    if (!listed.length) return { rules: [], total: 0 }
+    const output = await runGit(repo, ['check-ignore', '-v', '-n', '-z', '--stdin'], {
+      input: listed.join('\0') + '\0',
+      okExitCodes: [1]
+    })
+    return { rules: parseCheckIgnore(output), total: paths.length }
+  },
+
   async worktreeAdd(repo, { path, branch, newBranch, start }) {
     assertArg(path, 'folder')
     const target = resolve(repo, path)
@@ -1775,7 +1807,13 @@ const READ_ONLY = new Set<OpName>([
   'compareFiles',
   'imagePair',
   'reflog',
-  'backups'
+  'backups',
+  'mergePreview',
+  'commitChecks',
+  'releaseCommits',
+  'previousTag',
+  'ignoreRule',
+  'ignoredFiles'
 ])
 
 /**

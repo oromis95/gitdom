@@ -62,6 +62,7 @@ function build(): void {
       { label: 'Reflog', click: send('reflog') },
       { label: 'Backups', click: send('backups') },
       { label: 'Statistics', click: send('statistics') },
+      { label: 'Ignored Files', click: send('ignored') },
       { type: 'separator' },
       { role: 'togglefullscreen' },
       { role: 'reload' },

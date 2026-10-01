@@ -1264,6 +1264,11 @@ export function remoteBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
   ]
 }
 
+/** Opens the ignored files of a repository, checking a path first when given. */
+export function showIgnoredFiles(repo: string, path: string): void {
+  useUi.setState({ ignored: { repo, path } })
+}
+
 /** Opens the release notes of the commits up to a tag, or HEAD. */
 export function showReleaseNotes(repo: string, to: string): void {
   useUi.setState({ releaseNotes: { repo, to } })

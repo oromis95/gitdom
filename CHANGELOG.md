@@ -36,6 +36,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - The commits between two tags, merges and fixups left out, grouped as breaking changes, features, fixes, performance, refactoring, documentation and so on
   - Grouped by the Conventional Commits prefix (`feat:`, `fix(scope):`, `!` and `BREAKING CHANGE`) when there is one, by the first word of the summary otherwise ("Add…", "Fix…")
   - The range starts from the previous tag and can be changed; add the hashes and the authors if you like, then copy the Markdown
+- **Why is this file ignored?**: **View → Ignored Files**, or "Ignored files" in the command palette
+  - Type a path to see the rule that decides it: the pattern, and the file and line it comes from (a `.gitignore`, `.git/info/exclude` or the global excludes file); click the file to open it
+  - A `!` rule that brings the file back is shown too, and a file that matches a rule but is still tracked can stop being tracked from there, staying on disk
+  - Below, every ignored file and folder of the working tree with its rule; click one to see why
 - **Tips**: the features that are easy to miss, one at a time, each with a small animation showing how it works and the steps to use it
   - One at startup, and now and then one right after doing something it builds on, such as blaming back in time after opening a blame
   - **Help → Tips** (or "Tips" in the command palette) lists them all; turn them off with the checkbox in the dialog or in **Preferences**

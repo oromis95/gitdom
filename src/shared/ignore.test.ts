@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extensionOf, folderOf, ignorePattern } from './ignore'
+import { extensionOf, folderOf, ignorePattern, isNegation, parseCheckIgnore } from './ignore'
 
 describe('ignorePattern', () => {
   it('anchors a file to the root', () => {
@@ -31,5 +31,23 @@ describe('extensionOf and folderOf', () => {
     expect(extensionOf('trailing.')).toBeNull()
     expect(folderOf('a.txt')).toBeNull()
     expect(folderOf('a/b/c.txt')).toBe('a/b')
+  })
+})
+
+describe('parseCheckIgnore', () => {
+  it('reads the rule of each path, leaving out the paths no rule matches', () => {
+    const output = [
+      ['.gitignore', '3', '*.log', 'build/out.log'],
+      ['', '', '', 'src/app.ts'],
+      ['sub/.gitignore', '1', '!keep.log', 'sub/keep.log']
+    ]
+      .map((f) => f.join('\0') + '\0')
+      .join('')
+    const rules = parseCheckIgnore(output)
+    expect(rules).toEqual([
+      { path: 'build/out.log', source: '.gitignore', line: 3, pattern: '*.log' },
+      { path: 'sub/keep.log', source: 'sub/.gitignore', line: 1, pattern: '!keep.log' }
+    ])
+    expect(rules.map(isNegation)).toEqual([false, true])
   })
 })

@@ -25,6 +25,7 @@ import type {
 } from './types'
 import type { CommitWarning } from './commitChecks'
 import type { ReleaseCommit } from './releaseNotes'
+import type { IgnoreRule } from './ignore'
 
 /**
  * IPC results carry errors as values: Electron would otherwise mangle the message of thrown errors.
@@ -310,6 +311,13 @@ export interface RepoOps {
   submoduleSync(paths: string[]): string
   /** Adds a pattern to the root .gitignore, and stops tracking the given files (COMMIT-11). */
   ignore(pattern: string, untrack: string[]): void
+  /**
+   * The rule matching a path, whether it ignores it or brings it back (a ! pattern); null when no
+   * rule matches. `tracked` files are in the repository, where ignore rules don't apply.
+   */
+  ignoreRule(path: string): { rule: IgnoreRule | null; tracked: boolean }
+  /** Ignored files and folders with the rule ignoring each; `total` counts them all, past the limit. */
+  ignoredFiles(): { rules: IgnoreRule[]; total: number }
   /** Stores files matching the pattern with Git LFS, through the root .gitattributes. */
   /**
    * Adds a working tree at `path` (REPO-09): checking out `branch`, creating `newBranch` from
@@ -607,6 +615,7 @@ export type MenuCommand =
   | 'reflog'
   | 'backups'
   | 'statistics'
+  | 'ignored'
   | 'whatsNew'
   | 'checkUpdates'
 

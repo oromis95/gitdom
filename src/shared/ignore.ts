@@ -38,3 +38,29 @@ export function ignorePattern(path: string, kind: IgnoreKind): string {
   // A leading slash anchors the pattern to the root, and keeps a leading # or ! literal
   return `/${escapePattern(path)}`
 }
+
+/** The rule deciding whether a path is ignored, as `git check-ignore -v` reports it. */
+export interface IgnoreRule {
+  path: string
+  /** File the rule is in: a .gitignore, .git/info/exclude or the global excludes file */
+  source: string
+  line: number
+  pattern: string
+}
+
+/**
+ * Output of `git check-ignore -v -n -z`: source, line, pattern and path for each path. Paths no
+ * rule matches come with an empty source and are left out; a pattern starting with ! matched,
+ * but brings the path back instead of ignoring it.
+ */
+export function parseCheckIgnore(output: string): IgnoreRule[] {
+  const fields = output.split('\0')
+  const rules: IgnoreRule[] = []
+  for (let i = 0; i + 3 < fields.length; i += 4) {
+    const [source, line, pattern, path] = fields.slice(i, i + 4)
+    if (source) rules.push({ path, source, line: Number(line), pattern })
+  }
+  return rules
+}
+
+export const isNegation = (rule: IgnoreRule): boolean => rule.pattern.startsWith('!')

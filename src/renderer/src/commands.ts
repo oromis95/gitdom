@@ -212,6 +212,9 @@ export function buildCommands(): Command[] {
     add('Repository', 'Statistics: authors, activity, languages and hot files', () =>
       app.openStatistics(true)
     )
+    add('Repository', 'Ignored files: why a file is ignored, and by which rule', () =>
+      actions.showIgnoredFiles(repo, '')
+    )
     add('Repository', 'Release notes: the commits since the last tag, grouped by type', () =>
       actions.showReleaseNotes(repo, 'HEAD')
     )

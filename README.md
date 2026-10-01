@@ -49,7 +49,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Commit message template (`commit.template`) and quick reuse of a recent message
 - Edit the message of any commit on the current branch from its details (reword)
 - Sign commits and tags with GPG, SSH or X.509 keys, and see whether each signature is verified
-- Add a file, its extension or its folder to `.gitignore` from the file's menu
+- Add a file, its extension or its folder to `.gitignore` from the file's menu, and see which rule ignores a file, and from which file and line
 - Stash everything, only the staged changes, or a single file; optionally stash automatically on checkout
 - Branches, checkout, tags and stashes from the sidebar, shown as folders (`feature/…`) or as a flat list; check out a tag to look at that version
 - Release notes: the commits between two tags (or since the last one), grouped by type into Markdown ready to copy

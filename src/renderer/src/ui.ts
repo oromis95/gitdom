@@ -70,6 +70,12 @@ export interface RebaseSession {
   merges: number
 }
 
+/** The ignored files dialog, and the path it checks first. */
+export interface IgnoredSession {
+  repo: string
+  path: string
+}
+
 /** The range shown in the release notes dialog. */
 export interface ReleaseNotesSession {
   repo: string
@@ -96,6 +102,7 @@ interface UiState {
   rebase: RebaseSession | null
   split: SplitSession | null
   releaseNotes: ReleaseNotesSession | null
+  ignored: IgnoredSession | null
   /** Command palette open */
   palette: boolean
   /** Clone or new repository dialog open */
@@ -113,6 +120,7 @@ export const useUi = create<UiState>((set, get) => ({
   rebase: null,
   split: null,
   releaseNotes: null,
+  ignored: null,
   palette: false,
   repoDialog: null,
   preferences: false,

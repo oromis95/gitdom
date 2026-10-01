@@ -129,6 +129,40 @@ describe('staging and commit', () => {
     ).toHaveLength(1)
   })
 
+  it('tells which rule ignores a file, and lists the ignored files', async () => {
+    write('.gitignore', '# build output\n*.log\n!keep.log\nbuild/\n')
+    write('tracked.log', 'kept in the repository\n')
+    git(repo, 'add', '-f', '.gitignore', 'tracked.log')
+    git(repo, 'commit', '-q', '-m', 'init')
+    mkdirSync(join(repo, 'build'))
+    write('build/out.js', 'x\n')
+    write('debug.log', 'x\n')
+    write('keep.log', 'x\n')
+    mkdirSync(join(repo, '.git', 'info'), { recursive: true })
+    write('.git/info/exclude', 'notes.txt\n')
+    write('notes.txt', 'x\n')
+
+    expect(await runOp(repo, 'ignoreRule', ['debug.log'])).toEqual({
+      rule: { path: 'debug.log', source: '.gitignore', line: 2, pattern: '*.log' },
+      tracked: false
+    })
+    expect((await runOp(repo, 'ignoreRule', ['keep.log'])).rule?.pattern).toBe('!keep.log')
+    expect(await runOp(repo, 'ignoreRule', ['tracked.log'])).toMatchObject({
+      rule: { pattern: '*.log' },
+      tracked: true
+    })
+    expect(await runOp(repo, 'ignoreRule', ['src/app.ts'])).toEqual({ rule: null, tracked: false })
+    expect((await runOp(repo, 'ignoreRule', ['notes.txt'])).rule?.source).toBe('.git/info/exclude')
+
+    const { rules, total } = await runOp(repo, 'ignoredFiles', [])
+    expect(total).toBe(3)
+    expect(rules.map((r) => [r.path, r.pattern])).toEqual([
+      ['build/', 'build/'],
+      ['debug.log', '*.log'],
+      ['notes.txt', 'notes.txt']
+    ])
+  })
+
   it('commits, amends and reads the last message', async () => {
     await commitFile('a.txt', 'a\n', 'first')
     write('b.txt', 'b\n')

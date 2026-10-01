@@ -2177,3 +2177,102 @@ button:focus-visible,
   color: var(--text-dim);
   font-size: 12px;
 }
+.modal.ignored-files {
+  width: 720px;
+  max-width: calc(100vw - 40px);
+  max-height: 85vh;
+}
+.ignored-query {
+  padding: 7px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-code);
+  font-size: 13px;
+}
+.ignored-query:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.ignored-verdict {
+  padding: 8px 10px;
+  border-left: 3px solid var(--green);
+  border-radius: 3px;
+  background: var(--bg);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ignored-verdict.ignored {
+  border-left-color: var(--orange);
+}
+.ignored-verdict code {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--bg-hover);
+}
+.ignored-tracked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  color: var(--text-dim);
+}
+.ignored-tracked .btn {
+  flex: none;
+}
+.ignored-heading {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.ignored-list {
+  min-height: 60px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.ignored-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ignored-row:last-child {
+  border-bottom: none;
+}
+.ignored-row:hover {
+  background: var(--bg-hover);
+}
+.ignored-row svg {
+  flex: none;
+  color: var(--text-dim);
+}
+.ignored-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ignored-pattern {
+  color: var(--orange);
+}
+.ignored-source {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+}
+button.ignored-source {
+  cursor: pointer;
+}
+button.ignored-source:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
