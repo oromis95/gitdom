@@ -2,6 +2,12 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Fixed
+
+- Release notes list the commits in the order of the history, also when some were made in the same second
+
 ## 1.3.0 — 2026-10-01
 
 ### Added

@@ -1509,6 +1509,8 @@ const ops: OpImpl = {
     const output = await runGit(repo, [
       'log',
       '--no-merges',
+      // By the history, not the dates: commits made in the same second keep their order
+      '--topo-order',
       '--format=%H%x1f%an%x1f%s%x1f%b%x1e',
       from ? `${from}..${to}` : to,
       '--'
