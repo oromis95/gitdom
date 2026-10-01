@@ -1,6 +1,6 @@
 {
   "name": "gitdom",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "GitDom - desktop Git client",
   "main": "./out/main/index.js",
   "author": "dtropeano",

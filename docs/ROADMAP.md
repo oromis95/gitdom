@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.4.0 pubblicata il 2026-10-01 (Step 1–12 completati, Step 13 in corso). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.5.0 pubblicata il 2026-10-01 (Step 1–12 completati, Step 13 in corso). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -176,7 +176,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Step 13 — v1.4: Ordine, manutenzione e più repository
 
-> In corso: la panoramica dei branch e la salute del repository sono uscite con la v1.4.0.
+> In corso: la panoramica dei branch e la salute del repository sono uscite con la v1.4.0; i temi con layout diverso e la gestione degli hook con la v1.5.0.
 
 - ✅ **Panoramica dei branch**: ultimo commit, età, avanti/indietro rispetto a main, già uniti o no; eliminazione in blocco di quelli vecchi o uniti
 - ✅ **Salute del repository**: spazio occupato, gli oggetti più pesanti nella storia, e `gc`, `prune` e `fsck` con un clic
