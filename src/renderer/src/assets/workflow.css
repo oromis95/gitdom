@@ -744,6 +744,78 @@
   font-size: 13px;
 }
 
+/* --- Split commit -------------------------------------------------------------------- */
+.modal.split-editor {
+  width: 720px;
+  max-height: 80vh;
+}
+.split-files {
+  overflow-y: auto;
+  min-height: 60px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.split-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  cursor: pointer;
+}
+.split-file:last-child {
+  border-bottom: none;
+}
+.split-file:hover {
+  background: var(--bg-hover);
+}
+.split-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.split-where {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.split-file:has(input:checked) .split-where {
+  color: var(--accent);
+}
+.split-messages {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.split-messages label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.split-messages textarea {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  resize: vertical;
+  outline: none;
+}
+.split-messages textarea:focus {
+  border-color: var(--accent);
+}
+.split-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 /* --- Merge tool ----------------------------------------------------------------------- */
 .merge-toolbar {
   display: flex;

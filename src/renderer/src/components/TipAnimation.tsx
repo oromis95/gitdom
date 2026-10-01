@@ -166,6 +166,39 @@ function Fixup(): React.JSX.Element {
   )
 }
 
+function SplitCommit(): React.JSX.Element {
+  return (
+    <>
+      <Lane from={0} to={2} />
+      <div className="ta-lane ta-split-lane" style={{ top: top(2) + 11, height: ROW }} />
+      <Label i={0} name="main" />
+      <Row i={0} subject="later work" />
+      <Row i={1} subject="login, tests and docs" className="ta-split-old" />
+      <Row i={1} subject="Update docs" className="ta-split-new" />
+      <Row i={2} subject="Add login and tests" className="ta-split-new" />
+      <Row i={2} subject="init" className="ta-split-down" />
+      <Menu className="ta-menu-split" items={['Split commit…', 'Revert commit']} />
+      <div className="ta-split-dialog">
+        <div className="ta-split-title">Split commit</div>
+        {['login.ts', 'login.test.ts', 'README.md'].map((file, i) => (
+          <div key={file} className="ta-split-file" style={{ top: 30 + i * 18 }}>
+            <span className={`ta-check ${i < 2 ? `ta-check-${i}` : ''}`} />
+            {file}
+          </div>
+        ))}
+        <div className="ta-split-msg" style={{ top: 88 }}>
+          Add login and tests
+        </div>
+        <div className="ta-split-msg" style={{ top: 108 }}>
+          Update docs
+        </div>
+        <span className="ta-btn ta-split-go">Split commit</span>
+      </div>
+      <Cursor />
+    </>
+  )
+}
+
 function DragBranch(): React.JSX.Element {
   return (
     <>
@@ -355,6 +388,7 @@ const SCENES: Record<string, () => React.JSX.Element> = {
   recovery: Recovery,
   moveCommits: MoveCommits,
   fixup: Fixup,
+  splitCommit: SplitCommit,
   dragBranch: DragBranch,
   lineHistory: LineHistory,
   blameBack: BlameBack,

@@ -13,6 +13,9 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 - **Fixup**: forgot something in a commit? Stage it, right-click the commit and choose **Add staged changes to this commit (fixup)…**
   - The last commit is amended; an older one gets the changes and the commits after it are rewritten on top, keeping their messages
   - Unstaged changes are kept aside meanwhile, and **Undo** gives the changes back as staged
+- **Split a commit**: right-click a commit of the current branch and choose **Split commit…**, tick the files that go in the first commit and write the two messages
+  - The commits after it are recreated on top, merges included; files, staged and unstaged changes are left alone
+  - A backup is made first, and **Undo** puts the commit back as it was
 - **Tips**: the features that are easy to miss, one at a time, each with a small animation showing how it works and the steps to use it
   - One at startup, and now and then one right after doing something it builds on, such as blaming back in time after opening a blame
   - **Help → Tips** (or "Tips" in the command palette) lists them all; turn them off with the checkbox in the dialog or in **Preferences**

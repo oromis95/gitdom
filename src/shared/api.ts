@@ -213,6 +213,17 @@ export interface RepoOps {
    * an older one gets a fixup commit squashed into it by an interactive rebase.
    */
   fixup(hash: string): OpOutcome
+  /**
+   * Splits a commit of the current branch in two: the first gets the given files as the commit
+   * changed them, the second the rest. The commits after it are recreated on top, merges
+   * included; files, index and working tree are left as they are. Returns the two new commits.
+   */
+  splitCommit(
+    hash: string,
+    paths: string[],
+    firstMessage: string,
+    secondMessage: string
+  ): { first: string; second: string }
   revert(hash: string): OpOutcome
   /** A hard reset first saves uncommitted changes in a stash: returns its hash, or null. */
   reset(hash: string, mode: ResetMode): string | null

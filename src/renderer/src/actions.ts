@@ -737,6 +737,49 @@ export async function fixup(snapshot: RepoSnapshot, hash: string): Promise<void>
   await runOutcome(repo, 'Fixup', `Staged changes added to ${hash.slice(0, 7)}`, 'fixup', hash)
 }
 
+/** Opens the dialog that splits a commit of the current branch in two. */
+export async function splitCommit(snapshot: RepoSnapshot, hash: string): Promise<void> {
+  const repo = snapshot.path
+  const [detail, onBranch] = await Promise.all([
+    call(repo, 'commitDetail', hash),
+    call(repo, 'isAncestor', hash, 'HEAD')
+  ])
+  if (!detail.ok) return fail(detail)
+  if (onBranch.ok && !onBranch.value)
+    return notify('info', 'The commit is not on the current branch: check out its branch first')
+  if (detail.value.parents.length > 1) return notify('info', 'A merge commit cannot be split')
+  if (detail.value.files.length < 2)
+    return notify('info', 'The commit changes a single file: there is nothing to split')
+  const branch = snapshot.refs.find((r) => r.type === 'local' && r.name === snapshot.head.branch)
+  const upstream = branch?.upstream && snapshot.refs.find((r) => r.name === branch.upstream)
+  const pushed = upstream && (await call(repo, 'isAncestor', hash, upstream.fullName))
+  const { subject, body, files } = detail.value
+  useUi.setState({
+    split: {
+      repo,
+      hash: detail.value.hash,
+      message: body ? `${subject}\n\n${body}` : subject,
+      files,
+      isHead: detail.value.hash === snapshot.head.hash,
+      pushedTo: pushed && pushed.ok && pushed.value ? upstream.name : undefined
+    }
+  })
+}
+
+export async function runSplitCommit(
+  repo: string,
+  hash: string,
+  paths: string[],
+  first: string,
+  second: string
+): Promise<void> {
+  const result = await runBusy(repo, 'Split…', 'splitCommit', hash, paths, first, second)
+  if (!result.ok) return fail(result)
+  // The commit is gone: show the second of the two
+  useApp.getState().select(result.value.second, true)
+  notify('success', `Split ${hash.slice(0, 7)} in two commits`)
+}
+
 // --- Merge, rebase and history rewriting ----------------------------------------------------
 
 const MERGE_MODES: { value: MergeMode; label: string }[] = [
@@ -1196,6 +1239,11 @@ export function commitMenu(snapshot: RepoSnapshot, hash: string, subject: string
       label: 'Add staged changes to this commit (fixup)…',
       disabled: !snapshot.head.branch || !snapshot.status.staged.length,
       onClick: () => void fixup(snapshot, hash)
+    },
+    {
+      label: 'Split commit…',
+      disabled: !snapshot.head.branch,
+      onClick: () => void splitCommit(snapshot, hash)
     },
     { label: 'Revert commit', onClick: () => void revert(repo, hash) },
     {

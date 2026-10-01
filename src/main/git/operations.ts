@@ -856,6 +856,158 @@ const ops: OpImpl = {
     )
   },
 
+  async splitCommit(repo, hash, paths, firstMessage, secondMessage) {
+    assertHash(hash)
+    if (!firstMessage.trim() || !secondMessage.trim()) {
+      throw new Error('Both commits need a message')
+    }
+    await assertIdle(repo)
+    const branch = await currentBranch(repo)
+    const head = (await runGit(repo, ['rev-parse', '--verify', 'HEAD'])).trim()
+    const [commit, ...parents] = (await runGit(repo, ['rev-list', '--parents', '-n1', hash]))
+      .trim()
+      .split(' ')
+    if (parents.length > 1) throw new Error('A merge commit cannot be split')
+    if (commit !== head && !(await ops.isAncestor(repo, commit, head))) {
+      throw new Error('The commit is not on the current branch: check out its branch first')
+    }
+    const parent = parents[0] as string | undefined
+
+    // What the commit changed, file by file, with the mode and blob each has after it
+    const raw = await runGit(repo, [
+      'diff-tree',
+      '-r',
+      '-z',
+      '--raw',
+      '--no-renames',
+      '--no-commit-id',
+      ...(parent ? [parent, commit] : ['--root', commit])
+    ])
+    const fields = raw.split('\0')
+    const changes = new Map<string, string>()
+    for (let i = 0; i + 1 < fields.length; i += 2) {
+      const [, newMode, , newBlob] = fields[i].slice(1).split(' ')
+      changes.set(fields[i + 1], `${newMode} ${newBlob}`)
+    }
+    const chosen = new Set(paths)
+    const unknown = [...chosen].find((path) => !changes.has(path))
+    if (unknown !== undefined) throw new Error(`The commit didn't change ${unknown}`)
+    if (!chosen.size || chosen.size === changes.size) {
+      throw new Error('Pick some of the files for the first commit, not all of them')
+    }
+
+    // The first tree: the parent's, with the chosen files as the commit left them. Built in an
+    // index of its own, so the real one and the working tree are never touched
+    const index = resolve(
+      repo,
+      (await runGit(repo, ['rev-parse', '--git-path', 'gitdom-split-index'])).trim()
+    )
+    const env = { GIT_INDEX_FILE: index }
+    let firstTree: string
+    try {
+      await runGit(repo, ['read-tree', ...(parent ? [parent] : ['--empty'])], { env })
+      // Removals first: a file may give way to a folder of the same name
+      const entries = [...chosen]
+        .map((path) => `${changes.get(path)}\t${path}\0`)
+        .sort((a, b) => Number(!a.startsWith('000000 ')) - Number(!b.startsWith('000000 ')))
+      await runGit(repo, ['update-index', '-z', '--index-info'], { env, input: entries.join('') })
+      firstTree = (await runGit(repo, ['write-tree'], { env })).trim()
+    } finally {
+      await rm(index, { force: true })
+    }
+
+    // Recreated commits keep their author, message and tree; only their parents change
+    const sign = await signingProgramArgs(repo)
+    // Unlike commit, commit-tree signs only when asked
+    const gpgSign =
+      (await tryGit(repo, ['config', '--type=bool', '--get', 'commit.gpgsign']))?.trim() === 'true'
+    const format = '--format=%x01%H%x00%P%x00%T%x00%an%x00%ae%x00%ad%x00%B'
+    const parse = (
+      output: string
+    ): {
+      hash: string
+      parents: string[]
+      tree: string
+      env: Record<string, string>
+      message: string
+    }[] =>
+      output
+        .split('\x01')
+        .slice(1)
+        .map((record) => {
+          const [hash, parents, tree, name, email, date, ...message] = record.split('\0')
+          return {
+            hash,
+            parents: parents ? parents.split(' ') : [],
+            tree,
+            env: { GIT_AUTHOR_NAME: name, GIT_AUTHOR_EMAIL: email, GIT_AUTHOR_DATE: date },
+            message: message.join('\0').replace(/\n+$/, '') + '\n'
+          }
+        })
+    const log = ['log', '--no-show-signature', '--no-color', '--date=raw', format]
+    const [original] = parse(await runGit(repo, [...log, '-1', commit]))
+    const create = async (
+      tree: string,
+      parentList: string[],
+      author: Record<string, string>,
+      message: string
+    ): Promise<string> =>
+      (
+        await runGit(
+          repo,
+          [
+            ...sign,
+            'commit-tree',
+            ...(gpgSign ? ['-S'] : []),
+            ...parentList.flatMap((p) => ['-p', p]),
+            tree
+          ],
+          { env: author, input: message }
+        )
+      ).trim()
+    const first = await create(
+      firstTree,
+      parent ? [parent] : [],
+      original.env,
+      firstMessage.trim() + '\n'
+    )
+    const second = await create(original.tree, [first], original.env, secondMessage.trim() + '\n')
+
+    const rewritten = new Map([[commit, second]])
+    if (commit !== head) {
+      const after = parse(
+        await runGit(repo, [
+          ...log,
+          '--topo-order',
+          '--reverse',
+          '--ancestry-path',
+          `${commit}..${head}`
+        ])
+      )
+      for (const c of after) {
+        rewritten.set(
+          c.hash,
+          await create(
+            c.tree,
+            c.parents.map((p) => rewritten.get(p) ?? p),
+            c.env,
+            c.message
+          )
+        )
+      }
+    }
+    // Only if the branch is still where it was read
+    await runGit(repo, [
+      'update-ref',
+      '-m',
+      `split ${short(commit)}`,
+      `refs/heads/${branch}`,
+      rewritten.get(head)!,
+      head
+    ])
+    return { first, second }
+  },
+
   async continueOperation(repo) {
     const operation = await readOperation(repo)
     if (!operation) throw new Error('No merge, rebase, cherry-pick or revert in progress')
@@ -1591,6 +1743,7 @@ const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise
   ],
   reword: (repo) => currentBranchRef(repo),
   fixup: (repo) => currentBranchRef(repo),
+  splitCommit: (repo) => currentBranchRef(repo),
   push: async (repo, force) => (force ? pushTarget(repo) : []),
   // Restoring a backup moves the branch too: where it was is saved first
   restoreBackup: async (_repo, _id, ref) => [ref]
@@ -1625,6 +1778,8 @@ const UNDOABLE: {
   reword: (hash) => ({ label: `Reword ${short(hash)}`, move: 'soft' }),
   // Undo gives the added changes back as staged changes
   fixup: (hash) => ({ label: `Fixup ${short(hash)}`, move: 'soft' }),
+  // The files are the same before and after
+  splitCommit: (hash) => ({ label: `Split ${short(hash)}`, move: 'soft' }),
   checkout: (branch) => ({ label: `Checkout ${branch}` }),
   checkoutRemote: (_remote, localName) => ({ label: `Checkout ${localName}` }),
   checkoutCommit: (hash) => ({ label: `Checkout ${short(hash)}` }),

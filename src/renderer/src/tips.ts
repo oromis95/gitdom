@@ -73,6 +73,17 @@ export const TIPS: Tip[] = [
     after: ['commit']
   },
   {
+    id: 'splitCommit',
+    title: 'One commit doing two things?',
+    text: 'Split it in two, file by file, each with its own message: the history reads better and each change can be reverted on its own.',
+    steps: [
+      'Right-click the commit in the graph and choose Split commit…',
+      'Tick the files that go in the first commit, the others stay in the second',
+      'Write the two messages; your files and uncommitted changes stay as they are'
+    ],
+    after: ['reword']
+  },
+  {
     id: 'dragBranch',
     title: 'Drag a branch onto another',
     text: 'Merging, rebasing or fast-forwarding is a drag away, right in the graph.',

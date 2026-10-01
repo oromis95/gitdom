@@ -1,6 +1,7 @@
 // Transient UI state: toasts, modal dialogs and the context menu.
 import { create } from 'zustand'
 import type { RebaseCommit } from '../../shared/api'
+import type { FileChange } from '../../shared/types'
 
 export type ToastKind = 'info' | 'success' | 'warning' | 'error'
 
@@ -69,11 +70,24 @@ export interface RebaseSession {
   merges: number
 }
 
+/** The commit shown in the split dialog. */
+export interface SplitSession {
+  repo: string
+  hash: string
+  message: string
+  files: FileChange[]
+  /** The last commit of the branch: no commits after it to recreate */
+  isHead: boolean
+  /** Remote branch the commit is already on, to warn of the force push */
+  pushedTo?: string
+}
+
 interface UiState {
   toasts: Toast[]
   form: OpenForm | null
   menu: OpenMenu | null
   rebase: RebaseSession | null
+  split: SplitSession | null
   /** Command palette open */
   palette: boolean
   /** Clone or new repository dialog open */
@@ -89,6 +103,7 @@ export const useUi = create<UiState>((set, get) => ({
   form: null,
   menu: null,
   rebase: null,
+  split: null,
   palette: false,
   repoDialog: null,
   preferences: false,

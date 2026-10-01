@@ -1252,6 +1252,85 @@ describe('complete commits', () => {
     expect((await runOp(repo, 'status', [])).staged).toEqual([{ path: 'c.txt', status: 'A' }])
   })
 
+  it('splits an older commit, keeping the merges after it and the uncommitted changes', async () => {
+    write('b.txt', 'b\n')
+    write('c.txt', 'c\n')
+    write('a.txt', '3\n')
+    await runOp(repo, 'stage', [['a.txt', 'b.txt', 'c.txt']])
+    await runOp(repo, 'commit', ['mixed\n\nbody', false, { author: 'Ann <ann@x.it>' }])
+    const mixed = git(repo, 'rev-parse', 'HEAD')
+    git(repo, 'checkout', '-q', '-b', 'side')
+    await commitFile('s.txt', 's\n', 'side')
+    git(repo, 'checkout', '-q', 'main')
+    await commitFile('m.txt', 'm\n', 'main work')
+    git(repo, 'merge', '-q', '--no-edit', 'side')
+    const tip = git(repo, 'rev-parse', 'HEAD')
+    const tree = git(repo, 'rev-parse', 'HEAD^{tree}')
+    write('s.txt', 'dirty\n')
+    write('m.txt', 'staged\n')
+    await runOp(repo, 'stage', [['m.txt']])
+
+    await runOp(repo, 'splitCommit', [mixed, ['b.txt', 'c.txt'], 'add b and c', 'change a'])
+    expect(git(repo, 'rev-parse', 'HEAD^{tree}')).toBe(tree)
+    expect(git(repo, 'log', '--first-parent', '--format=%s|%an', 'HEAD~1').split('\n')).toEqual([
+      'main work|T',
+      'change a|Ann',
+      'add b and c|Ann',
+      'two|T',
+      'one|T'
+    ])
+    expect(git(repo, 'rev-list', '--parents', '-n1', 'HEAD').split(' ')).toHaveLength(3)
+    expect(git(repo, 'show', '--name-only', '--format=', 'HEAD~2')).toBe('a.txt')
+    expect(git(repo, 'show', '--name-only', '--format=', 'HEAD~3').split('\n')).toEqual([
+      'b.txt',
+      'c.txt'
+    ])
+    expect(readFileSync(join(repo, 's.txt'), 'utf8')).toBe('dirty\n')
+    expect((await runOp(repo, 'status', [])).staged).toEqual([{ path: 'm.txt', status: 'M' }])
+
+    await runOp(repo, 'undo', [])
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(tip)
+    expect((await runOp(repo, 'status', [])).staged).toEqual([{ path: 'm.txt', status: 'M' }])
+  })
+
+  it('splits the last commit and the root one, and refuses what cannot be split', async () => {
+    git(repo, 'rm', '-q', 'a.txt')
+    write('b.txt', 'b\n')
+    await runOp(repo, 'stage', [['b.txt']])
+    await runOp(repo, 'commit', ['swap', false])
+    const head = git(repo, 'rev-parse', 'HEAD')
+    await expect(runOp(repo, 'splitCommit', [head, ['a.txt', 'b.txt'], 'x', 'y'])).rejects.toThrow(
+      'not all'
+    )
+    await expect(runOp(repo, 'splitCommit', [head, [], 'x', 'y'])).rejects.toThrow('not all')
+    await expect(runOp(repo, 'splitCommit', [head, ['c.txt'], 'x', 'y'])).rejects.toThrow(
+      "didn't change c.txt"
+    )
+    await expect(runOp(repo, 'splitCommit', [head, ['a.txt'], 'x', ' '])).rejects.toThrow('message')
+    await runOp(repo, 'splitCommit', [head, ['a.txt'], 'remove a', 'add b'])
+    expect(subjects()).toEqual(['add b', 'remove a', 'two', 'one'])
+    expect(git(repo, 'ls-tree', '--name-only', 'HEAD~1')).toBe('')
+
+    git(repo, 'checkout', '-q', '--orphan', 'other')
+    git(repo, 'rm', '-q', '-r', '--cached', '.')
+    git(repo, 'clean', '-q', '-f')
+    write('d.txt', 'd\n')
+    write('e.txt', 'e\n')
+    await runOp(repo, 'stage', [['d.txt', 'e.txt']])
+    await runOp(repo, 'commit', ['root pair', false])
+    const pair = git(repo, 'rev-parse', 'HEAD')
+    await commitFile('f.txt', 'f\n', 'other')
+    await runOp(repo, 'splitCommit', [pair, ['e.txt'], 'e first', 'the rest'])
+    expect(subjects()).toEqual(['other', 'the rest', 'e first'])
+    expect(git(repo, 'ls-tree', '--name-only', 'HEAD~2')).toBe('e.txt')
+
+    git(repo, 'checkout', '-q', 'main')
+    git(repo, 'merge', '-q', '--no-edit', '--allow-unrelated-histories', 'other')
+    await expect(
+      runOp(repo, 'splitCommit', [git(repo, 'rev-parse', 'HEAD'), ['d.txt'], 'x', 'y'])
+    ).rejects.toThrow('merge commit')
+  })
+
   it('adds patterns to .gitignore and stops tracking files', async () => {
     write('.gitignore', 'node_modules/\r\n*.tmp')
     write('app.log', 'x\n')
