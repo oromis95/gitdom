@@ -24,6 +24,7 @@ import type {
   WorkingTreeStatus
 } from './types'
 import type { CommitWarning } from './commitChecks'
+import type { ReleaseCommit } from './releaseNotes'
 
 /**
  * IPC results carry errors as values: Electron would otherwise mangle the message of thrown errors.
@@ -264,6 +265,10 @@ export interface RepoOps {
   deleteBranch(name: string, force: boolean): void
   /** Moves a branch forward to `to`, refusing when it has commits `to` doesn't contain. */
   fastForwardBranch(branch: string, to: string): void
+  /** Commits in `to` and not in `from` (all of them without `from`), merges left out, newest first. */
+  releaseCommits(from: string | null, to: string): ReleaseCommit[]
+  /** The nearest tag reachable from `rev`, null when there is none. */
+  previousTag(rev: string): string | null
   /** Whether `ancestor` is reachable from `descendant` (a commit is its own ancestor). */
   isAncestor(ancestor: string, descendant: string): boolean
   /**

@@ -1264,6 +1264,11 @@ export function remoteBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
   ]
 }
 
+/** Opens the release notes of the commits up to a tag, or HEAD. */
+export function showReleaseNotes(repo: string, to: string): void {
+  useUi.setState({ releaseNotes: { repo, to } })
+}
+
 export function tagMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
   const repo = snapshot.path
   return [
@@ -1273,6 +1278,7 @@ export function tagMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
       onClick: () => void checkoutCommit(repo, ref.hash)
     },
     compareWithHead(snapshot, ref.name),
+    { label: 'Release notes…', onClick: () => showReleaseNotes(repo, ref.name) },
     'separator',
     ...snapshot.remotes.map((r): MenuItem => ({
       label: `Push to ${r.name}`,

@@ -1440,6 +1440,31 @@ const ops: OpImpl = {
     await runGit(repo, ['update-ref', '-m', reason, `refs/heads/${branch}`, target, old])
   },
 
+  async releaseCommits(repo, from, to) {
+    if (from) assertArg(from, 'commit')
+    assertArg(to, 'commit')
+    const output = await runGit(repo, [
+      'log',
+      '--no-merges',
+      '--format=%H%x1f%an%x1f%s%x1f%b%x1e',
+      from ? `${from}..${to}` : to,
+      '--'
+    ])
+    return output
+      .split('\x1e')
+      .map((record) => record.replace(/^\n/, ''))
+      .filter(Boolean)
+      .map((record) => {
+        const [hash, author, subject, body] = record.split('\x1f')
+        return { hash, author, subject, body: body.trim() }
+      })
+  },
+
+  async previousTag(repo, rev) {
+    assertArg(rev, 'commit')
+    return (await tryGit(repo, ['describe', '--tags', '--abbrev=0', rev]))?.trim() || null
+  },
+
   async isAncestor(repo, ancestor, descendant) {
     assertArg(ancestor, 'commit')
     assertArg(descendant, 'commit')

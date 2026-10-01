@@ -2141,3 +2141,39 @@ button:focus-visible,
 .config-row:hover .config-value:not(:focus) {
   border-color: var(--border);
 }
+.modal.release-notes {
+  width: 720px;
+  max-width: calc(100vw - 40px);
+}
+.release-notes-range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.release-notes-range label:not(.modal-check) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.release-notes-text {
+  width: 100%;
+  padding: 8px 10px;
+  resize: vertical;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-code);
+  font-size: 12px;
+  user-select: text;
+}
+.release-notes-text:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.release-notes-count {
+  min-height: 16px;
+  color: var(--text-dim);
+  font-size: 12px;
+}

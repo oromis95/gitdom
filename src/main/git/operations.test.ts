@@ -434,6 +434,29 @@ describe('remotes', () => {
 describe('stash and tags', () => {
   beforeEach(() => commitFile('a.txt', 'a\n', 'init'))
 
+  it('lists the commits between two tags for the release notes', async () => {
+    git(repo, 'tag', 'v1.0.0')
+    await commitFile('b.txt', 'b\n', 'feat: b')
+    git(repo, 'checkout', '-q', '-b', 'side')
+    await commitFile('c.txt', 'c\n', 'fix: c')
+    git(repo, 'checkout', '-q', 'main')
+    git(repo, 'merge', '-q', '--no-ff', '-m', 'Merge side', 'side')
+    git(repo, 'commit', '-q', '--allow-empty', '-m', 'docs: d', '-m', 'Why\n\nBREAKING CHANGE: x')
+    git(repo, 'tag', '-a', 'v1.1.0', '-m', 'v1.1.0')
+    await commitFile('e.txt', 'e\n', 'chore: e')
+
+    const commits = await runOp(repo, 'releaseCommits', ['v1.0.0', 'v1.1.0'])
+    expect(commits.map((c) => c.subject)).toEqual(['docs: d', 'fix: c', 'feat: b'])
+    expect(commits[0]).toMatchObject({ author: 'T', body: 'Why\n\nBREAKING CHANGE: x' })
+    expect(commits[0].hash).toMatch(/^[0-9a-f]{40}$/)
+    expect((await runOp(repo, 'releaseCommits', [null, 'v1.0.0'])).map((c) => c.subject)).toEqual([
+      'init'
+    ])
+    expect(await runOp(repo, 'previousTag', ['HEAD'])).toBe('v1.1.0')
+    expect(await runOp(repo, 'previousTag', ['v1.1.0^'])).toBe('v1.0.0')
+    expect(await runOp(repo, 'previousTag', ['v1.0.0^'])).toBeNull()
+  })
+
   it('pushes, applies, pops and drops stashes', async () => {
     write('a.txt', 'wip\n')
     write('u.txt', 'untracked\n')

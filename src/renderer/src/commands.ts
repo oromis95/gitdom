@@ -212,6 +212,9 @@ export function buildCommands(): Command[] {
     add('Repository', 'Statistics: authors, activity, languages and hot files', () =>
       app.openStatistics(true)
     )
+    add('Repository', 'Release notes: the commits since the last tag, grouped by type', () =>
+      actions.showReleaseNotes(repo, 'HEAD')
+    )
     add('Repository', 'Refresh', () => void app.refresh(), shortcutLabel('refresh'))
     add('Repository', 'Open repository in editor', () => void actions.openInEditor(repo, null))
     add('Repository', 'Show repository in Explorer', () => actions.showInFolder(repo, null))

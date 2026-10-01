@@ -32,6 +32,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - `console.log`, `debugger` and TODOs left in the changes
   - The message: a summary with a period at the end or too vague, long description lines, and a missing `feat:`/`fix:` type when the recent commits use Conventional Commits
   - Click a file to see its staged changes; dismiss a warning, or turn off its kind from the warning itself or in **Preferences → Git**
+- **Release notes**: right-click a tag and choose **Release notes…**, or "Release notes" in the command palette for what changed since the last tag
+  - The commits between two tags, merges and fixups left out, grouped as breaking changes, features, fixes, performance, refactoring, documentation and so on
+  - Grouped by the Conventional Commits prefix (`feat:`, `fix(scope):`, `!` and `BREAKING CHANGE`) when there is one, by the first word of the summary otherwise ("Add…", "Fix…")
+  - The range starts from the previous tag and can be changed; add the hashes and the authors if you like, then copy the Markdown
 - **Tips**: the features that are easy to miss, one at a time, each with a small animation showing how it works and the steps to use it
   - One at startup, and now and then one right after doing something it builds on, such as blaming back in time after opening a blame
   - **Help → Tips** (or "Tips" in the command palette) lists them all; turn them off with the checkbox in the dialog or in **Preferences**

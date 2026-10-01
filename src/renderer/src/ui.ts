@@ -70,6 +70,13 @@ export interface RebaseSession {
   merges: number
 }
 
+/** The range shown in the release notes dialog. */
+export interface ReleaseNotesSession {
+  repo: string
+  /** Tag the notes end at, or HEAD */
+  to: string
+}
+
 /** The commit shown in the split dialog. */
 export interface SplitSession {
   repo: string
@@ -88,6 +95,7 @@ interface UiState {
   menu: OpenMenu | null
   rebase: RebaseSession | null
   split: SplitSession | null
+  releaseNotes: ReleaseNotesSession | null
   /** Command palette open */
   palette: boolean
   /** Clone or new repository dialog open */
@@ -104,6 +112,7 @@ export const useUi = create<UiState>((set, get) => ({
   menu: null,
   rebase: null,
   split: null,
+  releaseNotes: null,
   palette: false,
   repoDialog: null,
   preferences: false,
