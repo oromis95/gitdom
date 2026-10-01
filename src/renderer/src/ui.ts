@@ -81,6 +81,10 @@ export interface BranchesSession {
   repo: string
 }
 
+export interface HealthSession {
+  repo: string
+}
+
 /** The clean up dialog, and the files it starts with. */
 export interface CleanSession {
   repo: string
@@ -116,6 +120,7 @@ interface UiState {
   ignored: IgnoredSession | null
   clean: CleanSession | null
   branches: BranchesSession | null
+  health: HealthSession | null
   /** Command palette open */
   palette: boolean
   /** Clone or new repository dialog open */
@@ -136,6 +141,7 @@ export const useUi = create<UiState>((set, get) => ({
   ignored: null,
   clean: null,
   branches: null,
+  health: null,
   palette: false,
   repoDialog: null,
   preferences: false,

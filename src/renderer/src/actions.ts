@@ -1275,6 +1275,11 @@ export function showBranchOverview(repo: string): void {
   useUi.setState({ branches: { repo } })
 }
 
+/** Opens the repository health: its size, the heaviest files, and maintenance. */
+export function showRepoHealth(repo: string): void {
+  useUi.setState({ health: { repo } })
+}
+
 /** Opens the clean up of untracked or ignored files. */
 export function showCleanUp(repo: string, scope: CleanScope = 'untracked'): void {
   useUi.setState({ clean: { repo, scope } })

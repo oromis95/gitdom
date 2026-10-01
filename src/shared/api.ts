@@ -141,6 +141,33 @@ export interface BranchOverview {
   branches: BranchInfo[]
 }
 
+/** What the repository takes on disk, in bytes */
+export interface RepoHealth {
+  /** Loose objects: one file each, until git packs them */
+  loose: { count: number; size: number }
+  packs: { count: number; size: number }
+  /** Loose objects already in a pack: safe to remove */
+  prunable: number
+  /** Files in the objects folder that git doesn't recognise, such as half-written packs */
+  garbage: { count: number; size: number }
+  /** Git LFS content kept in the repository; null without it */
+  lfs: { size: number; files: number; partial: boolean } | null
+  commits: number
+}
+
+/** A file version in the history, by its size */
+export interface HeavyObject {
+  hash: string
+  path: string
+  size: number
+  /** Compressed, as stored */
+  diskSize: number
+  /** In the last commit as it is, an older version of a file still there, or a deleted file */
+  state: 'current' | 'older' | 'deleted'
+}
+
+export type Maintenance = 'gc' | 'prune' | 'fsck'
+
 export type ChangeScope = 'git' | 'worktree'
 
 /**
@@ -328,6 +355,15 @@ export interface RepoOps {
    * unrelated histories).
    */
   mergePreview(ours: string, theirs: string): { conflicts: string[] } | null
+  /** What the repository takes on disk, and how much of it could go. */
+  repoHealth(): RepoHealth
+  /** The biggest file versions in the history of every branch, tag and stash. */
+  heaviestObjects(): HeavyObject[]
+  /**
+   * Runs `git gc`, `git prune` (with `git worktree prune`) or `git fsck`; resolves with the
+   * problems fsck found, empty otherwise.
+   */
+  maintain(task: Maintenance): string[]
   /** The local branches with their last commit, compared with `base` (main or master if null). */
   branchOverview(base: string | null): BranchOverview
   /**
@@ -682,6 +718,7 @@ export type MenuCommand =
   | 'ignored'
   | 'clean'
   | 'branches'
+  | 'health'
   | 'whatsNew'
   | 'checkUpdates'
 

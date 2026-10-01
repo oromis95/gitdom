@@ -10,6 +10,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - Branches merged into main are marked, even when they landed as a squash or a rebase; those not touched for 90 days and those whose upstream is gone have their own filters
   - Compare with any other branch, sort by name, age, ahead or behind, and click a row to show the branch in the graph
   - **Choose merged**, then delete the ticked branches at once: the current branch, main and those checked out in a worktree are kept, a backup is made first and **Undo** brings them back
+- **Repository health** (**View → Repository Health**): how much the history takes on disk, packed and loose, LFS included, and the number of commits
+  - The heaviest files in the history, with whether each is in the last commit, an older version, or a deleted file that still takes space
+  - **Compress** (`git gc`) is suggested when there are many loose objects or packs, and says what it packed and freed; **Prune** removes unreachable objects older than two weeks
+  - **Check** (`git fsck`) lists missing or damaged objects, if any
 
 ### Fixed
 

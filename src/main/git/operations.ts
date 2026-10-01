@@ -1,9 +1,11 @@
 // Repository operations exposed to the renderer through the `repo:op` IPC channel.
 import { lstat, mkdir, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { isAbsolute, relative, resolve } from 'path'
+import { StringDecoder } from 'string_decoder'
 import type {
   BranchInfo,
   CommitsToMove,
+  HeavyObject,
   MergeMode,
   OpArgs,
   OpName,
@@ -67,6 +69,10 @@ const MOST_CLEAN = 2000
 const CLEAN_COUNT_BUDGET = 5000
 /** Unmerged branches checked for a squash merge: one merge-tree each */
 const MOST_SQUASH_CHECKS = 200
+/** File versions listed by size in the repository health */
+const MOST_HEAVY = 30
+/** Smaller files are not worth listing among the heaviest */
+const LEAST_HEAVY = 1024
 /** Moves a file to the Recycle Bin: set to Electron's at startup, unset in the tests */
 let trash: ((path: string) => Promise<void>) | null = null
 
@@ -242,6 +248,23 @@ async function entrySize(file: string): Promise<{ size: number; files: number; p
     }
   }
   return { size, files, partial: false }
+}
+
+/** Runs git and hands over its output a line at a time, for output too big to hold. */
+async function eachLine(
+  repo: string,
+  args: string[],
+  onLine: (line: string) => void
+): Promise<void> {
+  const decoder = new StringDecoder('utf8')
+  let rest = ''
+  const take = (text: string): void => {
+    const lines = (rest + text).split('\n')
+    rest = lines.pop() as string
+    for (const line of lines) onLine(line)
+  }
+  await runGit(repo, args, { onStdout: (chunk) => take(decoder.write(chunk)) })
+  take(decoder.end() + '\n')
 }
 
 /**
@@ -1667,6 +1690,104 @@ const ops: OpImpl = {
     return { base, branches }
   },
 
+  async repoHealth(repo) {
+    const counts = new Map(
+      (await runGit(repo, ['count-objects', '-v']))
+        .split('\n')
+        .map((line) => line.split(': '))
+        .map(([key, value]) => [key, Number(value)] as const)
+    )
+    // In KiB
+    const figure = (key: string): number => counts.get(key) ?? 0
+    const lfsDir = resolve(
+      repo,
+      (await runGit(repo, ['rev-parse', '--git-path', 'lfs/objects'])).trim()
+    )
+    const lfs = await entrySize(lfsDir)
+    const commits = await tryGit(repo, ['rev-list', '--count', '--all'])
+    return {
+      loose: { count: figure('count'), size: figure('size') * 1024 },
+      packs: { count: figure('packs'), size: figure('size-pack') * 1024 },
+      prunable: figure('prune-packable'),
+      garbage: { count: figure('garbage'), size: figure('size-garbage') * 1024 },
+      lfs: lfs.files ? lfs : null,
+      commits: Number(commits ?? 0)
+    }
+  },
+
+  async heaviestObjects(repo) {
+    // Every object with its size, without walking the history: the biggest blobs are the candidates
+    const candidates: { hash: string; size: number; diskSize: number }[] = []
+    await eachLine(
+      repo,
+      [
+        'cat-file',
+        '--batch-all-objects',
+        '--unordered',
+        '--batch-check=%(objecttype) %(objectname) %(objectsize) %(objectsize:disk)'
+      ],
+      (line) => {
+        const [type, hash, size, disk] = line.split(' ')
+        if (type !== 'blob' || Number(size) < LEAST_HEAVY) return
+        candidates.push({ hash, size: Number(size), diskSize: Number(disk) })
+        // Kept short as it goes: millions of objects would not fit
+        if (candidates.length > MOST_HEAVY * 40) {
+          candidates.sort((a, b) => b.size - a.size).splice(MOST_HEAVY * 10)
+        }
+      }
+    )
+    candidates.sort((a, b) => b.size - a.size).splice(MOST_HEAVY * 10)
+    if (!candidates.length) return []
+    // Their paths, from the history of every ref: those not found are unreachable, and gc drops them
+    const paths = new Map(candidates.map((c) => [c.hash, '']))
+    const walk = (filter: string[]): Promise<void> =>
+      eachLine(repo, ['rev-list', '--objects', '--all', ...filter], (line) => {
+        const space = line.indexOf(' ')
+        if (space < 0) return
+        const hash = line.slice(0, space)
+        if (paths.get(hash) === '') paths.set(hash, line.slice(space + 1))
+      })
+    // Only blobs, with git 2.32 or later
+    await walk(['--filter=object:type=blob']).catch(() => walk([]))
+    const head = new Map<string, string>()
+    const tree = (await tryGit(repo, ['ls-tree', '-r', '-z', 'HEAD'])) ?? ''
+    for (const entry of tree.split('\0')) {
+      const tab = entry.indexOf('\t')
+      if (tab > 0) head.set(entry.slice(tab + 1), entry.slice(0, tab).split(' ')[2])
+    }
+    return candidates
+      .filter((c) => paths.get(c.hash))
+      .slice(0, MOST_HEAVY)
+      .map((c): HeavyObject => {
+        const path = paths.get(c.hash) as string
+        const now = head.get(path)
+        return { ...c, path, state: now === c.hash ? 'current' : now ? 'older' : 'deleted' }
+      })
+  },
+
+  async maintain(repo, task) {
+    if (task === 'gc') {
+      await runGit(repo, ['gc', '--quiet'])
+      return []
+    }
+    if (task === 'prune') {
+      // Unreachable objects older than two weeks, as gc does: newer ones may still be wanted back
+      await runGit(repo, ['prune'])
+      await runGit(repo, ['worktree', 'prune'])
+      return []
+    }
+    if (task !== 'fsck') throw new Error(`Unknown maintenance: ${task}`)
+    // Problems make fsck exit with a non-zero code: they are the result, not a failure
+    const output = await runGit(repo, ['fsck', '--no-dangling', '--no-progress'], {
+      withStderr: true,
+      okExitCodes: Array.from({ length: 255 }, (_, i) => i + 1)
+    })
+    return output
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('notice:') && !line.startsWith('Checking'))
+  },
+
   async deleteBranches(repo, names) {
     if (!Array.isArray(names) || !names.length) throw new Error('No branches to delete')
     for (const name of names) await assertBranchName(repo, name)
@@ -2090,7 +2211,9 @@ const READ_ONLY = new Set<OpName>([
   'ignoreRule',
   'ignoredFiles',
   'cleanPreview',
-  'branchOverview'
+  'branchOverview',
+  'repoHealth',
+  'heaviestObjects'
 ])
 
 /**
@@ -2139,7 +2262,13 @@ const LABELS: { [K in OpName]?: (...args: OpArgs<K>) => string } = {
   worktreeAdd: ({ path }) => `Add worktree ${path}`,
   worktreeRemove: (path) => `Remove worktree ${path}`,
   worktreeLock: (path, locked) => `${locked ? 'Lock' : 'Unlock'} worktree ${path}`,
-  restoreBackup: (_id, ref) => `Restore ${shortRef(ref)} from a backup`
+  restoreBackup: (_id, ref) => `Restore ${shortRef(ref)} from a backup`,
+  maintain: (task) =>
+    task === 'gc'
+      ? 'Compress the repository (gc)'
+      : task === 'prune'
+        ? 'Prune unreachable objects'
+        : 'Check the repository (fsck)'
 }
 
 /** The action as shown in the activity log: "stashPush" becomes "Stash push". */

@@ -214,6 +214,9 @@ export function buildCommands(): Command[] {
       'Branches overview: age, ahead and behind main, merged; delete old ones',
       () => actions.showBranchOverview(repo)
     )
+    add('Repository', 'Repository health: size, heaviest files, compress (gc) and check', () =>
+      actions.showRepoHealth(repo)
+    )
     add('Repository', 'Statistics: authors, activity, languages and hot files', () =>
       app.openStatistics(true)
     )

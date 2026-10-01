@@ -2516,3 +2516,116 @@ button.ignored-source:hover {
   background: none;
   border: 1px solid color-mix(in srgb, var(--green) 50%, transparent);
 }
+.modal.repo-health {
+  width: 820px;
+  max-width: calc(100vw - 40px);
+  max-height: 88vh;
+}
+.repo-health-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+.repo-health-note {
+  padding: 6px 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.repo-health-advice {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.repo-health-advice.warn {
+  color: var(--orange);
+}
+.repo-health-problems {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--red) 50%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--text);
+  font-size: 12.5px;
+}
+.repo-health-problems pre {
+  max-height: 120px;
+  margin: 6px 0 0;
+  overflow: auto;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+}
+.repo-health-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.repo-health-section h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.repo-health-section span {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.repo-health-list {
+  min-height: 60px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.repo-health-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.repo-health-row:last-child {
+  border-bottom: none;
+}
+.repo-health-row:hover {
+  background: var(--bg-hover);
+}
+.repo-health-row svg {
+  flex: none;
+  color: var(--text-dim);
+}
+.repo-health-size,
+.repo-health-disk {
+  flex: none;
+  width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.repo-health-disk {
+  color: var(--text-dim);
+}
+.repo-health-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-health-state {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.repo-health-state.current {
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--green);
+}
+.repo-health-state.deleted {
+  background: color-mix(in srgb, var(--orange) 18%, transparent);
+  color: var(--orange);
+}
+.repo-health-gap {
+  flex: 1;
+}

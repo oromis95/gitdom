@@ -1714,6 +1714,48 @@ describe('hover previews', () => {
   })
 })
 
+describe('repository health', () => {
+  it('measures the repository, finds the heaviest files in the history, and maintains it', async () => {
+    await commitFile('big.bin', 'b'.repeat(200000), 'big')
+    await commitFile('kept.txt', 'k'.repeat(50000), 'kept')
+    await commitFile('kept.txt', 'k'.repeat(60000), 'kept, bigger')
+    git(repo, 'rm', '-q', 'big.bin')
+    git(repo, 'commit', '-qm', 'drop big')
+    // Only in a dropped stash: unreachable, so not listed
+    write('kept.txt', 'u'.repeat(300000))
+    git(repo, 'stash', 'push', '-q')
+    git(repo, 'stash', 'drop', '-q')
+
+    let health = await runOp(repo, 'repoHealth', [])
+    expect(health).toMatchObject({ packs: { count: 0, size: 0 }, lfs: null, commits: 4 })
+    expect(health.loose.count).toBeGreaterThan(8)
+    expect(health.loose.size).toBeGreaterThan(0)
+
+    const heavy = await runOp(repo, 'heaviestObjects', [])
+    expect(heavy.map((o) => [o.path, o.size, o.state]).slice(0, 3)).toEqual([
+      ['big.bin', 200000, 'deleted'],
+      ['kept.txt', 60000, 'current'],
+      ['kept.txt', 50000, 'older']
+    ])
+    expect(heavy[0].hash).toMatch(/^[0-9a-f]{40}$/)
+    expect(heavy[0].diskSize).toBeGreaterThan(0)
+
+    await runOp(repo, 'maintain', ['gc'])
+    health = await runOp(repo, 'repoHealth', [])
+    // A second, cruft pack holds the unreachable objects since git 2.40
+    expect(health.packs.count).toBeGreaterThanOrEqual(1)
+    expect(health.loose.count).toBeLessThan(5)
+    expect(await runOp(repo, 'maintain', ['prune'])).toEqual([])
+    expect(await runOp(repo, 'maintain', ['fsck'])).toEqual([])
+
+    // A missing object is reported, not thrown
+    await commitFile('lost.txt', 'lost', 'lost')
+    const lost = git(repo, 'rev-parse', 'HEAD:lost.txt')
+    rmSync(join(repo, '.git', 'objects', lost.slice(0, 2), lost.slice(2)))
+    expect((await runOp(repo, 'maintain', ['fsck'])).join(' ')).toContain(lost)
+  })
+})
+
 describe('worktrees', () => {
   const norm = (p: string): string => p.replace(/[\\/]+/g, '/').toLowerCase()
 

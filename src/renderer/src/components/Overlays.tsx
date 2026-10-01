@@ -11,6 +11,7 @@ const ReleaseNotes = lazy(() => import('./ReleaseNotes'))
 const IgnoredFiles = lazy(() => import('./IgnoredFiles'))
 const CleanUp = lazy(() => import('./CleanUp'))
 const BranchOverview = lazy(() => import('./BranchOverview'))
+const RepoHealth = lazy(() => import('./RepoHealth'))
 const Preferences = lazy(() => import('./Preferences'))
 
 function Toasts(): React.JSX.Element {
@@ -281,6 +282,7 @@ export default function Overlays(): React.JSX.Element {
         <IgnoredFiles />
         <CleanUp />
         <BranchOverview />
+        <RepoHealth />
         <Preferences />
       </Suspense>
       <CommandPalette />

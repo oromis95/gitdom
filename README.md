@@ -85,6 +85,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Search the code (**Code** beside the graph search): the commits where some text appeared or went away, or whose changed lines match a regular expression
 - Browse the files of any commit (**All files** in the commit panel): read one as it was, with highlighting or as an image, and save it anywhere
 - Blame back in time: from a line of the blame, the file just before that commit changed it, at the same place, and back again
+- Repository health (**View → Repository Health**): what the history takes on disk, packed and loose, the heaviest files ever committed (even deleted ones), and one-click `git gc`, `git prune` and `git fsck`
 
 **Productivity**
 
