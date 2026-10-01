@@ -1280,6 +1280,11 @@ export function showRepoHealth(repo: string): void {
   useUi.setState({ health: { repo } })
 }
 
+/** Opens the hooks of the repository. */
+export function showHooks(repo: string): void {
+  useUi.setState({ hooks: { repo } })
+}
+
 /** Opens the clean up of untracked or ignored files. */
 export function showCleanUp(repo: string, scope: CleanScope = 'untracked'): void {
   useUi.setState({ clean: { repo, scope } })

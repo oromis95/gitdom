@@ -218,6 +218,9 @@ export function buildCommands(): Command[] {
     add('Repository', 'Repository health: size, heaviest files, compress (gc) and check', () =>
       actions.showRepoHealth(repo)
     )
+    add('Repository', 'Hooks: see, write, turn off and on, and try the git hooks', () =>
+      actions.showHooks(repo)
+    )
     add('Repository', 'Statistics: authors, activity, languages and hot files', () =>
       app.openStatistics(true)
     )

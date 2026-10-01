@@ -67,6 +67,7 @@ function build(): void {
       { label: 'Branches Overview', click: send('branches') },
       { label: 'Statistics', click: send('statistics') },
       { label: 'Repository Health', click: send('health') },
+      { label: 'Hooks', click: send('hooks') },
       { label: 'Ignored Files', click: send('ignored') },
       { label: 'Clean Up Untracked Files…', click: send('clean') },
       { type: 'separator' },

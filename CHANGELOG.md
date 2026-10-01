@@ -11,6 +11,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - **Mail**: three columns on a light background: the branches as folders, the commits as a list, and a wide reading pane where diffs open too
   - **IDE**: the graph on top, and a resizable panel at the bottom with the detail and the diff side by side, in the colors of a code editor
 - The theme previews show how each layout theme arranges its panels
+- **Hooks** (**View → Hooks**): every git hook of the repository, with when git runs it and whether it is on
+  - Read and edit the scripts, start from the example git ships, turn a hook off without losing it and back on, or delete it
+  - **Run** tries a hook that needs no arguments, such as pre-commit, and shows whether git would carry on and what it printed
+  - A warning when a tool such as Husky or Lefthook writes the hooks, or when `core.hooksPath` points elsewhere
 
 ## 1.4.0 — 2026-10-01
 

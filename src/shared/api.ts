@@ -168,6 +168,36 @@ export interface HeavyObject {
 
 export type Maintenance = 'gc' | 'prune' | 'fsck'
 
+/**
+ * A git hook: a script git runs at a moment of its work. Active runs, disabled is set aside with a
+ * .disabled suffix (GitDom's own convention), sample is the example git ships, none is missing.
+ */
+export interface HookInfo {
+  name: string
+  state: 'active' | 'disabled' | 'sample' | 'none'
+  /** When git runs it, for the hooks git knows */
+  description: string
+  /** Whether "Skip hooks" (--no-verify) in the commit box skips it */
+  skippable: boolean
+  /** Whether GitDom can run it by itself, to try it: it takes no arguments */
+  runnable: boolean
+}
+
+export interface HooksInfo {
+  /** The folder git reads them from, absolute */
+  dir: string
+  /** core.hooksPath, when set: the hooks then belong to the project or to a tool */
+  hooksPath: string | null
+  /** The tool that writes them, when it can be told (Husky, Lefthook, pre-commit) */
+  manager: string | null
+  hooks: HookInfo[]
+}
+
+export interface HookRun {
+  ok: boolean
+  output: string
+}
+
 export type ChangeScope = 'git' | 'worktree'
 
 /**
@@ -364,6 +394,18 @@ export interface RepoOps {
    * problems fsck found, empty otherwise.
    */
   maintain(task: Maintenance): string[]
+  /** The hooks git would run, the ones it knows and any other script in their folder. */
+  hooks(): HooksInfo
+  /** The script of a hook, active or disabled; the sample git ships when there is neither. */
+  readHook(name: string): string
+  /** Writes the script of a hook, keeping it disabled if it is; creates it active otherwise. */
+  saveHook(name: string, content: string): void
+  /** Turns a hook on or off, by moving it aside with a .disabled suffix. */
+  setHookEnabled(name: string, enabled: boolean): void
+  /** Deletes the script of a hook, active or disabled; the sample stays. */
+  deleteHook(name: string): void
+  /** Runs a hook that takes no arguments, as git would (`git hook run`), with what it printed. */
+  runHook(name: string): HookRun
   /** The local branches with their last commit, compared with `base` (main or master if null). */
   branchOverview(base: string | null): BranchOverview
   /**
@@ -719,6 +761,7 @@ export type MenuCommand =
   | 'clean'
   | 'branches'
   | 'health'
+  | 'hooks'
   | 'whatsNew'
   | 'checkUpdates'
 

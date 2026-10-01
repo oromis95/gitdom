@@ -26,6 +26,7 @@ import {
   showBranchOverview,
   showCleanUp,
   showIgnoredFiles,
+  showHooks,
   showRepoHealth
 } from './actions'
 import { identityMenu } from './identity'
@@ -164,6 +165,9 @@ function App(): React.JSX.Element {
         } else if (command === 'health') {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) showRepoHealth(repo)
+        } else if (command === 'hooks') {
+          const repo = useApp.getState().tabs[useApp.getState().active]?.path
+          if (repo) showHooks(repo)
         } else if (command === 'whatsNew') showWhatsNew()
         else if (command === 'tips') showTip()
         else if (command === 'checkUpdates') void checkForUpdates(true)

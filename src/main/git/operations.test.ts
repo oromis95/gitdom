@@ -1808,3 +1808,74 @@ describe('worktrees', () => {
     ).rejects.toThrow('Invalid revision')
   })
 })
+
+describe('hooks', () => {
+  it('lists, writes, turns off and on, runs and deletes hooks', async () => {
+    await commitFile('a.txt', 'a\n', 'init')
+    const hooksDir = join(repo, '.git', 'hooks')
+    const state = async (name: string): Promise<string | undefined> =>
+      (await runOp(repo, 'hooks', [])).hooks.find((h) => h.name === name)?.state
+
+    const info = await runOp(repo, 'hooks', [])
+    expect(info.dir.replace(/\\/g, '/')).toBe(hooksDir.replace(/\\/g, '/'))
+    expect(info).toMatchObject({ hooksPath: null, manager: null })
+    // git init writes the samples; server hooks only show when there is a script for them
+    expect(info.hooks[0]).toMatchObject({ name: 'pre-commit', skippable: true, runnable: true })
+    expect(await state('pre-commit')).toBe('sample')
+    expect(await state('update')).toBe('sample')
+    expect(await state('post-rewrite')).toBe('none')
+    expect(await runOp(repo, 'readHook', ['pre-commit'])).toContain('#!/bin/sh')
+
+    // A pre-commit that stops every commit, written with Windows line ends
+    await runOp(repo, 'saveHook', [
+      'pre-commit',
+      '#!/bin/sh\r\necho "tests failed" >&2\r\nexit 1\r\n'
+    ])
+    expect(readFileSync(join(hooksDir, 'pre-commit'), 'utf8')).toBe(
+      '#!/bin/sh\necho "tests failed" >&2\nexit 1\n'
+    )
+    expect(await state('pre-commit')).toBe('active')
+    write('a.txt', 'b\n')
+    await runOp(repo, 'stage', [['a.txt']])
+    await expect(runOp(repo, 'commit', ['blocked', false])).rejects.toThrow()
+    expect(await runOp(repo, 'runHook', ['pre-commit'])).toEqual({
+      ok: false,
+      output: 'tests failed'
+    })
+
+    // Off: the commit goes through; saving keeps it off
+    await runOp(repo, 'setHookEnabled', ['pre-commit', false])
+    expect(await state('pre-commit')).toBe('disabled')
+    await runOp(repo, 'commit', ['passes', false])
+    expect(git(repo, 'log', '-1', '--format=%s')).toBe('passes')
+    await runOp(repo, 'saveHook', ['pre-commit', '#!/bin/sh\necho fine\n'])
+    expect(await state('pre-commit')).toBe('disabled')
+    expect(await runOp(repo, 'readHook', ['pre-commit'])).toBe('#!/bin/sh\necho fine\n')
+    await runOp(repo, 'setHookEnabled', ['pre-commit', true])
+    expect(await runOp(repo, 'runHook', ['pre-commit'])).toEqual({ ok: true, output: 'fine' })
+
+    // Deleting leaves the sample
+    await runOp(repo, 'deleteHook', ['pre-commit'])
+    expect(await state('pre-commit')).toBe('sample')
+    // A script git doesn't know is listed too
+    writeFileSync(join(hooksDir, 'my-check'), '#!/bin/sh\n')
+    expect((await runOp(repo, 'hooks', [])).hooks.at(-1)).toMatchObject({
+      name: 'my-check',
+      state: 'active',
+      runnable: false
+    })
+
+    await expect(runOp(repo, 'readHook', ['../config'])).rejects.toThrow('Not a hook name')
+    await expect(runOp(repo, 'runHook', ['commit-msg'])).rejects.toThrow("can't run by itself")
+    await expect(runOp(repo, 'setHookEnabled', ['post-merge', true])).rejects.toThrow(
+      'no post-merge hook'
+    )
+
+    // core.hooksPath: the hooks of the project, or of a tool
+    git(repo, 'config', 'core.hooksPath', '.husky/_')
+    const husky = await runOp(repo, 'hooks', [])
+    expect(husky.dir.replace(/\\/g, '/')).toBe(join(repo, '.husky', '_').replace(/\\/g, '/'))
+    expect(husky).toMatchObject({ hooksPath: '.husky/_', manager: 'Husky' })
+    expect(husky.hooks.every((h) => h.state === 'none')).toBe(true)
+  })
+})

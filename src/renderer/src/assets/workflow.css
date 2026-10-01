@@ -2674,3 +2674,157 @@ button.ignored-source:hover {
 .repo-health-gap {
   flex: 1;
 }
+
+/* ---------- Hooks ---------- */
+
+.modal.hooks {
+  width: 900px;
+  max-width: calc(100vw - 40px);
+  height: 80vh;
+  max-height: 720px;
+}
+.hooks-note {
+  color: var(--text-muted);
+}
+.hooks-where {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.hooks-where .mono {
+  color: var(--text);
+  word-break: break-all;
+}
+.hooks-managed {
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 6px;
+}
+.hooks-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+}
+.hooks-list {
+  width: 220px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.hooks-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  text-align: left;
+}
+.hooks-row.empty {
+  color: var(--text-muted);
+}
+.hooks-row:hover {
+  background: var(--bg-hover);
+}
+.hooks-row.active {
+  background: var(--bg-selected);
+}
+.hooks-row .mono {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hooks-state {
+  padding: 0 6px;
+  font-size: 11px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+}
+.hooks-state.active {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 15%, transparent);
+}
+.hooks-state.disabled {
+  color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 15%, transparent);
+}
+.hooks-editor {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hooks-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.hooks-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.hooks-description,
+.hooks-status {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.hooks-script {
+  flex: 1;
+  min-height: 120px;
+  padding: 8px 10px;
+  font-size: var(--code-size);
+  color: var(--code-text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: none;
+  white-space: pre;
+  tab-size: 4;
+}
+.hooks-script:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.hooks-run {
+  padding: 8px 10px;
+  font-size: 12.5px;
+  border-radius: 6px;
+  border: 1px solid var(--success-border);
+  background: var(--success-bg);
+}
+.hooks-run.failed {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+.hooks-run pre {
+  max-height: 120px;
+  margin-top: 6px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.hooks-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hooks-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.hooks-gap {
+  flex: 1;
+}
