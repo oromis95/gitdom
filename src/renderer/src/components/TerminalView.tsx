@@ -49,7 +49,7 @@ const ANSI: Record<'dark' | 'light', ITheme> = {
 function themeColors(): ITheme {
   const css = getComputedStyle(document.documentElement)
   const v = (name: string): string => css.getPropertyValue(name).trim()
-  const mode = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+  const mode = v('color-scheme') === 'light' ? 'light' : 'dark'
   return {
     ...ANSI[mode],
     background: v('--bg'),

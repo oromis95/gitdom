@@ -125,7 +125,7 @@ function Appearance({ s }: { s: Settings }): React.JSX.Element {
         <select value={theme} onChange={(e) => setTheme(e.target.value)}>
           {themeOptions(custom).map((t) => (
             <option key={t.id} value={t.id}>
-              {t.id === 'studio' ? 'Studio (different layout)' : t.label}
+              {t.label}
             </option>
           ))}
         </select>
@@ -175,8 +175,10 @@ function Appearance({ s }: { s: Settings }): React.JSX.Element {
       <Row label="Panel sizes" hint="Drag the edge of the side panels; double-click it to reset">
         <button
           className="btn"
-          disabled={s.sidebarWidth === null && s.detailWidth === null}
-          onClick={() => updateSettings({ sidebarWidth: null, detailWidth: null })}
+          disabled={s.sidebarWidth === null && s.detailWidth === null && s.panelHeight === null}
+          onClick={() =>
+            updateSettings({ sidebarWidth: null, detailWidth: null, panelHeight: null })
+          }
         >
           Reset panel sizes
         </button>

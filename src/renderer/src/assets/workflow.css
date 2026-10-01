@@ -1876,6 +1876,51 @@
   font-size: 11px;
   font-weight: 600;
 }
+/* The layout themes show where their panels go */
+.theme-layout {
+  display: grid;
+  gap: 2px;
+  padding: 3px;
+}
+.theme-layout > span {
+  min-width: 0;
+  border-radius: 2px;
+}
+.theme-layout .theme-layout-side {
+  grid-area: side;
+}
+.theme-layout .theme-layout-extra {
+  grid-area: extra;
+}
+.theme-layout .theme-layout-detail {
+  grid-area: detail;
+}
+.theme-layout .theme-layout-main {
+  grid-area: main;
+  padding: 0 5px;
+}
+.theme-layout.studio {
+  grid-template-columns: 8% 24% 1fr 26%;
+  grid-template-areas: 'extra side main detail';
+}
+.theme-layout.focus {
+  grid-template-rows: 3px 1fr;
+  grid-template-areas: 'extra' 'main';
+}
+.theme-layout.focus .theme-layout-side,
+.theme-layout.focus .theme-layout-detail,
+.theme-layout.mail .theme-layout-extra {
+  display: none;
+}
+.theme-layout.mail {
+  grid-template-columns: 18% 40% 1fr;
+  grid-template-areas: 'side main detail';
+}
+.theme-layout.ide {
+  grid-template-columns: 24% 1fr;
+  grid-template-rows: 1fr 38% 3px;
+  grid-template-areas: 'side main' 'side detail' 'extra extra';
+}
 .theme-card-system .theme-card-preview span {
   flex: 1;
 }

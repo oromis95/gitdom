@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Download,
   FolderOpen,
@@ -12,9 +12,7 @@ import {
 import type { RepoSnapshot } from '../../shared/types'
 import TabBar from './components/TabBar'
 import Toolbar from './components/Toolbar'
-import Sidebar from './components/Sidebar'
-import GraphView from './components/GraphView'
-import DetailPanel from './components/DetailPanel'
+import Workspace from './components/Workspace'
 import Overlays from './components/Overlays'
 import { HoverLayer } from './components/HoverCards'
 import TerminalDock from './components/TerminalDock'
@@ -33,19 +31,12 @@ import {
 import { identityMenu } from './identity'
 import { openMenu, openPreferences, openRepoDialog } from './ui'
 import { stepZoom, useSettings } from './settings'
-import { splashEnabled, useTheme } from './theme'
+import { splashEnabled, toggleSidebarDrawer, useTheme } from './theme'
 import { startActivityLog, toggleActivity, useActivity } from './activity'
 import { checkForUpdates, showWhatsNew, startupChecks } from './updates'
 import { showTip, startupTip } from './tips'
 import { useShortcut, useShortcutLabel } from './shortcuts'
 import { focusPanel, type Panel } from './focus'
-
-// Loaded on first use, to keep the startup bundle small (NFR-02)
-const DiffView = lazy(() => import('./components/DiffView'))
-const ConflictView = lazy(() => import('./components/ConflictView'))
-const FileInspector = lazy(() => import('./components/FileInspector'))
-const RecoveryView = lazy(() => import('./components/RecoveryView'))
-const StatisticsView = lazy(() => import('./components/StatisticsView'))
 
 function IdentityButton({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
   const { name, email, scope } = snapshot.identity
@@ -137,9 +128,7 @@ function Welcome(): React.JSX.Element {
 function App(): React.JSX.Element {
   const tab = useActiveTab()
   const refresh = useApp((s) => s.refresh)
-  const loadMoreCommits = useApp((s) => s.loadMoreCommits)
-  const studio = useTheme((s) => s.studio)
-  const detailHidden = useTheme((s) => s.detailHidden)
+  const layout = useTheme((s) => s.layout)
   const [splash, setSplash] = useState(splashEnabled)
 
   useEffect(() => restoreSession(), [])
@@ -219,8 +208,16 @@ function App(): React.JSX.Element {
   useShortcut('zoomOut', () => stepZoom(-1))
   useShortcut('zoomReset', () => stepZoom(0))
   // Moving between the panels (NFR-09), not from behind a dialog
-  const focusKey = (panel: Panel) => (): boolean =>
-    !document.querySelector('.modal, .palette') && focusPanel(panel)
+  const focusKey = (panel: Panel) => (): boolean => {
+    if (document.querySelector('.modal, .palette')) return false
+    const { layout, detailClosedFor } = useTheme.getState()
+    if (layout !== 'focus' || panel === 'graph') return focusPanel(panel)
+    // Focus: the drawer opens first, and takes the focus once shown
+    if (panel === 'sidebar') toggleSidebarDrawer(true)
+    else if (detailClosedFor) useTheme.setState({ detailClosedFor: null })
+    setTimeout(() => focusPanel(panel), 50)
+    return true
+  }
   useShortcut('focusSidebar', focusKey('sidebar'))
   useShortcut('focusGraph', focusKey('graph'))
   useShortcut('focusDetail', focusKey('detail'))
@@ -250,7 +247,7 @@ function App(): React.JSX.Element {
   const snapshot = tab?.snapshot
 
   return (
-    <div className={`app${studio ? ' studio' : ''}`}>
+    <div className={`app${layout === 'classic' ? '' : ` ${layout}`}`}>
       <TabBar />
       {!tab ? (
         <Welcome />
@@ -259,33 +256,7 @@ function App(): React.JSX.Element {
           <Toolbar tab={tab} />
           {tab.error && <div className="banner-error">{tab.error}</div>}
           {snapshot ? (
-            <div
-              key={tab.path}
-              className={`workspace${studio && detailHidden ? ' detail-hidden' : ''}`}
-            >
-              <Sidebar snapshot={snapshot} />
-              <Suspense fallback={<div className="center-message">Loading…</div>}>
-                {tab.diff?.merge ? (
-                  <ConflictView snapshot={snapshot} target={tab.diff} />
-                ) : tab.diff ? (
-                  <DiffView snapshot={snapshot} target={tab.diff} />
-                ) : tab.inspect ? (
-                  <FileInspector snapshot={snapshot} inspect={tab.inspect} />
-                ) : tab.recovery ? (
-                  <RecoveryView snapshot={snapshot} view={tab.recovery} />
-                ) : tab.statistics ? (
-                  <StatisticsView snapshot={snapshot} />
-                ) : (
-                  <GraphView
-                    snapshot={snapshot}
-                    selected={tab.selected}
-                    loadingMore={!!tab.loadingMore}
-                    onLoadMore={() => void loadMoreCommits(tab.path)}
-                  />
-                )}
-              </Suspense>
-              <DetailPanel snapshot={snapshot} selected={tab.selected} compare={tab.compare} />
-            </div>
+            <Workspace key={tab.path} tab={tab} snapshot={snapshot} />
           ) : (
             <div className="center-message">{tab.loading ? 'Loading repository…' : ''}</div>
           )}

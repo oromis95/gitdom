@@ -2,6 +2,16 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- **Three new layout themes**, which change where the panels go and not just the colors (**Preferences → Themes**, **Window → Theme** or the command palette)
+  - **Focus**: just the graph, with one slim bar of icons; the branches slide in from the left and the detail opens beside the graph when you select a commit
+  - **Mail**: three columns on a light background: the branches as folders, the commits as a list, and a wide reading pane where diffs open too
+  - **IDE**: the graph on top, and a resizable panel at the bottom with the detail and the diff side by side, in the colors of a code editor
+- The theme previews show how each layout theme arranges its panels
+
 ## 1.4.0 — 2026-10-01
 
 ### Added

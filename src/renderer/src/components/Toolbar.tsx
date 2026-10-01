@@ -8,6 +8,7 @@ import {
   Command,
   GitBranchPlus,
   LoaderCircle,
+  PanelLeft,
   PanelRightClose,
   PanelRightOpen,
   Redo2,
@@ -24,7 +25,7 @@ import { useApp } from '../store'
 import { openMenu, useUi } from '../ui'
 import * as actions from '../actions'
 import { toggleTerminal, useTerminal } from '../terminal'
-import { toggleDetail, useTheme } from '../theme'
+import { toggleDetail, toggleDetailDrawer, toggleSidebarDrawer, useTheme } from '../theme'
 import { useShortcut, useShortcutLabel } from '../shortcuts'
 import RepoSwitcher from './RepoSwitcher'
 
@@ -59,7 +60,7 @@ function Tool({
       onClick={onClick}
     >
       {icon}
-      {label}
+      <span className="tool-label">{label}</span>
     </button>
   )
 }
@@ -103,8 +104,10 @@ function MainConflicts({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Elem
 export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
   const refresh = useApp((s) => s.refresh)
   const terminalShown = useTerminal((s) => s.shown)
-  const studio = useTheme((s) => s.studio)
+  const layout = useTheme((s) => s.layout)
   const detailHidden = useTheme((s) => s.detailHidden)
+  const sidebarOpen = useTheme((s) => s.sidebarOpen)
+  const detailClosedFor = useTheme((s) => s.detailClosedFor)
   const snapshot = tab.snapshot
   const head = snapshot?.head
   const branch = head?.branch ?? (head?.hash ? `detached ${head.hash.slice(0, 7)}` : '—')
@@ -292,7 +295,42 @@ export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
     </>
   )
 
-  if (studio) {
+  if (layout === 'focus') {
+    // One slim bar: the drawers' switches at the ends, the tools as icons
+    const detailOpen = !!tab.selected && tab.selected !== detailClosedFor
+    return (
+      <div className="focus-bar">
+        <button
+          className={`focus-switch${sidebarOpen ? ' active' : ''}`}
+          title={sidebarOpen ? 'Hide the branches' : 'Branches, tags, remotes and stashes'}
+          aria-pressed={sidebarOpen}
+          onClick={() => toggleSidebarDrawer()}
+        >
+          <PanelLeft size={18} />
+        </button>
+        {crumbs}
+        <div className="toolbar-spacer" />
+        {tools}
+        <button
+          className={`focus-switch${detailOpen ? ' active' : ''}`}
+          title={
+            !tab.selected
+              ? 'Select a commit to see its detail'
+              : detailOpen
+                ? 'Hide the detail'
+                : 'Show the detail'
+          }
+          aria-pressed={detailOpen}
+          disabled={!tab.selected}
+          onClick={() => toggleDetailDrawer(tab.selected)}
+        >
+          {detailOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+        </button>
+      </div>
+    )
+  }
+
+  if (layout === 'studio') {
     return (
       <>
         <nav className="rail">{tools}</nav>

@@ -10,7 +10,9 @@ import {
   parseTheme,
   saveCustomTheme,
   setTheme,
-  useTheme
+  useTheme,
+  LIGHT_THEMES,
+  type Layout
 } from '../theme'
 import {
   contrastChecks,
@@ -29,9 +31,11 @@ interface Preview {
   panel: string
   text: string
   colors: string[]
+  /** The layout themes show the shape of their panels */
+  layout?: Exclude<Layout, 'classic'>
 }
 
-// The CSS themes' colours, for their previews (from main.css, theme.css and studio.css)
+// The CSS themes' colours, for their previews (from main.css, theme.css, studio.css, layouts.css)
 const CSS_PREVIEWS: Preview[] = [
   {
     id: 'dark',
@@ -55,7 +59,35 @@ const CSS_PREVIEWS: Preview[] = [
     bg: '#15121c',
     panel: '#1e1a27',
     text: '#ebe6f2',
-    colors: ['#b48cff', '#5ee6a0', '#f5b454', '#ff6b8b']
+    colors: ['#b48cff', '#5ee6a0', '#f5b454', '#ff6b8b'],
+    layout: 'studio'
+  },
+  {
+    id: 'focus',
+    label: 'Focus',
+    bg: '#101214',
+    panel: '#1b1f23',
+    text: '#e6e8ea',
+    colors: ['#3ddbd9', '#6fdc8c', '#f2c14e', '#ff7a85'],
+    layout: 'focus'
+  },
+  {
+    id: 'mail',
+    label: 'Mail',
+    bg: '#ffffff',
+    panel: '#eef1f5',
+    text: '#1d2430',
+    colors: ['#2463eb', '#188038', '#b06000', '#d93025'],
+    layout: 'mail'
+  },
+  {
+    id: 'ide',
+    label: 'IDE',
+    bg: '#1e1e1e',
+    panel: '#2d2d30',
+    text: '#cccccc',
+    colors: ['#3794ff', '#89d185', '#cca700', '#f48771'],
+    layout: 'ide'
   }
 ]
 
@@ -76,16 +108,39 @@ function ThemeCard({ p, current }: { p: Preview; current: boolean }): React.JSX.
       aria-pressed={current}
       onClick={() => setTheme(p.id)}
     >
-      <span className="theme-card-preview" style={{ background: p.bg }}>
-        <span className="theme-card-side" style={{ background: p.panel }} />
-        <span className="theme-card-lines">
-          {p.colors.map((c) => (
-            <span key={c} style={{ background: c }} />
-          ))}
-        </span>
-        <span className="theme-card-text" style={{ color: p.text }}>
-          Aa
-        </span>
+      <span
+        className={`theme-card-preview${p.layout ? ` theme-layout ${p.layout}` : ''}`}
+        style={{ background: p.bg }}
+      >
+        {p.layout ? (
+          <>
+            {/* The panels around the graph, where each layout puts them */}
+            {['side', 'extra', 'detail'].map((part) => (
+              <span
+                key={part}
+                className={`theme-layout-${part}`}
+                style={{ background: part === 'extra' ? p.colors[0] : p.panel }}
+              />
+            ))}
+            <span className="theme-card-lines theme-layout-main">
+              {p.colors.map((c) => (
+                <span key={c} style={{ background: c }} />
+              ))}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="theme-card-side" style={{ background: p.panel }} />
+            <span className="theme-card-lines">
+              {p.colors.map((c) => (
+                <span key={c} style={{ background: c }} />
+              ))}
+            </span>
+            <span className="theme-card-text" style={{ color: p.text }}>
+              Aa
+            </span>
+          </>
+        )}
       </span>
       <span className="theme-card-name">
         {current && <Check size={12} />}
@@ -214,7 +269,7 @@ export default function ThemeSettings(): React.JSX.Element {
     edit({
       id: newThemeId(),
       name: `${name} (custom)`,
-      base: base === 'light' ? 'light' : 'dark',
+      base: LIGHT_THEMES.includes(base) ? 'light' : 'dark',
       palette: currentPalette()
     })
   }
@@ -309,7 +364,7 @@ export default function ThemeSettings(): React.JSX.Element {
 }
 
 function themeName(id: string, custom: ThemeDef[]): string {
-  if (id === 'system') return useTheme.getState().base === 'light' ? 'Light' : 'Dark'
+  if (id === 'system') return LIGHT_THEMES.includes(useTheme.getState().base) ? 'Light' : 'Dark'
   return (
     CSS_PREVIEWS.find((p) => p.id === id)?.label ??
     [...PRESET_THEMES, ...custom].find((t) => t.id === id)?.name ??

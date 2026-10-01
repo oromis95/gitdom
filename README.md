@@ -132,7 +132,11 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 **Themes**
 
 - Dark, Light, or follow the system setting
-- **Studio**: a different layout, with floating rounded panels, actions in a rail on the left and a collapsible detail panel
+- **Layout themes**: four themes that also arrange the panels their own way, each with its own colors
+  - **Studio**: floating rounded panels, actions in a rail on the left and a collapsible detail panel
+  - **Focus**: just the graph, with one slim bar of icons; the branches slide in from the left when you need them, and the detail opens beside the graph when you select a commit
+  - **Mail**: three columns like an email client, on a light background: the branches as folders, the commits as a list and a wide reading pane; a diff opens in the reading pane, with the files of the commit in the middle
+  - **IDE**: the colors of a code editor, with the graph on top and a panel at the bottom holding the detail and the diff side by side; drag its edge to resize it
 - Ready-made themes: Nord, Dracula, Tokyo Night, Catppuccin (Mocha and Latte), Gruvbox Dark, Monokai, Solarized (dark and light), and high-contrast dark and light
 - **Your own themes**: start from any theme and change its colors in **Preferences → Themes**; GitDom checks that text stays readable (WCAG contrast) and warns you if it doesn't. Themes can be exported and imported as text through the clipboard
 - To switch theme, use **Preferences → Themes**, **Window → Theme** or the command palette

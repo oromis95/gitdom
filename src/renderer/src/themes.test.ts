@@ -37,7 +37,17 @@ const darkVars = { ...block(css('main.css'), ':root'), ...block(css('theme.css')
 const CSS_THEMES: [string, ThemePalette][] = [
   ['Dark', paletteOf(darkVars)],
   ['Light', paletteOf({ ...darkVars, ...block(css('theme.css'), ":root[data-theme='light']") })],
-  ['Studio', paletteOf({ ...darkVars, ...block(css('studio.css'), ":root[data-theme='studio']") })]
+  ['Studio', paletteOf({ ...darkVars, ...block(css('studio.css'), ":root[data-theme='studio']") })],
+  ...['Focus', 'Mail', 'IDE'].map(
+    (name) =>
+      [
+        name,
+        paletteOf({
+          ...darkVars,
+          ...block(css('layouts.css'), `:root[data-theme='${name.toLowerCase()}']`)
+        })
+      ] as [string, ThemePalette]
+  )
 ]
 
 describe('colour arithmetic', () => {

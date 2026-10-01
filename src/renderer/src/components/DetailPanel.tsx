@@ -1334,11 +1334,14 @@ function ComparePanel({
 export default function DetailPanel({
   snapshot,
   selected,
-  compare
+  compare,
+  edge = 'left'
 }: {
   snapshot: RepoSnapshot
   selected: string | null
   compare?: CompareTarget
+  /** Edge with the resize handle, where the layout puts it; null when it fills the room */
+  edge?: 'left' | 'right' | null
 }): React.JSX.Element {
   let content: React.JSX.Element
   if (compare) content = <ComparePanel repoPath={snapshot.path} target={compare} />
@@ -1348,12 +1351,14 @@ export default function DetailPanel({
 
   return (
     <aside className="detail">
-      <ResizeHandle
-        edge="left"
-        min={300}
-        max={() => roomBeside('.sidebar', 300)}
-        onResize={(width) => updateSettings({ detailWidth: width })}
-      />
+      {edge && (
+        <ResizeHandle
+          edge={edge}
+          min={300}
+          max={() => roomBeside('.sidebar', 300)}
+          onResize={(width) => updateSettings({ detailWidth: width })}
+        />
+      )}
       {content}
     </aside>
   )

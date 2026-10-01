@@ -17,6 +17,8 @@ export interface Settings extends ToolSettings {
   /** Panel widths set by dragging their edge (UI-11, SIDE-10); null for the default */
   sidebarWidth: number | null
   detailWidth: number | null
+  /** Height of the panel at the bottom, in the IDE layout; null for the default */
+  panelHeight: number | null
   /** Diff viewer options (DIFF-01, DIFF-04, DIFF-05) */
   diffLayout: 'unified' | 'split'
   diffWrap: boolean
@@ -60,6 +62,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sidebarWidth: null,
   sidebarTree: true,
   detailWidth: null,
+  panelHeight: null,
   diffLayout: 'unified',
   diffWrap: false,
   diffIgnoreWhitespace: false,
@@ -122,7 +125,7 @@ function load(): Settings {
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) {
     const value = saved[key]
     const fallback = DEFAULT_SETTINGS[key]
-    const nullable = key === 'sidebarWidth' || key === 'detailWidth'
+    const nullable = key === 'sidebarWidth' || key === 'detailWidth' || key === 'panelHeight'
     if (typeof value === typeof fallback || (nullable && typeof value === 'number')) {
       ;(settings as Record<string, unknown>)[key] = value
     }
@@ -165,6 +168,7 @@ function apply(s: Settings): void {
   )
   setVar('--sidebar-w', s.sidebarWidth ? `${s.sidebarWidth}px` : '')
   setVar('--detail-w', s.detailWidth ? `${s.detailWidth}px` : '')
+  setVar('--panel-h', s.panelHeight ? `${s.panelHeight}px` : '')
   window.api.tools.setZoom(s.zoom)
   window.api.tools.configure({
     gitPath: s.gitPath,

@@ -1,6 +1,7 @@
-// Themes (UI-05): dark / light (following the system when asked to), Studio, which also changes the
-// layout, the built-in palettes and the user's own. Dark, Light and Studio are written in CSS; the
-// palettes set the same CSS variables on <html>, over the dark or light rules.
+// Themes (UI-05): dark / light (following the system when asked to), the layout themes (Studio,
+// Focus, Mail, IDE), which also arrange the panels their own way, the built-in palettes and the
+// user's own. The first ones are written in CSS; the palettes set the same CSS variables on <html>,
+// over the dark or light rules.
 import { create } from 'zustand'
 import type { ThemeChoice, ThemeOption } from '../../shared/api'
 import { setLanePalette } from './graph/colors'
@@ -17,7 +18,13 @@ import {
 
 export type { ThemeChoice }
 /** Colours the CSS rules follow, on <html data-theme> */
-export type ThemeName = 'dark' | 'light' | 'studio'
+export type ThemeName = 'dark' | 'light' | Exclude<Layout, 'classic'>
+/** How the panels are arranged: each layout theme has its own, every other theme the classic one */
+export type Layout = 'classic' | 'studio' | 'focus' | 'mail' | 'ide'
+
+const LAYOUTS: ThemeName[] = ['studio', 'focus', 'mail', 'ide']
+/** The themes on a light background */
+export const LIGHT_THEMES: ThemeName[] = ['light', 'mail']
 
 const THEME_KEY = 'gitdom.theme'
 const CUSTOM_KEY = 'gitdom.customThemes'
@@ -28,7 +35,10 @@ const systemDark = window.matchMedia('(prefers-color-scheme: dark)')
 export const CSS_THEMES: ThemeOption[] = [
   { id: 'dark', label: 'Dark' },
   { id: 'light', label: 'Light' },
-  { id: 'studio', label: 'Studio' },
+  { id: 'studio', label: 'Studio (layout: actions in a rail)' },
+  { id: 'focus', label: 'Focus (layout: just the graph)' },
+  { id: 'mail', label: 'Mail (layout: three columns)' },
+  { id: 'ide', label: 'IDE (layout: panel at the bottom)' },
   { id: 'system', label: 'Follow the system' }
 ]
 
@@ -77,7 +87,8 @@ function resolve(choice: ThemeChoice, custom: ThemeDef[]): Resolved {
     const applied = systemDark.matches ? 'dark' : 'light'
     return { applied, base: applied }
   }
-  if (choice === 'light' || choice === 'studio') return { applied: choice, base: choice }
+  if (choice === 'light' || LAYOUTS.includes(choice as ThemeName))
+    return { applied: choice, base: choice as ThemeName }
   const def = findTheme(choice, custom)
   return def ? { applied: def.id, base: def.base, def } : { applied: 'dark', base: 'dark' }
 }
@@ -90,11 +101,17 @@ interface ThemeState {
   custom: ThemeDef[]
   /** Bumped at every change of colours, for what is drawn on canvases */
   revision: number
-  /** Studio lays out the actions in a rail on the left, with a collapsible detail panel */
-  studio: boolean
+  layout: Layout
   /** Detail panel collapsed, in the Studio layout */
   detailHidden: boolean
+  /** Focus: the sidebar drawer is open */
+  sidebarOpen: boolean
+  /** Focus: the detail drawer was closed while this commit was selected; another one opens it */
+  detailClosedFor: string | null
 }
+
+const layoutOf = (base: ThemeName): Layout =>
+  LAYOUTS.includes(base) ? (base as Exclude<Layout, 'classic'>) : 'classic'
 
 export const useTheme = create<ThemeState>(() => {
   const custom = savedCustom()
@@ -106,8 +123,10 @@ export const useTheme = create<ThemeState>(() => {
     base,
     custom,
     revision: 0,
-    studio: base === 'studio',
-    detailHidden: localStorage.getItem(DETAIL_KEY) === '1'
+    layout: layoutOf(base),
+    detailHidden: localStorage.getItem(DETAIL_KEY) === '1',
+    sidebarOpen: false,
+    detailClosedFor: null
   }
 })
 
@@ -141,7 +160,8 @@ function apply(choice: ThemeChoice): void {
     theme: choice,
     applied,
     base,
-    studio: base === 'studio',
+    layout: layoutOf(base),
+    sidebarOpen: false,
     revision: revision + 1
   })
   window.api.menu.setTheme(choice, themeOptions(custom))
@@ -212,6 +232,17 @@ export function exportTheme(theme: ThemeDef): string {
 export function toggleDetail(hidden = !useTheme.getState().detailHidden): void {
   localStorage.setItem(DETAIL_KEY, hidden ? '1' : '0')
   useTheme.setState({ detailHidden: hidden })
+}
+
+/** Focus: opens or closes the drawer with the branches. */
+export function toggleSidebarDrawer(open = !useTheme.getState().sidebarOpen): void {
+  useTheme.setState({ sidebarOpen: open })
+}
+
+/** Focus: closes the detail drawer of `selected`, or opens it again. */
+export function toggleDetailDrawer(selected: string | null): void {
+  const { detailClosedFor } = useTheme.getState()
+  useTheme.setState({ detailClosedFor: detailClosedFor === selected ? null : selected })
 }
 
 apply(useTheme.getState().theme)

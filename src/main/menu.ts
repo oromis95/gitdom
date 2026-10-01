@@ -15,7 +15,10 @@ import { REPO_URL } from './updates'
 let themes: ThemeOption[] = [
   { id: 'dark', label: 'Dark' },
   { id: 'light', label: 'Light' },
-  { id: 'studio', label: 'Studio' },
+  { id: 'studio', label: 'Studio (layout: actions in a rail)' },
+  { id: 'focus', label: 'Focus (layout: just the graph)' },
+  { id: 'mail', label: 'Mail (layout: three columns)' },
+  { id: 'ide', label: 'IDE (layout: panel at the bottom)' },
   { id: 'system', label: 'Follow the system' }
 ]
 

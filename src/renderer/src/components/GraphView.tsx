@@ -103,7 +103,7 @@ function ColumnHeader({
 }): React.JSX.Element {
   const value = useSettings((s) => s[width])
   return (
-    <div className="graph-col" style={{ width: value }}>
+    <div className={`graph-col col-${width}`} style={{ width: value }}>
       {title}
       <ResizeHandle
         edge={edge}

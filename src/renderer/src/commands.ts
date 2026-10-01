@@ -9,6 +9,7 @@ import {
   splashEnabled,
   themeOptions,
   toggleDetail,
+  toggleSidebarDrawer,
   useTheme
 } from './theme'
 import * as actions from './actions'
@@ -284,14 +285,17 @@ export function buildCommands(): Command[] {
     () => toggleActivity(),
     shortcutLabel('activity')
   )
-  const { theme, studio, detailHidden } = useTheme.getState()
-  for (const t of themeOptions()) {
-    const title = t.id === 'studio' ? 'Studio (different layout)' : t.label
-    add('View', `Theme: ${title}`, () => setTheme(t.id), t.id === theme ? 'current' : undefined)
-  }
-  if (snapshot && studio) {
+  const { theme, layout, detailHidden, sidebarOpen } = useTheme.getState()
+  for (const t of themeOptions())
+    add('View', `Theme: ${t.label}`, () => setTheme(t.id), t.id === theme ? 'current' : undefined)
+  if (snapshot && layout === 'studio') {
     add('View', detailHidden ? 'Show the detail panel' : 'Hide the detail panel', () =>
       toggleDetail()
+    )
+  }
+  if (snapshot && layout === 'focus') {
+    add('View', sidebarOpen ? 'Hide the branches' : 'Show the branches', () =>
+      toggleSidebarDrawer()
     )
   }
   const zoom = Math.round(useSettings.getState().zoom * 100)
