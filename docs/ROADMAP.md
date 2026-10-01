@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.3.0 pubblicata il 2026-10-01 (Step 1–12 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.4.0 pubblicata il 2026-10-01 (Step 1–12 completati, Step 13 in corso). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -176,8 +176,10 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Step 13 — v1.4: Ordine, manutenzione e più repository
 
-- **Panoramica dei branch**: ultimo commit, età, avanti/indietro rispetto a main, già uniti o no; eliminazione in blocco di quelli vecchi o uniti
-- **Salute del repository**: spazio occupato, gli oggetti più pesanti nella storia, e `gc`, `prune` e `fsck` con un clic
+> In corso: la panoramica dei branch e la salute del repository sono uscite con la v1.4.0.
+
+- ✅ **Panoramica dei branch**: ultimo commit, età, avanti/indietro rispetto a main, già uniti o no; eliminazione in blocco di quelli vecchi o uniti
+- ✅ **Salute del repository**: spazio occupato, gli oggetti più pesanti nella storia, e `gc`, `prune` e `fsck` con un clic
 - **Gestione degli hook**: vedere, attivare, disattivare e modificare gli hook git del repository
 - **Bisect guidato**: segni "buono/cattivo" e l'app trova il commit colpevole (ADV-06)
 - **Patch**: creazione da commit e applicazione di file .patch (ADV-07)
