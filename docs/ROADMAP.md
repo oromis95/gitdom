@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.2.0 pubblicata il 2026-09-30 (Step 1–11 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.3.0 pubblicata il 2026-10-01 (Step 1–12 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -25,9 +25,10 @@ Le milestone 0–6 sono completate:
 - caricamento a pagine per storie di ogni dimensione, aperture più rapide e bundle diviso (Step 8);
 - temi pronti e personalizzati con verifica del contrasto, scorciatoie personalizzabili, navigazione completa da tastiera, editor della configurazione git e diff tool esterno (Step 9);
 - aggiornamento dall'app con verifica SHA-256 e CI su ogni push (Step 10);
-- statistiche del repository, storia di righe e funzioni, ricerca nel codice, file a qualsiasi commit e blame a ritroso (Step 11).
+- statistiche del repository, storia di righe e funzioni, ricerca nel codice, file a qualsiasi commit e blame a ritroso (Step 11);
+- commit spostati su un altro branch, fixup, divisione e riordino dei commit, hunk modificati prima dello stage, anteprima dei conflitti, controlli prima del commit, note di rilascio, regole di ignore spiegate, pulizia dei file non tracciati e suggerimenti animati (Step 12).
 
-Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è correggere gli errori senza paura: commit sul branch sbagliato, fixup, dividere un commit, anteprima dei conflitti e controlli prima del commit (Step 12).
+Con la v1.0 i requisiti P0 e P1 sono coperti; il prossimo passo è l'ordine e la manutenzione: panoramica dei branch, salute del repository, hook e più repository insieme (Step 13).
 
 ## Principi per l'ordine
 
@@ -156,7 +157,9 @@ Tutto in locale, dai dati che git ha già. Le analisi lunghe mostrano l'avanzame
 - **Esplora i file a qualsiasi commit**: l'albero del progetto com'era in un commit, con i file da aprire o salvare
 - **Blame a ritroso**: da una riga del blame si passa alla versione prima di quel commit
 
-## Step 12 — v1.3: Correggere senza paura
+## Step 12 — v1.3: Correggere senza paura ✅
+
+> Completato: dal menu di un commit si spostano lui e i successivi su un branch nuovo o esistente, gli si aggiungono le modifiche in stage (fixup) o lo si divide in due scegliendo i file; i commit si riordinano trascinandoli nel grafo. Un hunk si modifica prima dello stage lasciando il file com'è. I dialoghi di merge e rebase dicono quali file andranno in conflitto, e un avviso accanto al branch segnala quando branch e main toccano le stesse righe (`git merge-tree`). Prima del commit compaiono avvisi, mai bloccanti, su segreti, file grandi fuori da LFS, codice di debug e stile del messaggio. Dal menu di un tag si generano le note di rilascio in Markdown, raggruppate per tipo. **View → Ignored Files** spiega quale regola ignora un file, e **View → Clean Up Untracked Files…** rimuove file non tracciati o ignorati dopo un'anteprima con le dimensioni, nel Cestino o per sempre. In più, i suggerimenti animati presentano le funzioni meno visibili, all'avvio e nel momento giusto.
 
 Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backup e undo.
 
