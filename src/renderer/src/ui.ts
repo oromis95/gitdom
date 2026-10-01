@@ -1,6 +1,6 @@
 // Transient UI state: toasts, modal dialogs and the context menu.
 import { create } from 'zustand'
-import type { RebaseCommit } from '../../shared/api'
+import type { CleanScope, RebaseCommit } from '../../shared/api'
 import type { FileChange } from '../../shared/types'
 
 export type ToastKind = 'info' | 'success' | 'warning' | 'error'
@@ -76,6 +76,12 @@ export interface IgnoredSession {
   path: string
 }
 
+/** The clean up dialog, and the files it starts with. */
+export interface CleanSession {
+  repo: string
+  scope: CleanScope
+}
+
 /** The range shown in the release notes dialog. */
 export interface ReleaseNotesSession {
   repo: string
@@ -103,6 +109,7 @@ interface UiState {
   split: SplitSession | null
   releaseNotes: ReleaseNotesSession | null
   ignored: IgnoredSession | null
+  clean: CleanSession | null
   /** Command palette open */
   palette: boolean
   /** Clone or new repository dialog open */
@@ -121,6 +128,7 @@ export const useUi = create<UiState>((set, get) => ({
   split: null,
   releaseNotes: null,
   ignored: null,
+  clean: null,
   palette: false,
   repoDialog: null,
   preferences: false,

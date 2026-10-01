@@ -10,7 +10,7 @@ import {
 import { activityEntries, clearActivity, inAction, onActivity, redact } from './git/activity'
 import { cancelClone, cloneRepository, initRepository } from './git/clone'
 import { GitError } from './git/exec'
-import { runOp } from './git/operations'
+import { runOp, setTrash } from './git/operations'
 import type { GraphFilter, StatisticsOptions } from '../shared/types'
 import { ensureCommitGraph, loadSnapshot, resolveRepoRoot } from './git/repository'
 import { cancelStatistics, repoStatistics } from './git/statistics'
@@ -37,6 +37,7 @@ async function toResult<T>(work: () => Promise<T>): Promise<Result<T>> {
 }
 
 export function registerIpcHandlers(): void {
+  setTrash((path) => shell.trashItem(path))
   ipcMain.handle(IPC.pickRepository, async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
     const options: Electron.OpenDialogOptions = {

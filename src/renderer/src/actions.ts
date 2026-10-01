@@ -9,7 +9,8 @@ import type {
   RebaseStep,
   ResetMode,
   Result,
-  StashMode
+  StashMode,
+  CleanScope
 } from '../../shared/api'
 import type {
   Commit,
@@ -1267,6 +1268,11 @@ export function remoteBranchMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
 /** Opens the ignored files of a repository, checking a path first when given. */
 export function showIgnoredFiles(repo: string, path: string): void {
   useUi.setState({ ignored: { repo, path } })
+}
+
+/** Opens the clean up of untracked or ignored files. */
+export function showCleanUp(repo: string, scope: CleanScope = 'untracked'): void {
+  useUi.setState({ clean: { repo, scope } })
 }
 
 /** Opens the release notes of the commits up to a tag, or HEAD. */

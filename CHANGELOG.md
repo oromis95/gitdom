@@ -40,6 +40,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - Type a path to see the rule that decides it: the pattern, and the file and line it comes from (a `.gitignore`, `.git/info/exclude` or the global excludes file); click the file to open it
   - A `!` rule that brings the file back is shown too, and a file that matches a rule but is still tracked can stop being tracked from there, staying on disk
   - Below, every ignored file and folder of the working tree with its rule; click one to see why
+- **Clean up the working tree**: **View → Clean Up Untracked Files…**, the eraser beside the unstaged files, or "Clean up" in the command palette
+  - Untracked files, ignored ones (build output, dependencies, logs) or both, listed with their size before anything is removed; untick what to keep, or filter by name
+  - They go to the Recycle Bin by default, where they can be restored; deleting for good asks once more
+  - Repositories inside the working tree are left alone, and so are the ignored files in a folder when cleaning only the untracked ones
 - **Tips**: the features that are easy to miss, one at a time, each with a small animation showing how it works and the steps to use it
   - One at startup, and now and then one right after doing something it builds on, such as blaming back in time after opening a blame
   - **Help → Tips** (or "Tips" in the command palette) lists them all; turn them off with the checkbox in the dialog or in **Preferences**

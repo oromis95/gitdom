@@ -215,6 +215,9 @@ export function buildCommands(): Command[] {
     add('Repository', 'Ignored files: why a file is ignored, and by which rule', () =>
       actions.showIgnoredFiles(repo, '')
     )
+    add('Repository', 'Clean up untracked or ignored files, to the Recycle Bin', () =>
+      actions.showCleanUp(repo)
+    )
     add('Repository', 'Release notes: the commits since the last tag, grouped by type', () =>
       actions.showReleaseNotes(repo, 'HEAD')
     )

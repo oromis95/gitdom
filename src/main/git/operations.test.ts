@@ -4,7 +4,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setToolSettings } from '../settings'
-import { runOp } from './operations'
+import { runOp, setTrash } from './operations'
 import { ensureCommitGraph, loadCommits, loadIdentity, loadSnapshot } from './repository'
 
 // Git on Windows is slow to spawn: remote scenarios run dozens of commands
@@ -161,6 +161,62 @@ describe('staging and commit', () => {
       ['debug.log', '*.log'],
       ['notes.txt', 'notes.txt']
     ])
+  })
+
+  it('previews and cleans untracked and ignored files, to the Recycle Bin or for good', async () => {
+    await commitFile('.gitignore', '*.log\nnode_modules/\n', 'init')
+    write('new.txt', 'abc')
+    mkdirSync(join(repo, 'drafts'))
+    write('drafts/a.txt', '12345')
+    write('drafts/b.txt', '12345')
+    mkdirSync(join(repo, 'mixed'))
+    write('mixed/note.txt', 'x')
+    write('mixed/run.log', 'x')
+    write('debug.log', 'x')
+    mkdirSync(join(repo, 'node_modules/x'), { recursive: true })
+    write('node_modules/x/index.js', 'x')
+    mkdirSync(join(repo, 'lib'))
+    init(join(repo, 'lib'))
+
+    const paths = async (scope: 'untracked' | 'ignored' | 'all'): Promise<string[]> =>
+      (await runOp(repo, 'cleanPreview', [scope])).entries.map((e) => e.path).sort()
+    // A folder holding ignored files lists its untracked files one by one, leaving those
+    expect(await paths('untracked')).toEqual(['drafts/', 'mixed/note.txt', 'new.txt'])
+    expect(await paths('ignored')).toEqual(['debug.log', 'mixed/run.log', 'node_modules/'])
+    expect(await paths('all')).toEqual([
+      'debug.log',
+      'drafts/',
+      'mixed/',
+      'new.txt',
+      'node_modules/'
+    ])
+    const preview = await runOp(repo, 'cleanPreview', ['untracked'])
+    expect(preview.nested).toEqual(['lib/'])
+    expect(preview.entries[0]).toEqual({
+      path: 'drafts/',
+      ignored: false,
+      size: 10,
+      files: 2,
+      partial: false
+    })
+
+    for (const path of ['.gitignore', '.', 'lib/', '../x']) {
+      await expect(runOp(repo, 'cleanFiles', [[path], false])).rejects.toThrow()
+    }
+    await runOp(repo, 'cleanFiles', [['drafts/', 'mixed/note.txt'], false])
+    expect(existsSync(join(repo, 'drafts'))).toBe(false)
+    expect(existsSync(join(repo, 'mixed/note.txt'))).toBe(false)
+    expect(existsSync(join(repo, 'mixed/run.log'))).toBe(true)
+
+    const trashed: string[] = []
+    setTrash(async (path) => {
+      trashed.push(path)
+      rmSync(path, { recursive: true })
+    })
+    await runOp(repo, 'cleanFiles', [['node_modules/', 'debug.log'], true])
+    expect(trashed).toEqual([join(repo, 'node_modules'), join(repo, 'debug.log')])
+    expect(await paths('all')).toEqual(['mixed/', 'new.txt'])
+    expect(existsSync(join(repo, 'lib/.git'))).toBe(true)
   })
 
   it('commits, amends and reads the last message', async () => {

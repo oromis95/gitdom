@@ -1,5 +1,5 @@
 // Repository operations exposed to the renderer through the `repo:op` IPC channel.
-import { mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
+import { lstat, mkdir, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { isAbsolute, relative, resolve } from 'path'
 import type {
   CommitsToMove,
@@ -60,6 +60,16 @@ const LINE_HISTORY_LIMIT = 500
 const REFLOG_LIMIT = 2000
 /** Ignored files and folders listed with their rule */
 const MOST_IGNORED = 2000
+/** Untracked and ignored entries listed for a clean */
+const MOST_CLEAN = 2000
+/** Files counted in each folder before its size is shown as partial: node_modules can hold 100k */
+const CLEAN_COUNT_BUDGET = 5000
+/** Moves a file to the Recycle Bin: set to Electron's at startup, unset in the tests */
+let trash: ((path: string) => Promise<void>) | null = null
+
+export function setTrash(moveToTrash: (path: string) => Promise<void>): void {
+  trash = moveToTrash
+}
 /** The running search in the changes of each repository: a new one, or clearing it, stops it */
 const contentSearches = new Map<string, AbortController>()
 const CONFLICT_MARKER_RE = /^(<{7}|>{7})( |$)/m
@@ -179,6 +189,56 @@ function runWithPaths(repo: string, args: string[], paths: string[]): Promise<st
     ['--literal-pathspecs', ...args, '--pathspec-from-file=-', '--pathspec-file-nul'],
     { input: paths.join('\0') }
   )
+}
+
+/** Untracked and ignored entries of the working tree; folders come once, with a trailing slash. */
+async function untrackedEntries(repo: string): Promise<{ untracked: string[]; ignored: string[] }> {
+  const fields = (
+    await runGit(repo, ['status', '--porcelain=v1', '-z', '--untracked-files=normal', '--ignored'])
+  ).split('\0')
+  const untracked: string[] = []
+  const ignored: string[] = []
+  for (let i = 0; i < fields.length; i++) {
+    const field = fields[i]
+    if (field.startsWith('?? ')) untracked.push(field.slice(3))
+    else if (field.startsWith('!! ')) ignored.push(field.slice(3))
+    // A rename or copy is followed by the old path
+    else if (/^[RC]|^.[RC]/.test(field)) i++
+  }
+  return { untracked, ignored }
+}
+
+/** Whether `path` is inside one of the folders (each ending with a slash). */
+const insideFolder = (path: string, folders: string[]): boolean =>
+  folders.some((folder) => path !== folder && path.startsWith(folder))
+
+/** A folder holding a repository of its own: git clean leaves it, and so does GitDom. */
+const isNestedRepo = async (repo: string, path: string): Promise<boolean> =>
+  path.endsWith('/') && (await stat(resolve(repo, path, '.git')).catch(() => null)) !== null
+
+/** Bytes and files of a file or folder, without following links; partial past the budget. */
+async function entrySize(file: string): Promise<{ size: number; files: number; partial: boolean }> {
+  const info = await lstat(file).catch(() => null)
+  if (!info) return { size: 0, files: 0, partial: false }
+  if (!info.isDirectory()) return { size: info.size, files: 1, partial: false }
+  let size = 0
+  let files = 0
+  let budget = CLEAN_COUNT_BUDGET
+  const folders = [file]
+  while (folders.length) {
+    const folder = folders.pop() as string
+    const children = await readdir(folder, { withFileTypes: true }).catch(() => [])
+    for (const child of children) {
+      if (budget-- <= 0) return { size, files, partial: true }
+      const path = resolve(folder, child.name)
+      if (child.isDirectory()) folders.push(path)
+      else {
+        files++
+        size += (await lstat(path).catch(() => null))?.size ?? 0
+      }
+    }
+  }
+  return { size, files, partial: false }
 }
 
 async function hasHead(repo: string): Promise<boolean> {
@@ -1692,6 +1752,96 @@ const ops: OpImpl = {
     return { rules: parseCheckIgnore(output), total: paths.length }
   },
 
+  async cleanPreview(repo, scope) {
+    if (scope !== 'untracked' && scope !== 'ignored' && scope !== 'all') {
+      throw new Error(`Invalid scope: ${String(scope)}`)
+    }
+    const { untracked, ignored } = await untrackedEntries(repo)
+    const folders = untracked.filter((path) => path.endsWith('/'))
+    let listed: { path: string; ignored: boolean }[] = []
+    if (scope === 'ignored') listed = ignored.map((path) => ({ path, ignored: true }))
+    else if (scope === 'all') {
+      // Ignored files in an untracked folder go with the folder
+      listed = [
+        ...untracked.map((path) => ({ path, ignored: false })),
+        ...ignored
+          .filter((path) => !insideFolder(path, folders))
+          .map((path) => ({ path, ignored: true }))
+      ]
+    } else {
+      for (const path of untracked) {
+        if (path.endsWith('/') && ignored.some((i) => i.startsWith(path))) {
+          // The folder holds ignored files too: its untracked files one by one, leaving those
+          const files = await runGit(repo, [
+            '--literal-pathspecs',
+            'ls-files',
+            '-o',
+            '--exclude-standard',
+            '-z',
+            '--',
+            path
+          ])
+          for (const file of files.split('\0'))
+            if (file) listed.push({ path: file, ignored: false })
+        } else listed.push({ path, ignored: false })
+      }
+    }
+    const nested: string[] = []
+    const kept: typeof listed = []
+    for (const entry of listed) {
+      if (await isNestedRepo(repo, entry.path)) nested.push(entry.path)
+      else kept.push(entry)
+    }
+    const entries = await Promise.all(
+      kept.slice(0, MOST_CLEAN).map(async (entry) => ({
+        ...entry,
+        ...(await entrySize(resolve(repo, entry.path)))
+      }))
+    )
+    entries.sort((a, b) => b.size - a.size || a.path.localeCompare(b.path))
+    return { entries, more: Math.max(0, kept.length - MOST_CLEAN), nested }
+  },
+
+  async cleanFiles(repo, paths, toTrash) {
+    if (!Array.isArray(paths)) throw new Error('Invalid paths')
+    if (toTrash && !trash) throw new Error('The Recycle Bin is not available')
+    // Only what a preview can list: an entry of git status, or a file in an untracked folder
+    const { untracked, ignored } = await untrackedEntries(repo)
+    const known = new Set([...untracked, ...ignored])
+    const folders = untracked.filter((path) => path.endsWith('/'))
+    for (const path of paths) {
+      repoFile(repo, path)
+      if ((!known.has(path) && !insideFolder(path, folders)) || (await isNestedRepo(repo, path))) {
+        throw new Error(`${path} is no longer untracked: look at the list again`)
+      }
+    }
+    if (toTrash && trash) {
+      const failed: string[] = []
+      for (const path of paths) {
+        await trash(repoFile(repo, path)).catch(() => failed.push(path))
+      }
+      if (failed.length) {
+        throw new Error(
+          `${failed.length} of ${paths.length} could not be moved to the Recycle Bin: ${failed.slice(0, 5).join(', ')}${failed.length > 5 ? '…' : ''}`
+        )
+      }
+      return
+    }
+    // -x as the ignored ones are named explicitly; clean has no --pathspec-from-file
+    for (let i = 0; i < paths.length; i += 100) {
+      await runGit(repo, [
+        '--literal-pathspecs',
+        'clean',
+        '-f',
+        '-d',
+        '-x',
+        '-q',
+        '--',
+        ...paths.slice(i, i + 100)
+      ])
+    }
+  },
+
   async worktreeAdd(repo, { path, branch, newBranch, start }) {
     assertArg(path, 'folder')
     const target = resolve(repo, path)
@@ -1813,7 +1963,8 @@ const READ_ONLY = new Set<OpName>([
   'releaseCommits',
   'previousTag',
   'ignoreRule',
-  'ignoredFiles'
+  'ignoredFiles',
+  'cleanPreview'
 ])
 
 /**
@@ -1856,6 +2007,8 @@ const shortRef = (ref: string): string => ref.replace(/^refs\/(heads|remotes)\//
 const LABELS: { [K in OpName]?: (...args: OpArgs<K>) => string } = {
   push: (force) => (force ? 'Force push' : 'Push'),
   ignore: (pattern) => `Ignore ${pattern}`,
+  cleanFiles: (paths, toTrash) =>
+    `${toTrash ? 'Move to the Recycle Bin' : 'Delete'} ${paths.length === 1 ? paths[0] : `${paths.length} untracked files and folders`}`,
   setSigning: () => 'Set commit signing',
   worktreeAdd: ({ path }) => `Add worktree ${path}`,
   worktreeRemove: (path) => `Remove worktree ${path}`,

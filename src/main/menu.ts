@@ -63,6 +63,7 @@ function build(): void {
       { label: 'Backups', click: send('backups') },
       { label: 'Statistics', click: send('statistics') },
       { label: 'Ignored Files', click: send('ignored') },
+      { label: 'Clean Up Untracked Files…', click: send('clean') },
       { type: 'separator' },
       { role: 'togglefullscreen' },
       { role: 'reload' },

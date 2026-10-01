@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Eraser,
   FileText,
   Folder,
   History,
@@ -60,6 +61,7 @@ import {
   reword,
   run,
   saveFileAt,
+  showCleanUp,
   showInFolder,
   runValue,
   skipOperation,
@@ -931,6 +933,16 @@ function WorkingTreePanel({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.E
           <div className="file-group-title">
             <ChevronDown size={15} /> Unstaged Files ({unstaged.length})
             <span className="toolbar-spacer" />
+            {unstaged.some((f) => f.status === '?') && (
+              <button
+                className="btn btn-small"
+                title="Clean up untracked files…"
+                aria-label="Clean up untracked files"
+                onClick={() => showCleanUp(repo)}
+              >
+                <Eraser size={13} />
+              </button>
+            )}
             {unstaged.length > 0 && (
               <button
                 className="btn btn-small btn-danger-outline"

@@ -91,6 +91,27 @@ export interface StashOptions {
 }
 
 /** What changed on disk: `git` needs a full snapshot reload, `worktree` only the status. */
+/** What a clean removes: untracked files, ignored ones (build output, dependencies) or both. */
+export type CleanScope = 'untracked' | 'ignored' | 'all'
+
+export interface CleanEntry {
+  /** Relative to the repository; folders end with a slash */
+  path: string
+  ignored: boolean
+  /** Bytes, and files for a folder; `partial` when the folder was too big to count it all */
+  size: number
+  files: number
+  partial: boolean
+}
+
+export interface CleanPreview {
+  entries: CleanEntry[]
+  /** Entries past the limit, not listed */
+  more: number
+  /** Repositories inside the working tree, never removed */
+  nested: string[]
+}
+
 export type ChangeScope = 'git' | 'worktree'
 
 /**
@@ -318,6 +339,13 @@ export interface RepoOps {
   ignoreRule(path: string): { rule: IgnoreRule | null; tracked: boolean }
   /** Ignored files and folders with the rule ignoring each; `total` counts them all, past the limit. */
   ignoredFiles(): { rules: IgnoreRule[]; total: number }
+  /** What a clean would remove: untracked files, ignored ones or both, largest first. */
+  cleanPreview(scope: CleanScope): CleanPreview
+  /**
+   * Removes untracked or ignored files and folders listed by `cleanPreview`: to the Recycle Bin,
+   * or for good with git clean. Paths that are no longer untracked are refused.
+   */
+  cleanFiles(paths: string[], toTrash: boolean): void
   /** Stores files matching the pattern with Git LFS, through the root .gitattributes. */
   /**
    * Adds a working tree at `path` (REPO-09): checking out `branch`, creating `newBranch` from
@@ -616,6 +644,7 @@ export type MenuCommand =
   | 'backups'
   | 'statistics'
   | 'ignored'
+  | 'clean'
   | 'whatsNew'
   | 'checkUpdates'
 
