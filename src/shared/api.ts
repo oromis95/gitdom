@@ -168,6 +168,8 @@ export interface HeavyObject {
 
 export type Maintenance = 'gc' | 'prune' | 'fsck'
 
+export type BisectMark = 'good' | 'bad' | 'skip'
+
 /**
  * A git hook: a script git runs at a moment of its work. Active runs, disabled is set aside with a
  * .disabled suffix (GitDom's own convention), sample is the example git ships, none is missing.
@@ -394,6 +396,17 @@ export interface RepoOps {
    * problems fsck found, empty otherwise.
    */
   maintain(task: Maintenance): string[]
+  /**
+   * Starts a bisect: `bad` has the problem, `good` (when known) doesn't; once both are given git
+   * checks out a commit halfway between to test. Refuses with changes in the working tree.
+   */
+  bisectStart(bad: string, good: string | null): void
+  /** Marks a commit (the one checked out when null) as good, bad or skipped; git checks out the next. */
+  bisectMark(mark: BisectMark, hash: string | null): void
+  /** Runs a command on each commit to test: exit 0 is good, 125 skip, any other up to 127 bad. */
+  bisectRun(command: string): string
+  /** Ends the bisect and checks out again what was checked out when it started. */
+  bisectReset(): void
   /** The hooks git would run, the ones it knows and any other script in their folder. */
   hooks(): HooksInfo
   /** The script of a hook, active or disabled; the sample git ships when there is neither. */

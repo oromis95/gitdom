@@ -131,6 +131,23 @@ export interface WorkingTreeStatus {
   unstaged: FileChange[]
 }
 
+/** A bisect in progress: the search of the commit that brought a problem in (ADV-06) */
+export interface BisectState {
+  /** What was checked out when it started, where stopping goes back to */
+  original: string
+  /** The commit marked bad: the problem is there */
+  bad: string | null
+  /** The commits marked good: the problem isn't there */
+  good: string[]
+  skipped: string[]
+  /** Commits that may have brought the problem in, the bad one included; 0 until both are marked */
+  candidates: number
+  /** The first bad commit, once found */
+  culprit: string | null
+  /** Only skipped commits are left to test: the first bad one is among them */
+  onlySkipped: boolean
+}
+
 export interface RepoSnapshot {
   path: string
   name: string
@@ -142,6 +159,8 @@ export interface RepoSnapshot {
   status: WorkingTreeStatus
   /** Operation in progress (merge, rebase…), null when idle */
   operation: RepoOperation | null
+  /** Bisect in progress, null otherwise */
+  bisect: BisectState | null
   /** Labels of the actions GitDom can undo and redo */
   history: { undo: string | null; redo: string | null }
   /** True when the commit list was truncated to the load limit */

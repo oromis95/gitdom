@@ -2828,3 +2828,68 @@ button.ignored-source:hover {
 .hooks-gap {
   flex: 1;
 }
+
+/* ---------- Bisect ---------- */
+
+.bisect-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+  background: color-mix(in srgb, var(--purple) 12%, var(--bg-panel));
+  border-bottom: 1px solid color-mix(in srgb, var(--purple) 35%, var(--border));
+}
+.bisect-bar.found {
+  background: color-mix(in srgb, var(--green) 12%, var(--bg-panel));
+  border-bottom-color: color-mix(in srgb, var(--green) 35%, var(--border));
+}
+.bisect-bar .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.bisect-text {
+  flex: 1;
+  min-width: 300px;
+}
+.bisect-link {
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  cursor: pointer;
+}
+.bisect-link:hover {
+  text-decoration: underline;
+}
+.bisect-good:not(:disabled) {
+  color: var(--green);
+}
+.bisect-bad:not(:disabled) {
+  color: var(--red);
+}
+.bisect-mark {
+  margin-right: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  border-radius: 8px;
+  vertical-align: 1px;
+}
+.bisect-mark.good {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 15%, transparent);
+}
+.bisect-mark.bad {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
+}
+.bisect-mark.skipped {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+}
+.bisect-mark.testing {
+  color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 18%, transparent);
+}

@@ -50,11 +50,12 @@
 .app.studio {
   display: grid;
   grid-template-columns: var(--rail-w) minmax(0, 1fr);
-  grid-template-rows: var(--tabbar-h) auto auto minmax(0, 1fr) auto var(--statusbar-h);
+  grid-template-rows: var(--tabbar-h) auto auto auto minmax(0, 1fr) auto var(--statusbar-h);
   grid-template-areas:
     'tabs tabs'
     'rail header'
     'rail banner'
+    'rail bisect'
     'rail main'
     'rail dock'
     'status status';
@@ -77,6 +78,12 @@
   grid-area: banner;
   margin: 0 var(--gap) var(--gap) 0;
   border: 1px solid var(--error-border);
+  border-radius: var(--radius);
+}
+.app.studio > .bisect-bar {
+  grid-area: bisect;
+  margin: 0 var(--gap) var(--gap) 0;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 .app.studio > .workspace,

@@ -204,6 +204,25 @@ export function buildCommands(): Command[] {
     }
     add('Identity', 'Commit signing: GPG or SSH key…', () => void editSigning(snapshot))
 
+    const bisect = snapshot.bisect
+    if (bisect) {
+      if (head.hash) {
+        add('Bisect', 'Mark the checked out commit as good', () => {
+          void actions.markBisect(repo, 'good')
+        })
+        add('Bisect', 'Mark the checked out commit as bad', () => {
+          void actions.markBisect(repo, 'bad')
+        })
+        add('Bisect', 'Skip the checked out commit', () => void actions.markBisect(repo, 'skip'))
+      }
+      if (bisect.bad && bisect.good.length && !bisect.culprit)
+        add('Bisect', 'Test each commit with a command…', () => void actions.runBisect(repo))
+      add('Bisect', 'Stop bisect', () => void actions.stopBisect(repo))
+    } else if (head.hash && !snapshot.operation) {
+      add('Bisect', 'Find where a problem started: the checked out commit has it', () => {
+        void actions.startBisect(snapshot, head.hash!)
+      })
+    }
     add('Recovery', 'Reflog: where HEAD and the branches have been', () =>
       app.openRecovery('reflog')
     )

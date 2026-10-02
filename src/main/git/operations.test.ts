@@ -1879,3 +1879,76 @@ describe('hooks', () => {
     expect(husky.hooks.every((h) => h.state === 'none')).toBe(true)
   })
 })
+
+describe('bisect (ADV-06)', () => {
+  // c1 … c8; the bug comes in with c5
+  const hashes: string[] = []
+  beforeEach(async () => {
+    hashes.length = 0
+    for (let i = 1; i <= 8; i++) {
+      await commitFile('app.txt', i >= 5 ? `bug ${i}\n` : `ok ${i}\n`, `c${i}`)
+      hashes.push(git(repo, 'rev-parse', 'HEAD'))
+    }
+  })
+  const bisect = async (): Promise<
+    NonNullable<Awaited<ReturnType<typeof loadSnapshot>>['bisect']>
+  > => {
+    const state = (await loadSnapshot(repo)).bisect
+    expect(state).not.toBeNull()
+    return state!
+  }
+  const head = (): string => git(repo, 'rev-parse', 'HEAD')
+  const buggy = (): boolean => readFileSync(join(repo, 'app.txt'), 'utf8').startsWith('bug')
+
+  it('finds the first bad commit by marking, and goes back when stopped', async () => {
+    expect((await loadSnapshot(repo)).bisect).toBeNull()
+    // Only the bad one: waiting for a good one
+    await runOp(repo, 'bisectStart', ['HEAD', null])
+    expect(await bisect()).toMatchObject({
+      original: 'main',
+      bad: hashes[7],
+      good: [],
+      candidates: 0,
+      culprit: null
+    })
+    await expect(runOp(repo, 'bisectStart', ['HEAD', null])).rejects.toThrow('already in progress')
+    await runOp(repo, 'bisectMark', ['good', hashes[0]])
+    expect(await bisect()).toMatchObject({ good: [hashes[0]], candidates: 7, culprit: null })
+    // Test what git checks out, until it is found
+    for (let step = 0; step < 5 && !(await bisect()).culprit; step++)
+      await runOp(repo, 'bisectMark', [buggy() ? 'bad' : 'good', null])
+    expect((await bisect()).culprit).toBe(hashes[4])
+    await runOp(repo, 'bisectReset', [])
+    expect((await loadSnapshot(repo)).bisect).toBeNull()
+    expect(git(repo, 'symbolic-ref', '--short', 'HEAD')).toBe('main')
+    expect(head()).toBe(hashes[7])
+  })
+
+  it('skips commits, refuses with changes, and runs a command', async () => {
+    write('app.txt', 'changed\n')
+    await expect(runOp(repo, 'bisectStart', ['HEAD', hashes[0]])).rejects.toThrow(
+      'Commit or stash your changes first'
+    )
+    git(repo, 'checkout', '--', 'app.txt')
+    await expect(runOp(repo, 'bisectStart', ['nothing', null])).rejects.toThrow('Not a commit')
+    await expect(runOp(repo, 'bisectMark', ['good', null])).rejects.toThrow('No bisect')
+
+    // Skipping all the commits around the bug: only skipped ones left
+    await runOp(repo, 'bisectStart', [hashes[5], hashes[2]])
+    await runOp(repo, 'bisectMark', ['skip', hashes[3]])
+    await runOp(repo, 'bisectMark', ['skip', hashes[4]])
+    const state = await bisect()
+    expect(state).toMatchObject({ candidates: 3, culprit: null, onlySkipped: true })
+    expect(state.skipped.sort()).toEqual([hashes[3], hashes[4]].sort())
+    await runOp(repo, 'bisectReset', [])
+
+    // A command tells good from bad: fails where the bug is (shell builtins only, for Windows)
+    await runOp(repo, 'bisectStart', ['HEAD', hashes[0]])
+    const output = await runOp(repo, 'bisectRun', [
+      'read line < app.txt; case "$line" in ok*) exit 0 ;; *) exit 1 ;; esac'
+    ])
+    expect(output).toContain(`${hashes[4]} is the first bad commit`)
+    expect((await bisect()).culprit).toBe(hashes[4])
+    await runOp(repo, 'bisectReset', [])
+  })
+})

@@ -2,6 +2,7 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { basename, resolve } from 'path'
 import type {
+  BisectState,
   Commit,
   CommitDetail,
   GraphFilter,
@@ -106,6 +107,40 @@ export async function readOperation(repo: string): Promise<RepoOperation | null>
   if (has('CHERRY_PICK_HEAD')) return 'cherry-pick'
   if (has('REVERT_HEAD')) return 'revert'
   return null
+}
+
+/** The bisect in progress, from its files and refs/bisect; null when there is none. */
+export async function readBisect(
+  repo: string,
+  refsOutput: Promise<string>
+): Promise<BisectState | null> {
+  const { gitDir } = await gitDirs(repo)
+  const start = await readFile(resolve(gitDir, 'BISECT_START'), 'utf8').catch(() => null)
+  if (start === null) return null
+  let bad: string | null = null
+  const good: string[] = []
+  const skipped: string[] = []
+  for (const line of (await refsOutput).split('\n')) {
+    const [name, hash] = line.split(FIELD)
+    if (name === 'refs/bisect/bad') bad = hash
+    else if (name?.startsWith('refs/bisect/good-')) good.push(hash)
+    else if (name?.startsWith('refs/bisect/skip-')) skipped.push(hash)
+  }
+  // Between the good commits and the bad one: where the problem came in
+  const candidates =
+    bad && good.length
+      ? (await runGit(repo, ['rev-list', bad, '--not', ...good])).split('\n').filter(Boolean)
+      : []
+  const untested = candidates.filter((hash) => hash !== bad && !skipped.includes(hash))
+  return {
+    original: start.trim(),
+    bad,
+    good,
+    skipped,
+    candidates: candidates.length,
+    culprit: candidates.length === 1 ? bad : null,
+    onlySkipped: candidates.length > 1 && untested.length === 0
+  }
 }
 
 /** Submodules, when the repository declares any: `submodule status` is slow on large repositories. */
@@ -271,6 +306,7 @@ export async function loadSnapshot(
     remotes,
     status,
     operation,
+    bisect,
     submodules,
     lfs,
     [identity, signing],
@@ -284,6 +320,7 @@ export async function loadSnapshot(
     runGit(repo, ['remote', '-v']),
     loadStatus(repo),
     readOperation(repo),
+    readBisect(repo, refsOutput),
     loadSubmodules(repo),
     loadLfs(repo),
     loadIdentityAndSigning(repo),
@@ -301,6 +338,7 @@ export async function loadSnapshot(
     remotes: parseRemotes(remotes),
     status,
     operation,
+    bisect,
     history,
     truncated: page.more,
     submodules,

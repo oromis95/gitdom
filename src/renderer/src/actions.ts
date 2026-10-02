@@ -1,5 +1,6 @@
 // User-facing git actions: run operations, ask for confirmation where needed, report the outcome.
 import type {
+  BisectMark,
   MergeMode,
   OpArgs,
   OpName,
@@ -1390,6 +1391,8 @@ export function commitMenu(snapshot: RepoSnapshot, hash: string, subject: string
     },
     compareItem(`Compare with ${branch}`, hash, branch, isHead),
     'separator',
+    ...bisectItems(snapshot, hash),
+    'separator',
     ...(['soft', 'mixed', 'hard'] as const).map((mode): MenuItem => ({
       label: `Reset ${branch} here: ${mode} (${RESET_HELP[mode]})`,
       danger: mode === 'hard',
@@ -1399,6 +1402,71 @@ export function commitMenu(snapshot: RepoSnapshot, hash: string, subject: string
     'separator',
     { label: 'Copy commit hash', onClick: () => copy(hash) },
     { label: 'Copy commit message', onClick: () => copy(subject) }
+  ]
+}
+
+// --- Bisect (ADV-06) -------------------------------------------------------------------------
+
+const BISECT_COMMAND_KEY = 'gitdom.bisectCommand'
+
+/** Starts looking for the commit that brought a problem in, from one that has it. */
+export async function startBisect(snapshot: RepoSnapshot, bad: string): Promise<void> {
+  const result = await runBusy(snapshot.path, 'Starting bisect', 'bisectStart', bad, null)
+  if (!result.ok) fail(result)
+}
+
+export async function markBisect(
+  repo: string,
+  mark: BisectMark,
+  hash: string | null = null
+): Promise<void> {
+  const result = await runBusy(repo, 'Bisecting', 'bisectMark', mark, hash)
+  if (!result.ok) fail(result)
+}
+
+export async function stopBisect(repo: string): Promise<void> {
+  const result = await runBusy(repo, 'Stopping bisect', 'bisectReset')
+  if (!result.ok) fail(result)
+}
+
+/** Lets a command test each commit, until the first bad one is found. */
+export async function runBisect(repo: string): Promise<void> {
+  const values = await showForm({
+    title: 'Test each commit with a command',
+    fields: [
+      {
+        key: 'command',
+        label: 'Command, run in the repository folder',
+        initial: localStorage.getItem(BISECT_COMMAND_KEY) ?? 'npm test'
+      }
+    ],
+    message:
+      'It runs on every commit to test: exiting with 0 means good, 125 skips the commit, any other code up to 127 means bad. The output is in the activity log.',
+    confirmLabel: 'Run'
+  })
+  const command = values ? String(values.command).trim() : ''
+  if (!command) return
+  localStorage.setItem(BISECT_COMMAND_KEY, command)
+  const result = await runBusy(repo, 'Bisecting', 'bisectRun', command)
+  if (!result.ok) fail(result)
+}
+
+/** The bisect items of a commit's menu. */
+function bisectItems(snapshot: RepoSnapshot, hash: string): MenuItem[] {
+  const repo = snapshot.path
+  if (!snapshot.bisect)
+    return [
+      {
+        label: 'Find where a problem started (bisect): it is here…',
+        disabled: !!snapshot.operation,
+        onClick: () => void startBisect(snapshot, hash)
+      }
+    ]
+  return [
+    { label: 'Bisect: mark as good', onClick: () => void markBisect(repo, 'good', hash) },
+    { label: 'Bisect: mark as bad', onClick: () => void markBisect(repo, 'bad', hash) },
+    { label: "Bisect: skip (can't be tested)", onClick: () => void markBisect(repo, 'skip', hash) },
+    { label: 'Stop bisect', onClick: () => void stopBisect(repo) }
   ]
 }
 

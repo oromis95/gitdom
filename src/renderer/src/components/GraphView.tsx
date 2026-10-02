@@ -365,6 +365,20 @@ export default function GraphView({
     [snapshot.refs, snapshot.head]
   )
 
+  // The commits marked in a bisect in progress
+  const bisectMarks = useMemo(() => {
+    const marks = new Map<string, 'good' | 'bad' | 'skipped' | 'testing'>()
+    const b = snapshot.bisect
+    if (!b) return marks
+    for (const hash of b.good) marks.set(hash, 'good')
+    for (const hash of b.skipped) marks.set(hash, 'skipped')
+    if (b.bad) marks.set(b.bad, 'bad')
+    // What git checked out for the user to test
+    const head = snapshot.head.hash
+    if (head && b.bad && b.good.length && !b.culprit && !marks.has(head)) marks.set(head, 'testing')
+    return marks
+  }, [snapshot.bisect, snapshot.head.hash])
+
   const rowIndex = useMemo(() => {
     const map = new Map<string, number>()
     rows.forEach((r, i) => map.set(rowKey(r), i))
@@ -734,6 +748,11 @@ export default function GraphView({
               className={`cell-message${row.kind === 'stash' ? ' stash-message' : ''}`}
               {...(row.kind === 'commit' ? commitCard(row.commit) : stashCard(row.stash))}
             >
+              {row.kind === 'commit' && bisectMarks.has(hash) && (
+                <span className={`bisect-mark ${bisectMarks.get(hash)}`}>
+                  {bisectMarks.get(hash)}
+                </span>
+              )}
               <Marked
                 text={row.kind === 'commit' ? row.commit.subject : row.stash.message}
                 mark={commitKey}

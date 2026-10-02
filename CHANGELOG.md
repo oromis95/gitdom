@@ -2,6 +2,15 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- **Find where a problem started (bisect)**: right-click a commit with the problem and choose **Find where a problem started**, then mark one where it wasn't there yet as good
+  - A bar above the graph says which commit is checked out to test and how many steps are left; answer **Good**, **Bad** or **Skip** until GitDom names the commit that brought the problem in, then go back to the branch with one click
+  - **Automate…** lets a command test each commit, such as `npm test`: exit code 0 is good, 125 skips the commit, any other is bad
+  - The marked commits are labelled in the graph, and a bisect started in the terminal shows up too
+
 ## 1.5.0 — 2026-10-01
 
 ### Added

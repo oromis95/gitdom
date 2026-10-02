@@ -38,6 +38,7 @@ import {
 } from './parsers'
 import type { DiffOptions, FileContent, FileDiff, ImagePair } from '../../shared/types'
 import { GitError, runGit, tryGit } from './exec'
+import { gitDirs } from './gitdir'
 import { toolSettings } from '../settings'
 import {
   COMMIT_LIMIT,
@@ -301,6 +302,18 @@ async function currentBranch(repo: string): Promise<string> {
   const branch = (await tryGit(repo, ['symbolic-ref', '-q', '--short', 'HEAD']))?.trim()
   if (!branch) throw new Error('HEAD is detached: check out a branch first')
   return branch
+}
+
+async function bisecting(repo: string): Promise<boolean> {
+  const { gitDir } = await gitDirs(repo)
+  return exists(resolve(gitDir, 'BISECT_START'))
+}
+
+async function assertCommit(repo: string, rev: string): Promise<void> {
+  if (typeof rev !== 'string' || !rev || rev.startsWith('-') || rev.includes('\0'))
+    throw new Error(`Not a commit: ${String(rev)}`)
+  if ((await tryGit(repo, ['rev-parse', '--verify', '-q', `${rev}^{commit}`])) === null)
+    throw new Error(`Not a commit: ${rev}`)
 }
 
 /** The hooks git knows, in the order it runs them, and when */
@@ -1856,6 +1869,44 @@ const ops: OpImpl = {
       .filter((line) => line && !line.startsWith('notice:') && !line.startsWith('Checking'))
   },
 
+  async bisectStart(repo, bad, good) {
+    await assertIdle(repo)
+    if (await bisecting(repo)) throw new Error('A bisect is already in progress: stop it first')
+    // Bisect checks out other commits: the changes would follow, or stop it halfway
+    if ((await runGit(repo, ['status', '--porcelain', '--untracked-files=no'])).trim())
+      throw new Error('Commit or stash your changes first: bisect checks out other commits')
+    const revs = [bad, ...(good ? [good] : [])]
+    for (const rev of revs) await assertCommit(repo, rev)
+    await runGit(repo, ['bisect', 'start', ...revs, '--'])
+  },
+
+  async bisectMark(repo, mark, hash) {
+    if (!['good', 'bad', 'skip'].includes(mark)) throw new Error(`Unknown mark: ${String(mark)}`)
+    if (!(await bisecting(repo))) throw new Error('No bisect in progress')
+    if (hash !== null) await assertCommit(repo, hash)
+    try {
+      await runGit(repo, ['bisect', mark, ...(hash ? [hash] : [])])
+    } catch (e) {
+      // Not a failure: the bisect is over, the first bad commit is one of the skipped ones
+      if (e instanceof GitError && /only 'skip'ped commits left/.test(e.stderr)) return
+      throw e
+    }
+  },
+
+  async bisectRun(repo, command) {
+    if (typeof command !== 'string' || !command.trim()) throw new Error('No command to run')
+    if (!(await bisecting(repo))) throw new Error('No bisect in progress')
+    // git quotes each argument for the shell: eval reads the command as typed
+    const output = await runGit(repo, ['bisect', 'run', 'eval', command.trim()], {
+      withStderr: true
+    })
+    return output.trim().split('\n').slice(-200).join('\n')
+  },
+
+  async bisectReset(repo) {
+    await runGit(repo, ['bisect', 'reset'])
+  },
+
   async hooks(repo) {
     const dir = await hooksDir(repo)
     const hooksPath = await getConfig(repo, 'core.hooksPath')
@@ -2423,6 +2474,11 @@ const LABELS: { [K in OpName]?: (...args: OpArgs<K>) => string } = {
   worktreeRemove: (path) => `Remove worktree ${path}`,
   worktreeLock: (path, locked) => `${locked ? 'Lock' : 'Unlock'} worktree ${path}`,
   restoreBackup: (_id, ref) => `Restore ${shortRef(ref)} from a backup`,
+  bisectStart: () => 'Start bisect',
+  bisectMark: (mark, hash) =>
+    `Bisect: mark ${hash ? short(hash) : 'the checked out commit'} as ${mark === 'skip' ? 'skipped' : mark}`,
+  bisectRun: (command) => `Bisect: run ${command}`,
+  bisectReset: () => 'Stop bisect',
   saveHook: (name) => `Save the ${name} hook`,
   setHookEnabled: (name, enabled) => `Turn ${enabled ? 'on' : 'off'} the ${name} hook`,
   deleteHook: (name) => `Delete the ${name} hook`,

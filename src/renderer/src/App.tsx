@@ -13,6 +13,7 @@ import type { RepoSnapshot } from '../../shared/types'
 import TabBar from './components/TabBar'
 import Toolbar from './components/Toolbar'
 import Workspace from './components/Workspace'
+import BisectBar from './components/BisectBar'
 import Overlays from './components/Overlays'
 import { HoverLayer } from './components/HoverCards'
 import TerminalDock from './components/TerminalDock'
@@ -259,6 +260,7 @@ function App(): React.JSX.Element {
         <>
           <Toolbar tab={tab} />
           {tab.error && <div className="banner-error">{tab.error}</div>}
+          {snapshot && <BisectBar snapshot={snapshot} busy={!!tab.busy} />}
           {snapshot ? (
             <Workspace key={tab.path} tab={tab} snapshot={snapshot} />
           ) : (
