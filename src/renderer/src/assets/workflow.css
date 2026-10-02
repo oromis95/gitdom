@@ -3125,3 +3125,96 @@ button.ignored-source:hover {
 .dashboard-action .dashboard-state {
   grid-column: auto;
 }
+
+/* ---------- What I did ---------- */
+
+.modal.my-week {
+  width: 760px;
+  max-width: calc(100vw - 40px);
+  height: 82vh;
+  max-height: 760px;
+}
+.my-week-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.my-week-gap {
+  flex: 1;
+}
+.my-week-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+.my-week-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.my-week-note {
+  padding: 12px 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.my-week-day h3 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.my-week-repo {
+  margin: 0 0 8px 2px;
+}
+.my-week-repo-name {
+  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.my-week-commit {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 13px;
+  text-align: left;
+  color: var(--text);
+  border-radius: 4px;
+}
+.my-week-commit:hover {
+  background: var(--bg-hover);
+}
+.my-week-time {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.my-week-subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.my-week-ref {
+  flex-shrink: 0;
+  max-width: 160px;
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal.my-week .modal-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}

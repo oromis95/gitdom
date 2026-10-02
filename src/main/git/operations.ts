@@ -10,6 +10,7 @@ import type {
   PatchInfo,
   PatchSource,
   RepoSummary,
+  MyCommit,
   MergeMode,
   OpArgs,
   OpName,
@@ -1945,6 +1946,40 @@ const ops: OpImpl = {
     await runGit(repo, ['bisect', 'reset'])
   },
 
+  async myCommits(repo, since, until, emails) {
+    if (!Number.isFinite(since) || !Number.isFinite(until)) throw new Error('Invalid period')
+    if (!(await exists(repo))) throw new Error('The folder is gone')
+    const own = await getConfig(repo, 'user.email')
+    const mine = new Set(
+      [...(Array.isArray(emails) ? emails : []), own]
+        .filter((e): e is string => typeof e === 'string' && !!e.trim())
+        .map((e) => e.trim().toLowerCase())
+    )
+    if (!mine.size) return []
+    const output = await tryGit(repo, [
+      'log',
+      '--all',
+      '--source',
+      '--no-merges',
+      `--since=@${Math.floor(since)}`,
+      `--until=@${Math.floor(until)}`,
+      '--format=%H%x1f%at%x1f%ae%x1f%S%x1f%s'
+    ])
+    const seen = new Set<string>()
+    const commits: MyCommit[] = []
+    for (const line of (output ?? '').split('\n')) {
+      const [hash, date, email, source, ...subject] = line.split('\x1f')
+      if (!hash || seen.has(hash) || !mine.has(email.toLowerCase())) continue
+      seen.add(hash)
+      const ref = source.replace(/^refs\/(heads|tags|remotes)\//, '')
+      // Stashes are work in progress, not work done
+      if (source === 'refs/stash') continue
+      commits.push({ hash, date: Number(date), ref, subject: subject.join('\x1f') })
+    }
+    // --since reads the committer date: a rebase today would bring in last month's work
+    return commits.filter((c) => c.date >= since && c.date < until).sort((a, b) => b.date - a.date)
+  },
+
   async repoSummary(repo) {
     if (!(await exists(repo))) throw new Error('The folder is gone')
     const [status, last, stashes, operation] = await Promise.all([
@@ -2591,7 +2626,8 @@ const READ_ONLY = new Set<OpName>([
   'readHook',
   'patchText',
   'inspectPatch',
-  'repoSummary'
+  'repoSummary',
+  'myCommits'
 ])
 
 /**

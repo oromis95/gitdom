@@ -190,6 +190,16 @@ export interface RepoSummary {
   operation: RepoOperation | null
 }
 
+/** A commit of the user's, for "What I did" */
+export interface MyCommit {
+  hash: string
+  subject: string
+  /** Unix seconds, when it was authored */
+  date: number
+  /** The branch or tag it was found from */
+  ref: string
+}
+
 /** What a patch is made of: some commits, or the changes not committed yet */
 export type PatchSource =
   | { commits: string[] }
@@ -445,6 +455,11 @@ export interface RepoOps {
   bisectReset(): void
   /** The state of the repository in one look: branch, upstream, changes, stashes, last commit. */
   repoSummary(): RepoSummary
+  /**
+   * The user's commits between two moments (Unix seconds) on every branch, merges left out: those
+   * with the repository's own user.email, or one of `emails`.
+   */
+  myCommits(since: number, until: number, emails: string[]): MyCommit[]
   /** A patch as text, as git format-patch (commits) or git diff (changes) writes it. */
   patchText(source: PatchSource): string
   /** Writes a patch to a file. */
@@ -832,6 +847,7 @@ export type MenuCommand =
   | 'hooks'
   | 'applyPatch'
   | 'dashboard'
+  | 'myWeek'
   | 'whatsNew'
   | 'checkUpdates'
 

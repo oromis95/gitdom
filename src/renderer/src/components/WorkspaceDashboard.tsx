@@ -13,28 +13,14 @@ import {
 } from 'lucide-react'
 import type { RepoSummary } from '../../../shared/api'
 import { useApp } from '../store'
-import { useWorkspaces } from '../workspaces'
+import { eachLimited, knownRepositories, useWorkspaces } from '../workspaces'
 import { notify, openMenu, useUi } from '../ui'
 import { copy, showInFolder } from '../actions'
 import { relativeTime } from '../time'
 
-/** Repositories read or fetched at the same time */
-const PARALLEL = 4
-
 type Loaded = { summary: RepoSummary | null; error: string | null }
 type Fetching = 'fetching' | 'pulling' | { error: string }
-
 const nameOf = (path: string): string => path.split(/[\\/]/).pop() || path
-
-/** Runs `work` on each item, a few at a time. */
-async function eachLimited<T>(items: T[], work: (item: T) => Promise<void>): Promise<void> {
-  const queue = [...items]
-  await Promise.all(
-    Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
-      for (let item = queue.shift(); item !== undefined; item = queue.shift()) await work(item)
-    })
-  )
-}
 
 const changesOf = (s: RepoSummary): number => s.staged + s.unstaged + s.untracked + s.conflicts
 const needsAttention = (l: Loaded | undefined): boolean =>
@@ -59,15 +45,16 @@ function Dialog(): React.JSX.Element {
   const [busy, setBusy] = useState(false)
 
   // Every repository once, the open ones first
-  const all = useMemo(() => {
-    const paths = [
-      ...tabs.map((t) => t.path),
-      ...workspaces.flatMap((w) => w.paths),
-      ...favorites,
-      ...recent
-    ]
-    return paths.filter((p, i) => paths.findIndex((q) => q.toLowerCase() === p.toLowerCase()) === i)
-  }, [tabs, workspaces, favorites, recent])
+  const all = useMemo(
+    () =>
+      knownRepositories(
+        tabs.map((t) => t.path),
+        workspaces,
+        favorites,
+        recent
+      ),
+    [tabs, workspaces, favorites, recent]
+  )
   const paths =
     scope === 'all'
       ? all

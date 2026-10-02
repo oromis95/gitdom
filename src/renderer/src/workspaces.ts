@@ -27,6 +27,30 @@ function save(list: Workspace[]): void {
   useWorkspaces.setState({ list: sorted })
 }
 
+/** Every repository GitDom knows, once each: open tabs, workspaces, favorites, then recent. */
+export function knownRepositories(
+  tabs: string[],
+  workspaces: Workspace[],
+  favorites: string[],
+  recent: string[]
+): string[] {
+  const paths = [...tabs, ...workspaces.flatMap((w) => w.paths), ...favorites, ...recent]
+  return paths.filter((p, i) => paths.findIndex((q) => q.toLowerCase() === p.toLowerCase()) === i)
+}
+
+/** Repositories read or fetched at the same time */
+const PARALLEL = 4
+
+/** Runs `work` on each item, a few at a time. */
+export async function eachLimited<T>(items: T[], work: (item: T) => Promise<void>): Promise<void> {
+  const queue = [...items]
+  await Promise.all(
+    Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
+      for (let item = queue.shift(); item !== undefined; item = queue.shift()) await work(item)
+    })
+  )
+}
+
 const openPaths = (): string[] => useApp.getState().tabs.map((t) => t.path)
 
 export function openWorkspace(workspace: Workspace, replace: boolean): void {

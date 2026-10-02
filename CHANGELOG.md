@@ -2,6 +2,15 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- **What I did** (**View → What I Did**, or the command palette): your commits in every repository GitDom knows, day by day
+  - This week, last week, or the last 7 or 30 days; on any branch, merges and stashes left out
+  - Yours are those with the repository's author email or the address of one of your identity profiles, so work and personal addresses both count
+  - **Copy as text** or **Copy as Markdown** for a standup or a report; click a commit to open it in the graph
+
 ## 1.6.1 — 2026-10-02
 
 Version 1.6.0 was never published: this release also brings everything listed under it.

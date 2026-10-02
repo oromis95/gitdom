@@ -15,6 +15,7 @@ const RepoHealth = lazy(() => import('./RepoHealth'))
 const Hooks = lazy(() => import('./Hooks'))
 const PatchDialog = lazy(() => import('./PatchDialog'))
 const WorkspaceDashboard = lazy(() => import('./WorkspaceDashboard'))
+const MyWeek = lazy(() => import('./MyWeek'))
 const Preferences = lazy(() => import('./Preferences'))
 
 function Toasts(): React.JSX.Element {
@@ -289,6 +290,7 @@ export default function Overlays(): React.JSX.Element {
         <Hooks />
         <PatchDialog />
         <WorkspaceDashboard />
+        <MyWeek />
         <Preferences />
       </Suspense>
       <CommandPalette />

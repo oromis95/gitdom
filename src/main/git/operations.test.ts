@@ -2078,3 +2078,46 @@ describe('workspace dashboard', () => {
     await expect(runOp(join(root, 'gone'), 'repoSummary', [])).rejects.toThrow('The folder is gone')
   })
 })
+
+describe('what I did', () => {
+  it("finds the user's commits of a period on every branch", async () => {
+    const day = 86400
+    const monday = 1790380800 // Mon 28 Sep 2026, 00:00 UTC
+    const commitAt = (when: number, email: string, message: string, file: string): void => {
+      writeFileSync(join(repo, file), message)
+      git(repo, 'add', file)
+      const date = `@${when} +0000`
+      execFileSync('git', ['-c', `user.email=${email}`, 'commit', '-qm', message], {
+        cwd: repo,
+        input: '',
+        env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date }
+      })
+    }
+    git(repo, 'config', 'user.email', 'me@work.it')
+    commitAt(monday - 3 * day, 'me@work.it', 'Last week', 'a.txt')
+    commitAt(monday + 3600, 'me@work.it', 'Monday work', 'b.txt')
+    commitAt(monday + day, 'colleague@work.it', 'Not mine', 'c.txt')
+    git(repo, 'checkout', '-q', '-b', 'feature')
+    commitAt(monday + 2 * day, 'ME@personal.it', 'On a branch, other address', 'd.txt')
+    git(repo, 'checkout', '-q', 'main')
+    write('e.txt', 'wip')
+    git(repo, 'add', 'e.txt')
+    git(repo, 'stash', 'push', '-q')
+
+    const week = await runOp(repo, 'myCommits', [monday, monday + 7 * day, ['me@personal.it']])
+    expect(week.map((c) => [c.subject, c.ref])).toEqual([
+      ['On a branch, other address', 'feature'],
+      ['Monday work', 'main']
+    ])
+    expect(week[1].date).toBe(monday + 3600)
+    // Only the repository's own address
+    expect(
+      (await runOp(repo, 'myCommits', [monday, monday + 7 * day, []])).map((c) => c.subject)
+    ).toEqual(['Monday work'])
+    // The week before
+    expect(
+      (await runOp(repo, 'myCommits', [monday - 7 * day, monday, []])).map((c) => c.subject)
+    ).toEqual(['Last week'])
+    await expect(runOp(repo, 'myCommits', [Number.NaN, 0, []])).rejects.toThrow('Invalid period')
+  })
+})

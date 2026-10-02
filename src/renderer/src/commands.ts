@@ -336,6 +336,9 @@ export function buildCommands(): Command[] {
   add('View', 'Workspace dashboard: every repository, its changes, and fetch them all', () =>
     useUi.setState({ dashboard: true })
   )
+  add('View', 'What I did: my commits this week in every repository, to copy', () =>
+    useUi.setState({ myWeek: true })
+  )
   const zoom = Math.round(useSettings.getState().zoom * 100)
   add('View', 'Zoom in', () => stepZoom(1), `${shortcutLabel('zoomIn')}  (${zoom}%)`.trim())
   add('View', 'Zoom out', () => stepZoom(-1), shortcutLabel('zoomOut'))

@@ -137,6 +137,8 @@ interface UiState {
   palette: boolean
   /** Workspace dashboard open */
   dashboard: boolean
+  /** "What I did" open */
+  myWeek: boolean
   /** Clone or new repository dialog open */
   repoDialog: 'clone' | 'init' | null
   preferences: boolean
@@ -160,6 +162,7 @@ export const useUi = create<UiState>((set, get) => ({
   patch: null,
   palette: false,
   dashboard: false,
+  myWeek: false,
   repoDialog: null,
   preferences: false,
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

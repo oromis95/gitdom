@@ -186,7 +186,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 - ✅ **Bisect guidato**: segni "buono/cattivo" e l'app trova il commit colpevole (ADV-06)
 - ✅ **Patch**: creazione da commit e applicazione di file .patch (ADV-07)
 - ✅ **Cruscotto dei workspace**: lo stato di tutti i repository in una vista (modifiche aperte, avanti/indietro), con "Fetch tutti"
-- **Cosa ho fatto questa settimana**: i tuoi commit su tutti i repository, per giorno, da copiare per uno standup o un report
+- ✅ **Cosa ho fatto questa settimana**: i tuoi commit su tutti i repository, per giorno, da copiare per uno standup o un report
 
 ---
 

@@ -181,6 +181,7 @@ function App(): React.JSX.Element {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) showRepoHealth(repo)
         } else if (command === 'dashboard') useUi.setState({ dashboard: true })
+        else if (command === 'myWeek') useUi.setState({ myWeek: true })
         else if (command === 'applyPatch') {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) void openPatch(repo)
