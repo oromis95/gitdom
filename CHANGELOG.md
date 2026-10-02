@@ -2,7 +2,9 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
-## Unreleased
+## 1.6.1 — 2026-10-02
+
+Version 1.6.0 was never published: this release also brings everything listed under it.
 
 ### Added
 
