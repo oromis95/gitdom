@@ -9,6 +9,7 @@ import type {
   HookInfo,
   PatchInfo,
   PatchSource,
+  RepoSummary,
   MergeMode,
   OpArgs,
   OpName,
@@ -1944,6 +1945,52 @@ const ops: OpImpl = {
     await runGit(repo, ['bisect', 'reset'])
   },
 
+  async repoSummary(repo) {
+    if (!(await exists(repo))) throw new Error('The folder is gone')
+    const [status, last, stashes, operation] = await Promise.all([
+      runGit(repo, ['status', '--porcelain=v2', '--branch', '--untracked-files=normal']),
+      tryGit(repo, ['log', '-1', '--format=%ct%x1f%s']),
+      tryGit(repo, ['rev-list', '--walk-reflogs', '--count', 'refs/stash']),
+      readOperation(repo)
+    ])
+    const summary: RepoSummary = {
+      branch: null,
+      head: null,
+      upstream: null,
+      ahead: 0,
+      behind: 0,
+      staged: 0,
+      unstaged: 0,
+      untracked: 0,
+      conflicts: 0,
+      stashes: Number(stashes?.trim()) || 0,
+      lastCommit: null,
+      operation
+    }
+    for (const line of status.split('\n')) {
+      if (line.startsWith('# branch.head '))
+        summary.branch = line.slice(14) === '(detached)' ? null : line.slice(14)
+      else if (line.startsWith('# branch.oid ')) {
+        const oid = line.slice(13)
+        summary.head = oid === '(initial)' ? null : oid.slice(0, 7)
+      } else if (line.startsWith('# branch.upstream ')) summary.upstream = line.slice(18)
+      else if (line.startsWith('# branch.ab ')) {
+        const [ahead, behind] = line.slice(12).split(' ')
+        summary.ahead = Math.abs(Number(ahead))
+        summary.behind = Math.abs(Number(behind))
+      } else if (line.startsWith('1 ') || line.startsWith('2 ')) {
+        if (line[2] !== '.') summary.staged++
+        if (line[3] !== '.') summary.unstaged++
+      } else if (line.startsWith('u ')) summary.conflicts++
+      else if (line.startsWith('? ')) summary.untracked++
+    }
+    if (last?.trim()) {
+      const [date, ...subject] = last.trim().split('\x1f')
+      summary.lastCommit = { date: Number(date), subject: subject.join('\x1f') }
+    }
+    return summary
+  },
+
   async patchText(repo, source) {
     return patchText(repo, source)
   },
@@ -2543,7 +2590,8 @@ const READ_ONLY = new Set<OpName>([
   'hooks',
   'readHook',
   'patchText',
-  'inspectPatch'
+  'inspectPatch',
+  'repoSummary'
 ])
 
 /**

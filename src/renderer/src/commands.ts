@@ -1,7 +1,7 @@
 // Everything the command palette can do, built from the current state when it opens.
 import type { PullMode } from '../../shared/api'
 import { useApp } from './store'
-import { openPreferences, openRepoDialog } from './ui'
+import { openPreferences, openRepoDialog, useUi } from './ui'
 import { stepZoom, useSettings } from './settings'
 import {
   setSplashEnabled,
@@ -333,6 +333,9 @@ export function buildCommands(): Command[] {
       toggleSidebarDrawer()
     )
   }
+  add('View', 'Workspace dashboard: every repository, its changes, and fetch them all', () =>
+    useUi.setState({ dashboard: true })
+  )
   const zoom = Math.round(useSettings.getState().zoom * 100)
   add('View', 'Zoom in', () => stepZoom(1), `${shortcutLabel('zoomIn')}  (${zoom}%)`.trim())
   add('View', 'Zoom out', () => stepZoom(-1), shortcutLabel('zoomOut'))

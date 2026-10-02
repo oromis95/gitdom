@@ -98,6 +98,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Several repositories open side by side in tabs
 - Quick switcher on the repository name in the toolbar: open tabs, favorites and recent repositories, with search
 - Workspaces: save the open tabs under a name and reopen them together
+- Workspace dashboard (**View → Workspace Dashboard**, or **Dashboard** on the welcome screen): every repository you have open, saved in a workspace, favorite or recent, with its branch, commits to push and to pull, changes, stashes, and anything stuck such as a merge in progress. **Fetch all** fetches them a few at a time, **Pull** fast-forwards those that are only behind, and a click opens one
 - Worktrees: check out a branch in its own folder, listed in the sidebar, to work on two branches at once
 - Submodules: status, add, initialize, update and sync their URLs
 - Git LFS: tracked patterns, LFS badges on files, track or untrack from the file list, download and upload the LFS files

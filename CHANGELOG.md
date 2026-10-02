@@ -2,6 +2,19 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- **Workspace dashboard** (**View → Workspace Dashboard**, the command palette, or **Dashboard** on the welcome screen): all your repositories in one look
+  - The open tabs, saved workspaces, favorites and recent ones, each with its branch, commits ahead and behind, changes, stashes and its last commit; a merge or rebase in progress, conflicts and folders that are gone stand out
+  - **Fetch all**, a few repositories at a time; **Pull** fast-forwards a branch that is only behind, with nothing local to lose
+  - Show one workspace or the open tabs only, or only the repositories that need attention; click one to open it
+
+### Fixed
+
+- Checking for updates no longer fails with "403 rate limit exceeded" when many people share one internet address, as in an office: GitDom then reads the latest release from the GitHub website instead of its API
+
 ## 1.6.0 — 2026-10-02
 
 ### Added

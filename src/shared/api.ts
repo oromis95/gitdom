@@ -23,6 +23,7 @@ import type {
   TreeFile,
   WorkingTreeStatus
 } from './types'
+import type { RepoOperation } from './types'
 import type { CommitWarning } from './commitChecks'
 import type { ReleaseCommit } from './releaseNotes'
 import type { IgnoreRule } from './ignore'
@@ -169,6 +170,25 @@ export interface HeavyObject {
 export type Maintenance = 'gc' | 'prune' | 'fsck'
 
 export type BisectMark = 'good' | 'bad' | 'skip'
+
+/** A repository at a glance, for the workspace dashboard */
+export interface RepoSummary {
+  /** null when HEAD is detached */
+  branch: string | null
+  /** The commit checked out, short; null before the first commit */
+  head: string | null
+  upstream: string | null
+  ahead: number
+  behind: number
+  staged: number
+  unstaged: number
+  untracked: number
+  conflicts: number
+  stashes: number
+  lastCommit: { subject: string; date: number } | null
+  /** Merge, rebase… in progress */
+  operation: RepoOperation | null
+}
 
 /** What a patch is made of: some commits, or the changes not committed yet */
 export type PatchSource =
@@ -423,6 +443,8 @@ export interface RepoOps {
   bisectRun(command: string): string
   /** Ends the bisect and checks out again what was checked out when it started. */
   bisectReset(): void
+  /** The state of the repository in one look: branch, upstream, changes, stashes, last commit. */
+  repoSummary(): RepoSummary
   /** A patch as text, as git format-patch (commits) or git diff (changes) writes it. */
   patchText(source: PatchSource): string
   /** Writes a patch to a file. */
@@ -809,6 +831,7 @@ export type MenuCommand =
   | 'health'
   | 'hooks'
   | 'applyPatch'
+  | 'dashboard'
   | 'whatsNew'
   | 'checkUpdates'
 

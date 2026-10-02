@@ -2033,3 +2033,48 @@ describe('patches (ADV-07)', () => {
     )
   })
 })
+
+describe('workspace dashboard', () => {
+  it('sums up a repository in one look', async () => {
+    const empty = await runOp(repo, 'repoSummary', [])
+    expect(empty).toMatchObject({ branch: 'main', head: null, lastCommit: null, stashes: 0 })
+
+    await commitFile('a.txt', 'a\n', 'init')
+    // A clone one commit behind, with one of its own, changes, a stash
+    const clone = join(root, 'clone')
+    git(root, 'clone', '-q', repo, clone)
+    git(clone, 'config', 'user.email', 't@t.it')
+    git(clone, 'config', 'user.name', 'T')
+    await commitFile('a.txt', 'a\nb\n', 'upstream work')
+    git(clone, 'fetch', '-q')
+    writeFileSync(join(clone, 'mine.txt'), 'mine\n')
+    git(clone, 'add', 'mine.txt')
+    git(clone, 'commit', '-qm', 'Local work')
+    writeFileSync(join(clone, 'a.txt'), 'changed\n')
+    git(clone, 'stash', 'push', '-q')
+    writeFileSync(join(clone, 'a.txt'), 'changed again\n')
+    writeFileSync(join(clone, 'staged.txt'), 's\n')
+    git(clone, 'add', 'staged.txt')
+    writeFileSync(join(clone, 'new.txt'), 'n\n')
+
+    const summary = await runOp(clone, 'repoSummary', [])
+    expect(summary).toMatchObject({
+      branch: 'main',
+      upstream: 'origin/main',
+      ahead: 1,
+      behind: 1,
+      staged: 1,
+      unstaged: 1,
+      untracked: 1,
+      conflicts: 0,
+      stashes: 1,
+      operation: null
+    })
+    expect(summary.head).toBe(git(clone, 'rev-parse', '--short=7', 'HEAD'))
+    expect(summary.lastCommit?.subject).toBe('Local work')
+
+    git(clone, 'checkout', '-q', '--detach')
+    expect((await runOp(clone, 'repoSummary', [])).branch).toBeNull()
+    await expect(runOp(join(root, 'gone'), 'repoSummary', [])).rejects.toThrow('The folder is gone')
+  })
+})

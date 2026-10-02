@@ -68,6 +68,7 @@ function build(): void {
       { label: 'Activity Log', ...shown('activity'), click: send('activity') },
       { label: 'Reflog', click: send('reflog') },
       { label: 'Backups', click: send('backups') },
+      { label: 'Workspace Dashboard', click: send('dashboard') },
       { label: 'Branches Overview', click: send('branches') },
       { label: 'Statistics', click: send('statistics') },
       { label: 'Repository Health', click: send('health') },

@@ -2967,3 +2967,161 @@ button.ignored-source:hover {
 .patch-gap {
   flex: 1;
 }
+
+/* ---------- Workspace dashboard ---------- */
+
+.modal.dashboard {
+  width: 1000px;
+  max-width: calc(100vw - 40px);
+  height: 82vh;
+  max-height: 760px;
+}
+.dashboard-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.dashboard-bar select {
+  padding: 3px 6px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.dashboard-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+}
+.dashboard-gap {
+  flex: 1;
+}
+.dashboard-summary {
+  color: var(--text-muted);
+}
+.dashboard-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.dashboard-note {
+  padding: 16px;
+  color: var(--text-muted);
+}
+.dashboard-row {
+  display: grid;
+  grid-template-columns: 22px minmax(160px, 1fr) 160px 80px 170px 90px 70px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.dashboard-row:hover {
+  background: var(--bg-hover);
+}
+.dashboard-row.missing {
+  cursor: default;
+  opacity: 0.75;
+}
+.dashboard-icon {
+  color: var(--text-muted);
+}
+.dashboard-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dashboard-repo {
+  font-weight: 600;
+}
+.dashboard-path {
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dashboard-branch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dashboard-branch svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.dashboard-sync {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+.dashboard-sync > span {
+  display: inline-flex;
+  align-items: center;
+}
+.dashboard-sync .ahead {
+  color: var(--accent);
+}
+.dashboard-sync .behind {
+  color: var(--orange);
+}
+.dashboard-changes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 5px;
+  min-width: 0;
+}
+.dashboard-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 7px;
+  font-size: 11.5px;
+  border-radius: 9px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  white-space: nowrap;
+}
+.dashboard-chip.changes {
+  color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 15%, transparent);
+}
+.dashboard-chip.error {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
+}
+.dashboard-last {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.dashboard-state {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  grid-column: span 4;
+  font-size: 12px;
+}
+.dashboard-state.error {
+  color: var(--red);
+}
+.dashboard-action {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 12px;
+}
+.dashboard-action .dashboard-state {
+  grid-column: auto;
+}

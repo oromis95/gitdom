@@ -3,6 +3,7 @@ import {
   Download,
   FolderOpen,
   FolderPlus,
+  LayoutDashboard,
   ScrollText,
   Star,
   TriangleAlert,
@@ -33,7 +34,7 @@ import {
   showRepoHealth
 } from './actions'
 import { identityMenu } from './identity'
-import { openMenu, openPreferences, openRepoDialog } from './ui'
+import { openMenu, openPreferences, openRepoDialog, useUi } from './ui'
 import { stepZoom, useSettings } from './settings'
 import { splashEnabled, toggleSidebarDrawer, useTheme } from './theme'
 import { startActivityLog, toggleActivity, useActivity } from './activity'
@@ -114,6 +115,15 @@ function Welcome(): React.JSX.Element {
         <button className="primary" onClick={() => openRepoDialog('init')}>
           <FolderPlus size={18} /> New
         </button>
+        {recent.length + favorites.length > 1 && (
+          <button
+            className="primary"
+            title="All your repositories in one look, and fetch them all"
+            onClick={() => useUi.setState({ dashboard: true })}
+          >
+            <LayoutDashboard size={18} /> Dashboard
+          </button>
+        )}
       </div>
       {(favorites.length > 0 || others.length > 0) && (
         <div className="recent">
@@ -170,7 +180,8 @@ function App(): React.JSX.Element {
         } else if (command === 'health') {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) showRepoHealth(repo)
-        } else if (command === 'applyPatch') {
+        } else if (command === 'dashboard') useUi.setState({ dashboard: true })
+        else if (command === 'applyPatch') {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) void openPatch(repo)
         } else if (command === 'hooks') {

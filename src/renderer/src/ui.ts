@@ -135,6 +135,8 @@ interface UiState {
   patch: PatchSession | null
   /** Command palette open */
   palette: boolean
+  /** Workspace dashboard open */
+  dashboard: boolean
   /** Clone or new repository dialog open */
   repoDialog: 'clone' | 'init' | null
   preferences: boolean
@@ -157,6 +159,7 @@ export const useUi = create<UiState>((set, get) => ({
   hooks: null,
   patch: null,
   palette: false,
+  dashboard: false,
   repoDialog: null,
   preferences: false,
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
