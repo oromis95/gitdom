@@ -51,6 +51,8 @@ function build(): void {
       { label: 'Clone Repository…', click: send('clone') },
       { label: 'New Repository…', click: send('init') },
       { type: 'separator' },
+      { label: 'Apply Patch…', click: send('applyPatch') },
+      { type: 'separator' },
       { label: 'Preferences…', ...shown('preferences'), click: send('preferences') },
       { type: 'separator' },
       { role: 'quit' }

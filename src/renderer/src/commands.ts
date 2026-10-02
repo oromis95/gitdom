@@ -237,6 +237,19 @@ export function buildCommands(): Command[] {
     add('Repository', 'Repository health: size, heaviest files, compress (gc) and check', () =>
       actions.showRepoHealth(repo)
     )
+    add('Patch', 'Apply a patch file…', () => void actions.openPatch(repo))
+    if (snapshot.status.staged.length || snapshot.status.unstaged.length) {
+      add('Patch', 'Save the uncommitted changes as a patch…', () => {
+        void actions.savePatch(repo, { changes: 'all' }, 'changes.patch')
+      })
+      add('Patch', 'Copy the uncommitted changes as a patch', () => {
+        void actions.copyPatch(repo, { changes: 'all' })
+      })
+    }
+    if (snapshot.status.staged.length)
+      add('Patch', 'Save the staged changes as a patch…', () => {
+        void actions.savePatch(repo, { changes: 'staged' }, 'staged.patch')
+      })
     add('Repository', 'Hooks: see, write, turn off and on, and try the git hooks', () =>
       actions.showHooks(repo)
     )

@@ -822,7 +822,8 @@ function OperationBanner({
   snapshot: RepoSnapshot
   conflicts: number
 }): React.JSX.Element {
-  const operation = snapshot.operation!
+  // git am applies patches
+  const operation = snapshot.operation === 'am' ? 'patch' : snapshot.operation!
   const repo = snapshot.path
   return (
     <div className="banner-warning operation-banner">

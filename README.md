@@ -68,6 +68,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Split a commit in two, file by file, each with its own message
 - Reorder the commits of the current branch by dragging them in the graph
 - Drag a branch onto another to fast-forward, merge or rebase
+- Patches: save a commit, several commits picked with `Ctrl`+click, or the uncommitted changes as a `.patch` file, or copy them; apply one with **File → Apply Patch…** or by dropping it on the window. GitDom shows its commits and files and whether it applies first, then applies it as commits with their author and message (`git am`), to the working tree, or staged
 - Undo / redo of the last operations
 
 **Safety net**

@@ -205,6 +205,22 @@ export function registerToolHandlers(): void {
     return result.canceled || !result.filePath ? null : result.filePath
   })
 
+  ipcMain.handle(IPC.toolsPickPatchFile, async (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    const options: Electron.OpenDialogOptions = {
+      title: 'Apply a patch',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Patches', extensions: ['patch', 'diff', 'mbox', 'eml'] },
+        { name: 'All files', extensions: ['*'] }
+      ]
+    }
+    const result = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options)
+    return result.canceled ? null : (result.filePaths[0] ?? null)
+  })
+
   ipcMain.on(IPC.toolsShowInFolder, (_event, repo: string, path: string | null) => {
     try {
       const target = repoPath(repo, path)

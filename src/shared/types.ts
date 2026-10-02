@@ -85,7 +85,7 @@ export interface Remote {
   pushUrl: string
 }
 
-export type RepoOperation = 'merge' | 'rebase' | 'cherry-pick' | 'revert'
+export type RepoOperation = 'merge' | 'rebase' | 'cherry-pick' | 'revert' | 'am'
 
 export interface HeadInfo {
   /** Current branch short name, null when detached or unborn */

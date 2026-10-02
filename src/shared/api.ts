@@ -170,6 +170,22 @@ export type Maintenance = 'gc' | 'prune' | 'fsck'
 
 export type BisectMark = 'good' | 'bad' | 'skip'
 
+/** What a patch is made of: some commits, or the changes not committed yet */
+export type PatchSource =
+  | { commits: string[] }
+  /** All the changes to tracked files, or the staged ones only */
+  | { changes: 'all' | 'staged' }
+
+/** A patch file, read before applying it */
+export interface PatchInfo {
+  /** The commits it carries, with their authors and messages (from git format-patch) */
+  commits: { subject: string; author: string }[]
+  files: { path: string; added: number | null; removed: number | null }[]
+  /** Whether it applies as it is to the working tree; why not, otherwise */
+  applies: boolean
+  problem: string | null
+}
+
 /**
  * A git hook: a script git runs at a moment of its work. Active runs, disabled is set aside with a
  * .disabled suffix (GitDom's own convention), sample is the example git ships, none is missing.
@@ -407,6 +423,19 @@ export interface RepoOps {
   bisectRun(command: string): string
   /** Ends the bisect and checks out again what was checked out when it started. */
   bisectReset(): void
+  /** A patch as text, as git format-patch (commits) or git diff (changes) writes it. */
+  patchText(source: PatchSource): string
+  /** Writes a patch to a file. */
+  savePatch(dest: string, source: PatchSource): void
+  /** Reads a patch file: its commits and files, and whether it applies. */
+  inspectPatch(path: string): PatchInfo
+  /**
+   * Applies the commits of a patch file on the current branch, keeping their authors and
+   * messages (git am, with a three-way merge); may stop on conflicts.
+   */
+  amPatch(path: string): OpOutcome
+  /** Applies a patch file to the working tree, and to the index too when `stage`. */
+  applyPatchFile(path: string, stage: boolean): OpOutcome
   /** The hooks git would run, the ones it knows and any other script in their folder. */
   hooks(): HooksInfo
   /** The script of a hook, active or disabled; the sample git ships when there is neither. */
@@ -616,6 +645,10 @@ export interface ToolsApi {
   showInFolder(repo: string, path: string | null): void
   /** Shows a save dialog for a file named `name`; resolves the chosen path, or null. */
   pickSavePath(title: string, name: string): Promise<string | null>
+  /** Shows an open dialog for a patch file; resolves the chosen path, or null. */
+  pickPatchFile(): Promise<string | null>
+  /** The path on disk of a file dropped on the window. */
+  pathForFile(file: File): string
   /** Zoom factor of the window, 1 for 100%. */
   setZoom(factor: number): void
   /** Entries of the user's (global) or a repository's (local) git configuration (SET-03). */
@@ -775,6 +808,7 @@ export type MenuCommand =
   | 'branches'
   | 'health'
   | 'hooks'
+  | 'applyPatch'
   | 'whatsNew'
   | 'checkUpdates'
 
@@ -829,6 +863,7 @@ export const IPC = {
   toolsOpenInEditor: 'tools:open-in-editor',
   toolsShowInFolder: 'tools:show-in-folder',
   toolsPickSavePath: 'tools:pick-save-path',
+  toolsPickPatchFile: 'tools:pick-patch-file',
   toolsConfigList: 'tools:config-list',
   toolsConfigSet: 'tools:config-set',
   toolsConfigUnset: 'tools:config-unset',

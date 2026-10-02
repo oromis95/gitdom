@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webFrame, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webFrame, webUtils, type IpcRendererEvent } from 'electron'
 import {
   IPC,
   type ActivityEntry,
@@ -42,6 +42,8 @@ const api: GitDomApi = {
     openInEditor: (repo, path) => ipcRenderer.invoke(IPC.toolsOpenInEditor, repo, path),
     showInFolder: (repo, path) => ipcRenderer.send(IPC.toolsShowInFolder, repo, path),
     pickSavePath: (title, name) => ipcRenderer.invoke(IPC.toolsPickSavePath, title, name),
+    pickPatchFile: () => ipcRenderer.invoke(IPC.toolsPickPatchFile),
+    pathForFile: (file) => webUtils.getPathForFile(file),
     setZoom: (factor) => webFrame.setZoomFactor(factor),
     configList: (scope, repo) => ipcRenderer.invoke(IPC.toolsConfigList, scope, repo),
     configSet: (scope, repo, key, value, old) =>

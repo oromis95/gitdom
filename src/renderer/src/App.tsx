@@ -28,6 +28,7 @@ import {
   showBranchOverview,
   showCleanUp,
   showIgnoredFiles,
+  openPatch,
   showHooks,
   showRepoHealth
 } from './actions'
@@ -169,6 +170,9 @@ function App(): React.JSX.Element {
         } else if (command === 'health') {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) showRepoHealth(repo)
+        } else if (command === 'applyPatch') {
+          const repo = useApp.getState().tabs[useApp.getState().active]?.path
+          if (repo) void openPatch(repo)
         } else if (command === 'hooks') {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) showHooks(repo)
@@ -244,6 +248,28 @@ function App(): React.JSX.Element {
   }, [])
   const zoom = useSettings((s) => s.zoom)
   const activityShown = useActivity((s) => s.shown)
+
+  // A patch file dropped on the window: shown, to apply it to the open repository
+  useEffect(() => {
+    const patchFile = (e: DragEvent): File | undefined =>
+      [...(e.dataTransfer?.files ?? [])].find((f) => /\.(patch|diff|mbox|eml)$/i.test(f.name))
+    const onOver = (e: DragEvent): void => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault()
+    }
+    const onDrop = (e: DragEvent): void => {
+      const file = patchFile(e)
+      const repo = useApp.getState().tabs[useApp.getState().active]?.path
+      if (!file || !repo) return
+      e.preventDefault()
+      void openPatch(repo, window.api.tools.pathForFile(file))
+    }
+    window.addEventListener('dragover', onOver)
+    window.addEventListener('drop', onDrop)
+    return () => {
+      window.removeEventListener('dragover', onOver)
+      window.removeEventListener('drop', onDrop)
+    }
+  }, [])
 
   // Pick up changes made outside the app (terminal, IDE) when the window regains focus
   useEffect(() => {

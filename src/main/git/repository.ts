@@ -102,6 +102,8 @@ export async function loadStatus(repo: string): Promise<WorkingTreeStatus> {
 export async function readOperation(repo: string): Promise<RepoOperation | null> {
   const { gitDir } = await gitDirs(repo)
   const has = (name: string): boolean => existsSync(resolve(gitDir, name))
+  // git am keeps its patches in rebase-apply too, and marks them as its own
+  if (has('rebase-apply/applying')) return 'am'
   if (has('rebase-merge') || has('rebase-apply')) return 'rebase'
   if (has('MERGE_HEAD')) return 'merge'
   if (has('CHERRY_PICK_HEAD')) return 'cherry-pick'

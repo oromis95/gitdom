@@ -10,6 +10,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
   - A bar above the graph says which commit is checked out to test and how many steps are left; answer **Good**, **Bad** or **Skip** until GitDom names the commit that brought the problem in, then go back to the branch with one click
   - **Automate…** lets a command test each commit, such as `npm test`: exit code 0 is good, 125 skips the commit, any other is bad
   - The marked commits are labelled in the graph, and a bisect started in the terminal shows up too
+- **Patches**: save commits or uncommitted changes as a `.patch` file, and apply patch files
+  - **Save as patch…** and **Copy as patch** in a commit's menu; several commits picked with `Ctrl`+click make one numbered patch; the uncommitted or staged changes from the command palette
+  - **File → Apply Patch…**, or drop a `.patch` file on the window: its commits, files and whether it still applies are shown first
+  - Apply it **as commits**, keeping their authors and messages (`git am`, three-way, undoable), **to the working tree**, or **staged**; conflicts are resolved like those of a rebase
 - **Two new themes that restyle the controls too**
   - **Retro 2000**: grey raised buttons, sunken white fields, navy title bars on the dialogs, property-sheet tabs, Tahoma and the old scroll bars
   - **Matrix**: green on black, monospaced, glowing text and monitor lines, green graph lanes and falling code on the welcome screen

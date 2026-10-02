@@ -184,7 +184,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 - ✅ **Temi con layout diverso**: oltre a Studio, Focus (solo il grafo, sidebar a scomparsa), Posta (tre colonne con pannello di lettura) e IDE (grafo in alto, dettaglio e diff nel pannello in basso), ognuno con i suoi colori
 - ✅ **Gestione degli hook**: vedere, attivare, disattivare e modificare gli hook git del repository
 - ✅ **Bisect guidato**: segni "buono/cattivo" e l'app trova il commit colpevole (ADV-06)
-- **Patch**: creazione da commit e applicazione di file .patch (ADV-07)
+- ✅ **Patch**: creazione da commit e applicazione di file .patch (ADV-07)
 - **Cruscotto dei workspace**: lo stato di tutti i repository in una vista (modifiche aperte, avanti/indietro), con "Fetch tutti"
 - **Cosa ho fatto questa settimana**: i tuoi commit su tutti i repository, per giorno, da copiare per uno standup o un report
 

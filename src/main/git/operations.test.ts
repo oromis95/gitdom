@@ -1952,3 +1952,83 @@ describe('bisect (ADV-06)', () => {
     await runOp(repo, 'bisectReset', [])
   })
 })
+
+describe('patches (ADV-07)', () => {
+  it('saves commits and changes as patches, reads them and applies them', async () => {
+    await commitFile('a.txt', 'one\n', 'init')
+    const base = git(repo, 'rev-parse', 'HEAD')
+    await commitFile('a.txt', 'one\ntwo\n', 'Add two')
+    await commitFile('b.txt', 'bee\n', 'Add b')
+    const [two, b] = [git(repo, 'rev-parse', 'HEAD~1'), git(repo, 'rev-parse', 'HEAD')]
+
+    // Given newest first, written oldest first, numbered
+    const series = join(root, 'series.patch')
+    await runOp(repo, 'savePatch', [series, { commits: [b, two] }])
+    const text = readFileSync(series, 'utf8')
+    expect(text.indexOf('[PATCH 1/2] Add two')).toBeGreaterThan(0)
+    expect(text.indexOf('[PATCH 2/2] Add b')).toBeGreaterThan(text.indexOf('Add two'))
+    expect(await runOp(repo, 'patchText', [{ commits: [two] }])).toContain(
+      'Subject: [PATCH] Add two'
+    )
+
+    // On another branch from the start: the commits come back with their author and message
+    git(repo, 'checkout', '-q', '-b', 'other', base)
+    const info = await runOp(repo, 'inspectPatch', [series])
+    expect(info).toEqual({
+      commits: [
+        { subject: 'Add two', author: 'T' },
+        { subject: 'Add b', author: 'T' }
+      ],
+      files: [
+        { path: 'a.txt', added: 1, removed: 0 },
+        { path: 'b.txt', added: 1, removed: 0 }
+      ],
+      applies: true,
+      problem: null
+    })
+    await runOp(repo, 'amPatch', [series])
+    expect(git(repo, 'log', '--format=%s|%an', '-2')).toBe('Add b|T\nAdd two|T')
+    expect(git(repo, 'rev-parse', 'HEAD^{tree}')).toBe(git(repo, 'rev-parse', `${b}^{tree}`))
+    // Undo takes the applied commits away
+    await runOp(repo, 'undo', [])
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(base)
+
+    // Changes not committed: to the working tree, or staged
+    write('a.txt', 'one\nchanged\n')
+    const changes = join(root, 'changes.patch')
+    await runOp(repo, 'savePatch', [changes, { changes: 'all' }])
+    git(repo, 'checkout', '--', 'a.txt')
+    await expect(
+      runOp(repo, 'savePatch', [join(root, 'empty.patch'), { changes: 'staged' }])
+    ).rejects.toThrow('Nothing to save')
+    expect((await runOp(repo, 'inspectPatch', [changes])).commits).toEqual([])
+    await runOp(repo, 'applyPatchFile', [changes, false])
+    expect(git(repo, 'diff', '--name-only')).toBe('a.txt')
+    expect(git(repo, 'diff', '--cached', '--name-only')).toBe('')
+    git(repo, 'checkout', '--', 'a.txt')
+    await runOp(repo, 'applyPatchFile', [changes, true])
+    expect(git(repo, 'diff', '--cached', '--name-only')).toBe('a.txt')
+    git(repo, 'reset', '-q', '--hard')
+
+    // One that doesn't apply: said before, and nothing is left half done
+    write('a.txt', 'something else\n')
+    git(repo, 'commit', '-qam', 'diverge')
+    const stale = await runOp(repo, 'inspectPatch', [changes])
+    expect(stale.applies).toBe(false)
+    expect(stale.problem).toContain('a.txt')
+    await expect(runOp(repo, 'applyPatchFile', [changes, false])).rejects.toThrow()
+    // As commits, the three-way merge stops on conflicts, resolved like a rebase
+    expect(await runOp(repo, 'amPatch', [series])).toMatchObject({ conflicts: true })
+    expect((await loadSnapshot(repo)).operation).toBe('am')
+    await runOp(repo, 'abortOperation', [])
+    expect((await loadSnapshot(repo)).operation).toBeNull()
+
+    writeFileSync(join(root, 'notes.txt'), 'just some text\n')
+    await expect(runOp(repo, 'inspectPatch', [join(root, 'notes.txt')])).rejects.toThrow(
+      'not a patch'
+    )
+    await expect(runOp(repo, 'inspectPatch', ['relative.patch'])).rejects.toThrow(
+      'Invalid patch file'
+    )
+  })
+})

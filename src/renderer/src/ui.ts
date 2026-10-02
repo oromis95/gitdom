@@ -89,6 +89,12 @@ export interface HooksSession {
   repo: string
 }
 
+/** A patch file to look at before applying it */
+export interface PatchSession {
+  repo: string
+  path: string
+}
+
 /** The clean up dialog, and the files it starts with. */
 export interface CleanSession {
   repo: string
@@ -126,6 +132,7 @@ interface UiState {
   branches: BranchesSession | null
   health: HealthSession | null
   hooks: HooksSession | null
+  patch: PatchSession | null
   /** Command palette open */
   palette: boolean
   /** Clone or new repository dialog open */
@@ -148,6 +155,7 @@ export const useUi = create<UiState>((set, get) => ({
   branches: null,
   health: null,
   hooks: null,
+  patch: null,
   palette: false,
   repoDialog: null,
   preferences: false,
