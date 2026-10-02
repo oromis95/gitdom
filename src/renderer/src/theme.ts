@@ -18,13 +18,15 @@ import {
 
 export type { ThemeChoice }
 /** Colours the CSS rules follow, on <html data-theme> */
-export type ThemeName = 'dark' | 'light' | Exclude<Layout, 'classic'>
+export type ThemeName = 'dark' | 'light' | 'retro' | 'matrix' | Exclude<Layout, 'classic'>
 /** How the panels are arranged: each layout theme has its own, every other theme the classic one */
 export type Layout = 'classic' | 'studio' | 'focus' | 'mail' | 'ide'
 
 const LAYOUTS: ThemeName[] = ['studio', 'focus', 'mail', 'ide']
 /** The themes on a light background */
-export const LIGHT_THEMES: ThemeName[] = ['light', 'mail']
+export const LIGHT_THEMES: ThemeName[] = ['light', 'mail', 'retro']
+/** The CSS themes in the classic layout, other than dark: their own colours and controls */
+const STYLED: ThemeName[] = ['light', 'retro', 'matrix']
 
 const THEME_KEY = 'gitdom.theme'
 const CUSTOM_KEY = 'gitdom.customThemes'
@@ -35,6 +37,8 @@ const systemDark = window.matchMedia('(prefers-color-scheme: dark)')
 export const CSS_THEMES: ThemeOption[] = [
   { id: 'dark', label: 'Dark' },
   { id: 'light', label: 'Light' },
+  { id: 'retro', label: 'Retro 2000 (grey bevels, like Windows 2000)' },
+  { id: 'matrix', label: 'Matrix (green on black)' },
   { id: 'studio', label: 'Studio (layout: actions in a rail)' },
   { id: 'focus', label: 'Focus (layout: just the graph)' },
   { id: 'mail', label: 'Mail (layout: three columns)' },
@@ -87,7 +91,7 @@ function resolve(choice: ThemeChoice, custom: ThemeDef[]): Resolved {
     const applied = systemDark.matches ? 'dark' : 'light'
     return { applied, base: applied }
   }
-  if (choice === 'light' || LAYOUTS.includes(choice as ThemeName))
+  if (STYLED.includes(choice as ThemeName) || LAYOUTS.includes(choice as ThemeName))
     return { applied: choice, base: choice as ThemeName }
   const def = findTheme(choice, custom)
   return def ? { applied: def.id, base: def.base, def } : { applied: 'dark', base: 'dark' }

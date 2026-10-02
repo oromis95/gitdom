@@ -54,6 +54,22 @@ const CSS_PREVIEWS: Preview[] = [
     colors: ['#0969da', '#1a7f37', '#bc6c00', '#cf222e']
   },
   {
+    id: 'retro',
+    label: 'Retro 2000',
+    bg: '#d4d0c8',
+    panel: '#0a246a',
+    text: '#000000',
+    colors: ['#0a246a', '#008000', '#808000', '#800000']
+  },
+  {
+    id: 'matrix',
+    label: 'Matrix',
+    bg: '#000000',
+    panel: '#03140a',
+    text: '#00ff41',
+    colors: ['#00ff41', '#00c832', '#b6ff00', '#7dff9e']
+  },
+  {
     id: 'studio',
     label: 'Studio',
     bg: '#15121c',

@@ -1,5 +1,5 @@
-// Lane palettes of the commit graph: one for the classic themes, one for Studio; the palette
-// themes bring their own.
+// Lane palettes of the commit graph: one for the classic themes, others for Studio, Retro 2000
+// and Matrix; the palette themes bring their own.
 const LANE_COLORS = [
   '#15a0bf',
   '#0669f7',
@@ -27,6 +27,40 @@ const STUDIO_COLORS = [
   '#f7768e'
 ]
 
+// Retro 2000: the sixteen colours of the old screens, the darker ones that read on white
+const RETRO_COLORS = [
+  '#000080',
+  '#008080',
+  '#800000',
+  '#808000',
+  '#800080',
+  '#008000',
+  '#0000ff',
+  '#ff0000',
+  '#c08000',
+  '#ff00ff'
+]
+
+// Matrix: every lane green, from mint to deep
+const MATRIX_COLORS = [
+  '#00ff41',
+  '#00c832',
+  '#7dff9e',
+  '#00ff9c',
+  '#3dbb5a',
+  '#b6ff00',
+  '#00e676',
+  '#5cff7a',
+  '#1fa045',
+  '#9dffb0'
+]
+
+const CSS_LANES: Record<string, string[]> = {
+  studio: STUDIO_COLORS,
+  retro: RETRO_COLORS,
+  matrix: MATRIX_COLORS
+}
+
 let themeColors: string[] | null = null
 
 /** Lanes of a palette theme; null goes back to the CSS theme's. */
@@ -36,8 +70,7 @@ export function setLanePalette(colors: string[] | null): void {
 
 export function laneColor(lane: number): string {
   const palette =
-    themeColors ??
-    (document.documentElement.dataset.theme === 'studio' ? STUDIO_COLORS : LANE_COLORS)
+    themeColors ?? CSS_LANES[document.documentElement.dataset.theme ?? ''] ?? LANE_COLORS
   return palette[lane % palette.length]
 }
 

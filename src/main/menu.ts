@@ -15,6 +15,8 @@ import { REPO_URL } from './updates'
 let themes: ThemeOption[] = [
   { id: 'dark', label: 'Dark' },
   { id: 'light', label: 'Light' },
+  { id: 'retro', label: 'Retro 2000 (grey bevels, like Windows 2000)' },
+  { id: 'matrix', label: 'Matrix (green on black)' },
   { id: 'studio', label: 'Studio (layout: actions in a rail)' },
   { id: 'focus', label: 'Focus (layout: just the graph)' },
   { id: 'mail', label: 'Mail (layout: three columns)' },

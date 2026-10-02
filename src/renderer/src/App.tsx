@@ -14,6 +14,7 @@ import TabBar from './components/TabBar'
 import Toolbar from './components/Toolbar'
 import Workspace from './components/Workspace'
 import BisectBar from './components/BisectBar'
+import MatrixRain from './components/MatrixRain'
 import Overlays from './components/Overlays'
 import { HoverLayer } from './components/HoverCards'
 import TerminalDock from './components/TerminalDock'
@@ -96,8 +97,10 @@ function RecentItem({ path }: { path: string }): React.JSX.Element {
 function Welcome(): React.JSX.Element {
   const { recent, favorites, pickAndOpen } = useApp()
   const others = recent.filter((p) => !favorites.includes(p))
+  const matrix = useTheme((s) => s.base === 'matrix')
   return (
     <div className="welcome">
+      {matrix && <MatrixRain />}
       <HighwayLogo size={220} />
       <h1>GitDom</h1>
       <div className="welcome-actions">

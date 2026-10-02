@@ -134,6 +134,8 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 **Themes**
 
 - Dark, Light, or follow the system setting
+- **Retro 2000**: the grey raised and sunken bevels of the desktops of 2000, with navy title bars, Tahoma and dotted scroll bars
+- **Matrix**: green phosphor on black, monospaced everywhere, a faint glow and monitor lines, and falling code on the welcome screen
 - **Layout themes**: four themes that also arrange the panels their own way, each with its own colors
   - **Studio**: floating rounded panels, actions in a rail on the left and a collapsible detail panel
   - **Focus**: just the graph, with one slim bar of icons; the branches slide in from the left when you need them, and the detail opens beside the graph when you select a commit

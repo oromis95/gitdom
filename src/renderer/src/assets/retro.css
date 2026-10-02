@@ -1,0 +1,475 @@
+/* Two themes that change the controls as well as the colours, in the classic layout:
+   Retro 2000, the grey raised and sunken bevels of the desktops of 2000, and Matrix, green
+   phosphor on black. Chosen with data-theme on <html>. */
+
+/* ========================================================================================== */
+/* Retro 2000                                                                                 */
+/* ========================================================================================== */
+
+:root[data-theme='retro'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-panel: #d4d0c8;
+  --bg-elevated: #d4d0c8;
+  --bg-hover: #e4e1db;
+  --bg-selected: #a6caf0;
+  --border: #808080;
+  --text: #000000;
+  --text-muted: #404040;
+  --text-dim: #808080;
+  --accent: #0a246a;
+  --accent-soft: #a6caf0;
+  --green: #006400;
+  --red: #b00000;
+  --orange: #7a5200;
+  --purple: #800080;
+  --bg-deep: #d4d0c8;
+  --scrollbar: #d4d0c8;
+  --code-text: #000000;
+  --success-bg: #c8e6c8;
+  --success-border: #008000;
+  --warning-bg: #ffffe1;
+  --warning-border: #808000;
+  --warning-text: #5c4000;
+  --unstage-bg: #f4e2c0;
+  --unstage-border: #a07020;
+  --danger-bg: #f4c8c8;
+  --danger-text: #800000;
+  --error-bg: #ffffe1;
+  --error-text: #800000;
+  --error-border: #800000;
+  --hunk-bg: #e0e0f0;
+  --hunk-text: #000080;
+
+  --syn-comment: #008000;
+  --syn-keyword: #0000ff;
+  --syn-tag: #800000;
+  --syn-literal: #008080;
+  --syn-string: #a31515;
+  --syn-number: #098658;
+  --syn-title: #000080;
+  --syn-type: #267f99;
+
+  /* The four shades of a bevel */
+  --hi: #ffffff;
+  --light: #dfdfdf;
+  --shadow: #808080;
+  --dark: #404040;
+  --raised:
+    inset -1px -1px var(--dark), inset 1px 1px var(--hi), inset -2px -2px var(--shadow),
+    inset 2px 2px var(--light);
+  --sunken:
+    inset 1px 1px var(--shadow), inset -1px -1px var(--hi), inset 2px 2px var(--dark),
+    inset -2px -2px var(--light);
+  --title: linear-gradient(90deg, #0a246a, #a6caf0);
+
+  --font-ui: Tahoma, 'Microsoft Sans Serif', Verdana, sans-serif;
+  --font-code: 'Courier New', Courier, monospace;
+}
+
+/* Nothing was round in 2000 */
+:root[data-theme='retro'] *,
+:root[data-theme='retro'] *::before,
+:root[data-theme='retro'] *::after {
+  border-radius: 0 !important;
+  text-shadow: none;
+}
+:root[data-theme='retro'] body {
+  font-size: 13px;
+}
+
+/* Buttons: raised, pressed in when clicked */
+:root[data-theme='retro'] :is(.btn, .commit-box .primary, .welcome .primary) {
+  color: #000;
+  background: var(--bg-panel);
+  border: none;
+  box-shadow: var(--raised);
+}
+:root[data-theme='retro'] :is(.btn, .commit-box .primary, .welcome .primary) {
+  padding: 4px 14px;
+}
+:root[data-theme='retro'] .btn-small {
+  padding: 2px 8px;
+}
+:root[data-theme='retro'] :is(.btn, .commit-box .primary, .welcome .primary):not(:disabled):hover {
+  filter: none;
+  background: var(--bg-panel);
+}
+:root[data-theme='retro']
+  :is(.btn, .commit-box .primary, .welcome .primary, .tool):not(:disabled):active {
+  box-shadow: var(--sunken);
+  transform: none;
+}
+:root[data-theme='retro'] .btn-primary {
+  outline: 1px solid #000;
+  outline-offset: -1px;
+}
+:root[data-theme='retro'] button:disabled {
+  opacity: 1;
+  color: var(--shadow);
+  text-shadow: 1px 1px var(--hi);
+}
+:root[data-theme='retro'] button:disabled svg {
+  filter: drop-shadow(1px 1px 0 var(--hi));
+}
+
+/* The toolbar: flat buttons that rise under the mouse */
+:root[data-theme='retro'] .toolbar {
+  border-bottom: 1px solid var(--shadow);
+  box-shadow: 0 1px var(--hi);
+}
+:root[data-theme='retro'] .tool {
+  color: #000;
+}
+:root[data-theme='retro'] .tool:not(:disabled):hover {
+  background: none;
+  box-shadow:
+    inset -1px -1px var(--shadow),
+    inset 1px 1px var(--hi);
+}
+:root[data-theme='retro'] .tool.active {
+  background: var(--light);
+  box-shadow: var(--sunken);
+}
+/* Pull and its arrow rise together */
+:root[data-theme='retro'] .tool-split .tool:not(:disabled):hover {
+  box-shadow: none;
+}
+:root[data-theme='retro'] .tool-split:hover {
+  box-shadow:
+    inset -1px -1px var(--shadow),
+    inset 1px 1px var(--hi);
+}
+:root[data-theme='retro'] .tool-arrow:not(:disabled):hover {
+  background: none;
+}
+
+/* Fields: sunken and white */
+:root[data-theme='retro']
+  :is(input:not([type='checkbox'], [type='radio'], [type='color']), textarea, select) {
+  color: #000;
+  background: #fff;
+  border: none;
+  box-shadow: var(--sunken);
+}
+:root[data-theme='retro'] :is(input, textarea, select):focus {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+/* Tabs: property-sheet tabs */
+:root[data-theme='retro'] .tabbar {
+  padding: 4px 4px 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--hi);
+}
+:root[data-theme='retro'] .tab {
+  margin-right: 2px;
+  color: #000;
+  font-size: 13px;
+  border: none;
+  box-shadow:
+    inset 1px 1px var(--hi),
+    inset -1px 0 var(--dark),
+    inset -2px 0 var(--shadow);
+}
+:root[data-theme='retro'] .tab.active {
+  font-weight: 400;
+  background: var(--bg-panel);
+  box-shadow:
+    inset 1px 1px var(--hi),
+    inset -1px 0 var(--dark),
+    inset -2px 0 var(--shadow),
+    0 1px var(--bg-panel);
+  position: relative;
+  top: 1px;
+}
+:root[data-theme='retro'] .tab:not(.active) {
+  margin-top: 2px;
+}
+
+/* Panels: grey, separated by an etched line */
+:root[data-theme='retro'] .sidebar {
+  border-right: none;
+  box-shadow:
+    inset -1px 0 var(--shadow),
+    inset -2px 0 var(--hi);
+}
+:root[data-theme='retro'] .detail {
+  border-left: none;
+  box-shadow:
+    inset 1px 0 var(--hi),
+    inset 2px 0 var(--shadow);
+}
+:root[data-theme='retro'] .section-header {
+  border-top: none;
+  color: #000;
+}
+:root[data-theme='retro'] .tree-item.current {
+  font-weight: 700;
+  color: #000;
+}
+
+/* The list of commits: a white list view, the selection navy */
+:root[data-theme='retro'] .graph-header {
+  font-family: var(--font-ui);
+  letter-spacing: 0;
+  color: #000;
+  background: var(--bg-panel);
+}
+:root[data-theme='retro'] .graph-header > div {
+  border-right: none;
+  box-shadow: var(--raised);
+}
+:root[data-theme='retro'] .graph-row.selected {
+  background: #0a246a;
+}
+:root[data-theme='retro']
+  .graph-row.selected
+  :is(.cell-message, .cell-author, .cell-date, .cell-sha) {
+  color: #fff;
+}
+
+/* Windows: a raised frame and a title bar fading from navy */
+:root[data-theme='retro'] :is(.modal, .palette) {
+  padding-top: 0;
+  border: none;
+  background: var(--bg-panel);
+  box-shadow:
+    var(--raised),
+    4px 4px 0 rgba(0, 0, 0, 0.25);
+}
+:root[data-theme='retro'] .modal-title {
+  margin: 3px -17px 4px;
+  padding: 3px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--title);
+}
+:root[data-theme='retro'] .pref-header {
+  color: #fff;
+  background: var(--title);
+}
+:root[data-theme='retro'] .modal-backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+/* Menus: raised, the item under the mouse navy */
+:root[data-theme='retro'] .menu {
+  padding: 2px;
+  border: none;
+  background: var(--bg-panel);
+  box-shadow:
+    var(--raised),
+    2px 2px 0 rgba(0, 0, 0, 0.3);
+}
+:root[data-theme='retro'] .menu-item {
+  color: #000;
+}
+:root[data-theme='retro'] .menu-item:not(:disabled):hover,
+:root[data-theme='retro'] .menu-item:focus-visible {
+  color: #fff;
+  background: #0a246a;
+}
+
+/* Balloons for notifications */
+:root[data-theme='retro'] .toast {
+  color: #000;
+  background: #ffffe1;
+  border: 1px solid #000;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* The status bar: sunken panes */
+:root[data-theme='retro'] .statusbar {
+  gap: 3px;
+  padding: 2px;
+  color: #000;
+  border-top: none;
+  box-shadow: inset 0 1px var(--hi);
+}
+:root[data-theme='retro'] .statusbar > :is(span, button) {
+  padding: 0 6px;
+  box-shadow:
+    inset 1px 1px var(--shadow),
+    inset -1px -1px var(--hi);
+}
+:root[data-theme='retro'] .statusbar > span:empty {
+  box-shadow: none;
+}
+
+/* Scroll bars with arrows' room and a dotted track */
+:root[data-theme='retro'] ::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+:root[data-theme='retro'] ::-webkit-scrollbar-track {
+  background: repeating-conic-gradient(var(--bg-panel) 0 25%, var(--hi) 0 50%) 0 0 / 2px 2px;
+}
+:root[data-theme='retro'] ::-webkit-scrollbar-thumb {
+  border: none;
+  background: var(--bg-panel);
+  box-shadow: var(--raised);
+}
+:root[data-theme='retro'] ::-webkit-scrollbar-button:single-button {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: var(--bg-panel);
+  box-shadow: var(--raised);
+}
+:root[data-theme='retro'] ::-webkit-scrollbar-corner {
+  background: var(--bg-panel);
+}
+
+/* ========================================================================================== */
+/* Matrix                                                                                     */
+/* ========================================================================================== */
+
+:root[data-theme='matrix'] {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-panel: #020c05;
+  --bg-elevated: #04160a;
+  --bg-hover: #062410;
+  --bg-selected: #0b3a18;
+  --border: #0e4a1d;
+  --text: #00ff41;
+  --text-muted: #00b82f;
+  --text-dim: #00701c;
+  --accent: #00ff9c;
+  --accent-soft: #0b3a22;
+  --accent-text: #001a08;
+  --green: #00ff41;
+  --red: #ff4d4d;
+  --orange: #d4ff00;
+  --purple: #7dffb3;
+  --bg-deep: #000000;
+  --scrollbar: #0e4a1d;
+  --code-text: #33ff66;
+  --success-bg: #06301a;
+  --success-border: #0f7a35;
+  --warning-bg: #2a3300;
+  --warning-border: #6b8000;
+  --warning-text: #d4ff00;
+  --unstage-bg: #2a3300;
+  --unstage-border: #6b8000;
+  --danger-bg: #3a0a0a;
+  --danger-text: #ff8080;
+  --error-bg: #2a0606;
+  --error-text: #ff9a9a;
+  --error-border: #7a1a1a;
+  --hunk-bg: #04200c;
+  --hunk-text: #7dffb3;
+
+  --syn-comment: #00802a;
+  --syn-keyword: #b6ff00;
+  --syn-tag: #00ff9c;
+  --syn-literal: #7dffb3;
+  --syn-string: #9dffb0;
+  --syn-number: #d4ff00;
+  --syn-title: #e0ffe8;
+  --syn-type: #00e676;
+
+  --font-ui: Consolas, 'Lucida Console', 'Courier New', monospace;
+  --font-code: Consolas, 'Lucida Console', 'Courier New', monospace;
+}
+
+/* Phosphor: the text glows a little */
+:root[data-theme='matrix'] body {
+  text-shadow: 0 0 5px rgba(0, 255, 65, 0.45);
+}
+:root[data-theme='matrix'] :is(svg, img, canvas) {
+  filter: drop-shadow(0 0 2px rgba(0, 255, 65, 0.4));
+}
+/* The lines of an old monitor, over everything; the mouse goes through */
+:root[data-theme='matrix'] #root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+}
+
+:root[data-theme='matrix'] :is(.btn, .commit-box .primary, .welcome .primary) {
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+:root[data-theme='matrix'] :is(.btn, .commit-box .primary, .welcome .primary):not(:disabled):hover {
+  filter: none;
+  color: #000;
+  text-shadow: none;
+  background: var(--text);
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.6);
+}
+:root[data-theme='matrix'] .welcome .primary {
+  background: #000;
+}
+:root[data-theme='matrix'] .btn-primary {
+  border-color: var(--text);
+  box-shadow: 0 0 6px rgba(0, 255, 65, 0.35);
+}
+:root[data-theme='matrix'] :is(.modal, .palette, .menu) {
+  background: #000;
+  border-color: var(--text-dim);
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 65, 0.15),
+    0 0 30px rgba(0, 255, 65, 0.18);
+}
+:root[data-theme='matrix'] .modal-title::before {
+  content: '> ';
+  color: var(--text-muted);
+}
+:root[data-theme='matrix'] .welcome h1::after,
+:root[data-theme='matrix'] .crumb-value[title]::after {
+  content: '_';
+  margin-left: 2px;
+  animation: matrix-cursor 1.1s steps(1) infinite;
+}
+@keyframes matrix-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+:root[data-theme='matrix'] .graph-header {
+  color: var(--text-muted);
+  background: #000;
+}
+:root[data-theme='matrix'] .graph-row.selected {
+  box-shadow: inset 2px 0 var(--text);
+}
+:root[data-theme='matrix'] :is(input, textarea, select) {
+  caret-color: var(--text);
+}
+:root[data-theme='matrix'] ::selection {
+  color: #000;
+  background: var(--text);
+}
+
+/* The falling code behind the welcome screen */
+.matrix-rain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.4;
+  pointer-events: none;
+}
+.welcome:has(.matrix-rain) {
+  position: relative;
+  overflow: hidden;
+}
+.welcome:has(.matrix-rain) > :not(.matrix-rain) {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme='matrix'] .welcome h1::after,
+  :root[data-theme='matrix'] .crumb-value[title]::after {
+    animation: none;
+  }
+}

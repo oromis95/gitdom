@@ -38,6 +38,11 @@ const CSS_THEMES: [string, ThemePalette][] = [
   ['Dark', paletteOf(darkVars)],
   ['Light', paletteOf({ ...darkVars, ...block(css('theme.css'), ":root[data-theme='light']") })],
   ['Studio', paletteOf({ ...darkVars, ...block(css('studio.css'), ":root[data-theme='studio']") })],
+  [
+    'Retro 2000',
+    paletteOf({ ...darkVars, ...block(css('retro.css'), ":root[data-theme='retro']") })
+  ],
+  ['Matrix', paletteOf({ ...darkVars, ...block(css('retro.css'), ":root[data-theme='matrix']") })],
   ...['Focus', 'Mail', 'IDE'].map(
     (name) =>
       [
