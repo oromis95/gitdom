@@ -1,5 +1,33 @@
 import { describe, expect, it } from 'vitest'
-import { compareVersions, parseChangelog, parseInline, parseMarkdown } from './releases'
+import {
+  compareVersions,
+  parseChangelog,
+  parseInline,
+  parseMarkdown,
+  portableAssets,
+  tagOfReleaseUrl
+} from './releases'
+
+describe('the release from the website', () => {
+  it('reads the tag where /releases/latest leads', () => {
+    expect(tagOfReleaseUrl('https://github.com/oromis95/gitdom/releases/tag/v1.6.0')).toBe('v1.6.0')
+    expect(tagOfReleaseUrl('https://github.com/oromis95/gitdom/releases/tag/v1.6.0/')).toBe(
+      'v1.6.0'
+    )
+    expect(tagOfReleaseUrl('https://github.com/oromis95/gitdom/releases/tag/v2.0.0?x=1')).toBe(
+      'v2.0.0'
+    )
+    // No release yet: GitHub stays on the list
+    expect(tagOfReleaseUrl('https://github.com/oromis95/gitdom/releases')).toBeNull()
+  })
+
+  it('names the assets as the release workflow does', () => {
+    expect(portableAssets('1.6.0')).toEqual({
+      exe: 'GitDom-1.6.0-portable.exe',
+      checksum: 'GitDom-1.6.0-portable.exe.sha256'
+    })
+  })
+})
 
 describe('compareVersions', () => {
   it('compares each number, not the text', () => {

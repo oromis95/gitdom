@@ -18,6 +18,18 @@ export function compareVersions(a: string, b: string): number {
   return 0
 }
 
+/** The tag a release page is for: https://github.com/o/r/releases/tag/v1.6.0 gives v1.6.0. */
+export function tagOfReleaseUrl(url: string): string | null {
+  const match = /\/releases\/tag\/([^/?#]+)\/?(?:[?#].*)?$/.exec(url)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+/** The names of the portable exe of a version and of its checksum, as the release workflow makes them. */
+export function portableAssets(version: string): { exe: string; checksum: string } {
+  const exe = `GitDom-${version}-portable.exe`
+  return { exe, checksum: `${exe}.sha256` }
+}
+
 export interface ChangelogEntry {
   version: string
   /** As written in the heading, e.g. 2026-09-25 */

@@ -6,11 +6,20 @@ import { open, rm } from 'fs/promises'
 import { dirname } from 'path'
 import { app, net } from 'electron'
 import type { ReleaseInfo, UpdateProgress } from '../shared/api'
-import { compareVersions } from '../shared/releases'
+import {
+  compareVersions,
+  parseChangelog,
+  portableAssets,
+  tagOfReleaseUrl
+} from '../shared/releases'
 import { checksumFor, cleanUpAfterUpdate, downloadPathOf, swapExecutable } from './updateFiles'
 
 export const REPO_URL = 'https://github.com/oromis95/gitdom'
 const LATEST_RELEASE = 'https://api.github.com/repos/oromis95/gitdom/releases/latest'
+/** The same, from the website: not limited like the API, which many people behind one office
+ * address soon use up (60 requests an hour) */
+const LATEST_PAGE = `${REPO_URL}/releases/latest`
+const RAW_FILES = 'https://raw.githubusercontent.com/oromis95/gitdom'
 const PROGRESS_INTERVAL = 200
 
 interface GitHubRelease {
@@ -40,6 +49,9 @@ export async function latestRelease(): Promise<ReleaseInfo> {
   const response = await net.fetch(LATEST_RELEASE, {
     headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'GitDom' }
   })
+  // Over the API's limit for this address: the website tells the same
+  if (response.status === 403 || response.status === 429)
+    return remember(await releaseFromWebsite())
   if (!response.ok) throw new Error(`GitHub answered ${response.status} ${response.statusText}`)
   const release = (await response.json()) as GitHubRelease
   if (typeof release.tag_name !== 'string' || !isRepoUrl(release.html_url)) {
@@ -61,8 +73,48 @@ export async function latestRelease(): Promise<ReleaseInfo> {
     notes: typeof release.body === 'string' ? release.body : '',
     readyToInstall: false
   }
-  latest = { ...info, exeName: exe?.name ?? null }
+  return remember(info, exe?.name ?? null)
+}
+
+function remember(info: ReleaseInfo, exeName: string | null = null): ReleaseInfo {
+  latest = {
+    ...info,
+    exeName: exeName ?? (info.downloadUrl ? portableAssets(info.version).exe : null)
+  }
   return { ...info, readyToInstall: ready === info.version }
+}
+
+/**
+ * The latest release from the pages anyone can read: /releases/latest leads to the tag, the notes
+ * are that version's section of the changelog, the files have fixed addresses.
+ */
+async function releaseFromWebsite(): Promise<ReleaseInfo> {
+  const headers = { 'User-Agent': 'GitDom' }
+  const page = await net.fetch(LATEST_PAGE, { headers })
+  const tag = isRepoUrl(page.url) ? tagOfReleaseUrl(page.url) : null
+  void page.body?.cancel()
+  if (!page.ok || !tag) throw new Error(`GitHub answered ${page.status} ${page.statusText}`)
+  const version = tag.replace(/^v/, '')
+  const { exe, checksum } = portableAssets(version)
+  const download = `${REPO_URL}/releases/download/${encodeURIComponent(tag)}`
+  // The files come a few minutes after the release, once built: only offered when there
+  const attached = await net
+    .fetch(`${download}/${checksum}`, { method: 'HEAD', headers })
+    .then((r) => r.ok)
+    .catch(() => false)
+  const notes = await net
+    .fetch(`${RAW_FILES}/${encodeURIComponent(tag)}/CHANGELOG.md`, { headers })
+    .then((r) => (r.ok ? r.text() : ''))
+    .then((text) => parseChangelog(text).find((e) => e.version === version)?.body ?? '')
+    .catch(() => '')
+  return {
+    version,
+    url: page.url,
+    downloadUrl: attached ? `${download}/${exe}` : null,
+    checksumUrl: attached ? `${download}/${checksum}` : null,
+    notes,
+    readyToInstall: false
+  }
 }
 
 async function fetchOk(url: string, signal: AbortSignal): Promise<Response> {

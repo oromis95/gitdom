@@ -1947,7 +1947,8 @@ describe('bisect (ADV-06)', () => {
     const output = await runOp(repo, 'bisectRun', [
       'read line < app.txt; case "$line" in ok*) exit 0 ;; *) exit 1 ;; esac'
     ])
-    expect(output).toContain(`${hashes[4]} is the first bad commit`)
+    // Newer git quotes the term: is the first 'bad' commit
+    expect(output).toMatch(new RegExp(`${hashes[4]} is the first '?bad'? commit`))
     expect((await bisect()).culprit).toBe(hashes[4])
     await runOp(repo, 'bisectReset', [])
   })
