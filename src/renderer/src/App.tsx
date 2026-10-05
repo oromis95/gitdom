@@ -188,7 +188,7 @@ function App(): React.JSX.Element {
         } else if (command === 'hooks') {
           const repo = useApp.getState().tabs[useApp.getState().active]?.path
           if (repo) showHooks(repo)
-        } else if (command === 'whatsNew') showWhatsNew()
+        } else if (command === 'whatsNew') void showWhatsNew()
         else if (command === 'tips') showTip()
         else if (command === 'checkUpdates') void checkForUpdates(true)
         else stepZoom(command === 'zoomIn' ? 1 : command === 'zoomOut' ? -1 : 0)

@@ -359,7 +359,7 @@ function Git({ s }: { s: Settings }): React.JSX.Element {
           <button className="btn btn-small" onClick={() => void checkForUpdates(true)}>
             Check now
           </button>
-          <button className="btn btn-small" onClick={() => showWhatsNew()}>
+          <button className="btn btn-small" onClick={() => void showWhatsNew()}>
             What&apos;s new
           </button>
         </div>

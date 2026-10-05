@@ -4,6 +4,14 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 
 ## Unreleased
 
+### Changed
+
+- Faster start
+  - The graph of the tab on screen shows up in about half the time
+  - Tabs from the last session load one at a time, when GitDom is idle, or as soon as you open them
+  - Fewer git processes before the first graph; the terminal's helpers load only when you open it
+  - The portable exe is smaller, so it has less to unpack at every start
+
 ### Removed
 
 - Five built-in themes that looked like others; if you used one, GitDom switches you to the closest:

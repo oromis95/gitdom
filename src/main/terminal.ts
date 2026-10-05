@@ -3,7 +3,7 @@ import { execFile } from 'child_process'
 import { existsSync, statSync } from 'fs'
 import { join } from 'path'
 import { ipcMain, type WebContents } from 'electron'
-import { spawn, type IPty } from '@lydell/node-pty'
+import type { IPty } from '@lydell/node-pty'
 import { IPC, type Result, type ShellInfo } from '../shared/api'
 import { gitBinary } from './settings'
 
@@ -99,6 +99,9 @@ async function open(
     if (!shell) throw new Error('No shell found')
     if (!existsSync(cwd) || !statSync(cwd).isDirectory())
       throw new Error(`Folder not found: ${cwd}`)
+    // The native module loads with the first terminal, not at every start
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { spawn } = require('@lydell/node-pty') as typeof import('@lydell/node-pty')
     const pty = spawn(shell.file, shell.args, {
       name: 'xterm-256color',
       cwd,

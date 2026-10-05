@@ -1,7 +1,6 @@
 // New versions and what's new: the startup check against GitHub releases, and the changelog shown
 // once after an update and from Help > What's New.
 import { create } from 'zustand'
-import changelogText from '../../../CHANGELOG.md?raw'
 import type { ReleaseInfo } from '../../shared/api'
 import { compareVersions, parseChangelog, type ChangelogEntry } from '../../shared/releases'
 import { useSettings } from './settings'
@@ -12,7 +11,9 @@ const SKIPPED_KEY = 'gitdom.skippedVersion'
 /** The check waits for startup to settle: it's never urgent */
 const CHECK_DELAY = 5000
 
-export const CHANGELOG = parseChangelog(changelogText)
+/** The bundled changelog, loaded on demand: there's nothing to show at most starts */
+export const changelog = (): Promise<ChangelogEntry[]> =>
+  import('../../../CHANGELOG.md?raw').then((m) => parseChangelog(m.default))
 
 interface WhatsNew {
   title: string
@@ -42,9 +43,11 @@ export const useUpdates = create<UpdatesState>(() => ({
   whatsNew: null
 }))
 
-export const showWhatsNew = (
-  whatsNew: WhatsNew = { title: "What's new", entries: CHANGELOG }
-): void => useUpdates.setState({ whatsNew })
+export async function showWhatsNew(whatsNew?: WhatsNew): Promise<void> {
+  useUpdates.setState({
+    whatsNew: whatsNew ?? { title: "What's new", entries: await changelog() }
+  })
+}
 
 export const closeWhatsNew = (): void => useUpdates.setState({ whatsNew: null })
 
@@ -131,12 +134,14 @@ export function startupChecks(): void {
     localStorage.getItem(LAST_VERSION_KEY) ??
     (localStorage.getItem('gitdom.tabs') || localStorage.getItem('gitdom.recent') ? '0.5.0' : null)
   localStorage.setItem(LAST_VERSION_KEY, __APP_VERSION__)
-  if (last && compareVersions(__APP_VERSION__, last) > 0) {
-    const entries = CHANGELOG.filter(
-      (e) =>
-        compareVersions(e.version, last) > 0 && compareVersions(e.version, __APP_VERSION__) <= 0
-    )
-    if (entries.length) showWhatsNew({ title: `GitDom updated to ${__APP_VERSION__}`, entries })
-  }
+  if (last && compareVersions(__APP_VERSION__, last) > 0)
+    void changelog().then((all) => {
+      const entries = all.filter(
+        (e) =>
+          compareVersions(e.version, last) > 0 && compareVersions(e.version, __APP_VERSION__) <= 0
+      )
+      if (entries.length)
+        void showWhatsNew({ title: `GitDom updated to ${__APP_VERSION__}`, entries })
+    })
   if (useSettings.getState().checkUpdates) setTimeout(() => void checkForUpdates(), CHECK_DELAY)
 }

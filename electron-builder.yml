@@ -11,7 +11,12 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - '!{docs/*,LICENSE}'
+  - '!{docs/*,bench/*,LICENSE}'
+# Chromium's own texts (context menus, dialogs) in English and Italian only: the other ~50 languages
+# are megabytes the portable exe unpacks at every start
+electronLanguages:
+  - en-US
+  - it
 asarUnpack:
   - resources/**
   # The terminal's native module and the console helpers it starts must be real files

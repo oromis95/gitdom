@@ -345,7 +345,7 @@ export function buildCommands(): Command[] {
   add('View', 'Reset zoom', () => stepZoom(0), shortcutLabel('zoomReset'))
   add('Preferences', 'Preferences…', () => openPreferences(), shortcutLabel('preferences'))
   add('Help', 'Tips: what GitDom can do', () => showTip())
-  add('Help', "What's new in GitDom", () => showWhatsNew())
+  add('Help', "What's new in GitDom", () => void showWhatsNew())
   add('Help', 'Check for updates', () => void checkForUpdates(true))
   const splash = splashEnabled()
   add('View', splash ? 'Turn off the startup animation' : 'Turn on the startup animation', () =>

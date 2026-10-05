@@ -296,6 +296,9 @@ export const useApp = create<AppState>((set, get) => {
     setActive(index) {
       set({ active: index })
       persist(get().tabs, index)
+      // A restored tab not loaded yet
+      const tab = get().tabs[index]
+      if (tab && !tab.snapshot && !tab.loading && !tab.error) void load(tab.path)
     },
 
     async refresh(index) {
@@ -437,10 +440,16 @@ export function restoreSession(): void {
   }))
   const active = Math.min(saved.active, tabs.length - 1)
   useApp.setState({ tabs, active })
-  // The tab on screen first: loading all of them at once would slow it down
+  // The tab on screen first; then the others one at a time when the app is idle (a tab opened in
+  // the meantime loads right away, see setActive): all at once would start dozens of git processes
   const { refresh } = useApp.getState()
-  void refresh(active).finally(() => {
-    tabs.forEach((_, i) => void (i !== active && refresh(i)))
+  void refresh(active).finally(async () => {
+    for (const { path } of tabs) {
+      await new Promise((done) => requestIdleCallback(done, { timeout: 2000 }))
+      const index = useApp.getState().tabs.findIndex((t) => t.path === path)
+      const tab = useApp.getState().tabs[index]
+      if (tab && !tab.snapshot && !tab.loading && !tab.error) await refresh(index)
+    }
   })
 }
 

@@ -1,6 +1,6 @@
 import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
-import { basename, resolve } from 'path'
+import { basename, dirname, join, resolve } from 'path'
 import type {
   BisectState,
   Commit,
@@ -38,6 +38,7 @@ import {
 } from './parsers'
 import { GitError, runGit, tryGit } from './exec'
 import { historyLabels } from './history'
+import { gitBinary } from '../settings'
 import { gitDirs } from './gitdir'
 
 /** Commits loaded at first, and per page as the graph scrolls down (GRAPH-08). */
@@ -158,8 +159,36 @@ async function loadSubmodules(repo: string): Promise<Submodule[]> {
 // Installing git-lfs while GitDom runs is rare: checked once
 let lfsInstalled: Promise<boolean> | null = null
 
+/**
+ * Whether git-lfs is next to git or on the PATH, looking at the disk: `git lfs version` takes most
+ * of a second on some machines, and the first snapshot waited for it. Null when unsure.
+ */
+export function lfsOnDisk(
+  git: string,
+  path = process.env.PATH ?? '',
+  exists: (file: string) => boolean = existsSync
+): boolean | null {
+  if (process.platform !== 'win32') return null
+  const dirs = path.split(';').filter(Boolean)
+  // Git for Windows: <root>\cmd\git.exe, with git-lfs in <root>\mingw64\bin
+  const gitDir = git.includes('\\') || git.includes('/') ? dirname(git) : null
+  const roots = [gitDir, ...dirs.filter((d) => exists(join(d, 'git.exe')))]
+    .filter((d): d is string => !!d)
+    .map((d) => resolve(d, '..'))
+  const candidates = [
+    ...dirs.map((d) => join(d, 'git-lfs.exe')),
+    ...roots.flatMap((r) => [
+      join(r, 'mingw64', 'bin', 'git-lfs.exe'),
+      join(r, 'mingw64', 'libexec', 'git-core', 'git-lfs.exe')
+    ])
+  ]
+  return candidates.some((c) => exists(c)) ? true : null
+}
+
 async function loadLfs(repo: string): Promise<LfsInfo> {
-  lfsInstalled ??= tryGit(repo, ['lfs', 'version']).then((v) => v !== null)
+  lfsInstalled ??= lfsOnDisk(gitBinary())
+    ? Promise.resolve(true)
+    : tryGit(repo, ['lfs', 'version']).then((v) => v !== null)
   const attributes = await readFile(resolve(repo, '.gitattributes'), 'utf8').catch(() => '')
   return { installed: await lfsInstalled, patterns: parseLfsPatterns(attributes) }
 }
@@ -289,6 +318,24 @@ export async function ensureCommitGraph(repo: string): Promise<void> {
     .map((p) => resolve(repo, p.trim()))
   if (existsSync(single) || existsSync(chain)) return
   await tryGit(repo, ['commit-graph', 'write', '--reachable'])
+}
+
+/**
+ * The snapshot of the repository at `path`, any folder of it. A tab is nearly always the top folder:
+ * then the snapshot doesn't wait for git to confirm it, one process less before the graph.
+ */
+export async function openSnapshot(
+  path: string,
+  filter?: GraphFilter,
+  limit?: number
+): Promise<RepoSnapshot> {
+  if (roots.has(path) || !existsSync(join(path, '.git')))
+    return loadSnapshot(await resolveRepoRoot(path), filter, limit)
+  const [root, snapshot] = await Promise.all([
+    resolveRepoRoot(path),
+    loadSnapshot(path, filter, limit)
+  ])
+  return { ...snapshot, path: root, name: basename(root) }
 }
 
 export async function loadSnapshot(

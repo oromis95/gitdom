@@ -23,9 +23,11 @@ export default function TerminalDock(): React.JSX.Element | null {
   const [shells, setShells] = useState<ShellInfo[]>([])
   const repo = tab?.snapshot ? tab.path : undefined
 
+  // Finding the shells starts git: not at every start, only when the terminal is wanted
+  const wanted = shown || Object.keys(sessions).length > 0
   useEffect(() => {
-    void window.api.terminal.shells().then(setShells)
-  }, [])
+    if (wanted && !shells.length) void window.api.terminal.shells().then(setShells)
+  }, [wanted, shells.length])
 
   // Ctrl+` (the key left of 1, whatever the keyboard layout) shows and hides the terminal
   useShortcut('terminal', () => toggleTerminal())
