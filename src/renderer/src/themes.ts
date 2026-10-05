@@ -1,6 +1,7 @@
 // Theme palettes (UI-05): the built-in collection and the user's own. A palette holds the colours
-// people pick; the rest (soft backgrounds, borders, badges) is mixed from them. Dark, Light and
-// Studio keep their colours in the CSS files; these ones are applied as CSS variables on <html>.
+// people pick; the rest (soft backgrounds, borders, badges) is mixed from them. Dark, Light, Retro
+// 2000, Matrix and the layout themes keep their colours in the CSS files; these ones are applied as
+// CSS variables on <html>.
 
 export type ThemeBase = 'dark' | 'light'
 
@@ -228,6 +229,15 @@ export function contrastChecks(
 
 // --- The collection ---------------------------------------------------------------------------
 
+/** Built-in themes taken out because another one looked the same: who used them gets that one. */
+export const REMOVED_THEMES: Record<string, string> = {
+  'tokyo-night': 'dark',
+  'catppuccin-mocha': 'dark',
+  'catppuccin-latte': 'light',
+  dracula: 'studio',
+  monokai: 'nord'
+}
+
 export const PRESET_THEMES: ThemeDef[] = [
   {
     id: 'nord',
@@ -261,99 +271,6 @@ export const PRESET_THEMES: ThemeDef[] = [
     }
   },
   {
-    id: 'dracula',
-    name: 'Dracula',
-    base: 'dark',
-    palette: {
-      bg: '#282a36',
-      panel: '#21222c',
-      elevated: '#343746',
-      hover: '#343746',
-      selected: '#44475a',
-      border: '#3b3e4f',
-      deep: '#1b1c24',
-      text: '#f8f8f2',
-      muted: '#b6b9cc',
-      dim: '#6c7093',
-      code: '#f8f8f2',
-      accent: '#bd93f9',
-      green: '#50fa7b',
-      red: '#ff5555',
-      orange: '#ffb86c',
-      purple: '#ff79c6',
-      comment: '#7984b8',
-      keyword: '#ff79c6',
-      tag: '#ff79c6',
-      literal: '#bd93f9',
-      string: '#f1fa8c',
-      number: '#bd93f9',
-      title: '#50fa7b',
-      type: '#8be9fd'
-    }
-  },
-  {
-    id: 'tokyo-night',
-    name: 'Tokyo Night',
-    base: 'dark',
-    palette: {
-      bg: '#1a1b26',
-      panel: '#16161e',
-      elevated: '#24283b',
-      hover: '#232433',
-      selected: '#2e3c64',
-      border: '#292e42',
-      deep: '#121218',
-      text: '#c8d1f5',
-      muted: '#9aa3cc',
-      dim: '#565f89',
-      code: '#c0caf5',
-      accent: '#7aa2f7',
-      green: '#9ece6a',
-      red: '#f7768e',
-      orange: '#ff9e64',
-      purple: '#bb9af7',
-      comment: '#6a73a0',
-      keyword: '#bb9af7',
-      tag: '#f7768e',
-      literal: '#ff9e64',
-      string: '#9ece6a',
-      number: '#ff9e64',
-      title: '#7aa2f7',
-      type: '#2ac3de'
-    }
-  },
-  {
-    id: 'catppuccin-mocha',
-    name: 'Catppuccin Mocha',
-    base: 'dark',
-    palette: {
-      bg: '#1e1e2e',
-      panel: '#181825',
-      elevated: '#313244',
-      hover: '#2a2b3c',
-      selected: '#3b3f5c',
-      border: '#313244',
-      deep: '#11111b',
-      text: '#cdd6f4',
-      muted: '#a6adc8',
-      dim: '#6c7086',
-      code: '#cdd6f4',
-      accent: '#89b4fa',
-      green: '#a6e3a1',
-      red: '#f38ba8',
-      orange: '#fab387',
-      purple: '#cba6f7',
-      comment: '#7f849c',
-      keyword: '#cba6f7',
-      tag: '#f38ba8',
-      literal: '#fab387',
-      string: '#a6e3a1',
-      number: '#fab387',
-      title: '#89b4fa',
-      type: '#f9e2af'
-    }
-  },
-  {
     id: 'gruvbox-dark',
     name: 'Gruvbox Dark',
     base: 'dark',
@@ -382,37 +299,6 @@ export const PRESET_THEMES: ThemeDef[] = [
       number: '#d3869b',
       title: '#8ec07c',
       type: '#fabd2f'
-    }
-  },
-  {
-    id: 'monokai',
-    name: 'Monokai',
-    base: 'dark',
-    palette: {
-      bg: '#272822',
-      panel: '#2d2e27',
-      elevated: '#3e3d32',
-      hover: '#3e3d32',
-      selected: '#49483e',
-      border: '#3b3a32',
-      deep: '#1e1f1c',
-      text: '#f8f8f2',
-      muted: '#bcbaad',
-      dim: '#75715e',
-      code: '#f8f8f2',
-      accent: '#66d9ef',
-      green: '#a6e22e',
-      red: '#f92672',
-      orange: '#fd971f',
-      purple: '#ae81ff',
-      comment: '#88846f',
-      keyword: '#f92672',
-      tag: '#f92672',
-      literal: '#ae81ff',
-      string: '#e6db74',
-      number: '#ae81ff',
-      title: '#a6e22e',
-      type: '#66d9ef'
     }
   },
   {
@@ -475,37 +361,6 @@ export const PRESET_THEMES: ThemeDef[] = [
       number: '#c02f75',
       title: '#1f7ab8',
       type: '#9a7500'
-    }
-  },
-  {
-    id: 'catppuccin-latte',
-    name: 'Catppuccin Latte',
-    base: 'light',
-    palette: {
-      bg: '#eff1f5',
-      panel: '#e6e9ef',
-      elevated: '#f6f7fa',
-      hover: '#dce0e8',
-      selected: '#cddcf8',
-      border: '#ccd0da',
-      deep: '#dce0e8',
-      text: '#373a52',
-      muted: '#555870',
-      dim: '#8c8fa1',
-      code: '#4c4f69',
-      accent: '#1e66f5',
-      green: '#357f23',
-      red: '#d20f39',
-      orange: '#c24d07',
-      purple: '#8839ef',
-      comment: '#7c7f93',
-      keyword: '#8839ef',
-      tag: '#d20f39',
-      literal: '#c24d07',
-      string: '#357f23',
-      number: '#c24d07',
-      title: '#1e66f5',
-      type: '#a86a10'
     }
   },
   {

@@ -1,7 +1,7 @@
-// Themes (UI-05): dark / light (following the system when asked to), the layout themes (Studio,
-// Focus, Mail, IDE), which also arrange the panels their own way, the built-in palettes and the
-// user's own. The first ones are written in CSS; the palettes set the same CSS variables on <html>,
-// over the dark or light rules.
+// Themes (UI-05): dark / light (following the system when asked to), Retro 2000 and Matrix, the
+// layout themes (Studio, Focus, Mail, IDE), which also arrange the panels their own way, the built-in
+// palettes and the user's own. The first ones are written in CSS; the palettes set the same CSS
+// variables on <html>, over the dark or light rules.
 import { create } from 'zustand'
 import type { ThemeChoice, ThemeOption } from '../../shared/api'
 import { setLanePalette } from './graph/colors'
@@ -10,6 +10,7 @@ import {
   laneColors,
   PALETTE_VARS,
   PRESET_THEMES,
+  REMOVED_THEMES,
   themeVars,
   type PaletteKey,
   type ThemeDef,
@@ -75,7 +76,10 @@ function findTheme(id: ThemeChoice, custom: ThemeDef[]): ThemeDef | undefined {
 }
 
 function saved(custom: ThemeDef[]): ThemeChoice {
-  const value = localStorage.getItem(THEME_KEY) ?? 'dark'
+  const stored = localStorage.getItem(THEME_KEY) ?? 'dark'
+  // A custom theme can't have one of those ids (they start with "custom-")
+  const value = REMOVED_THEMES[stored] ?? stored
+  if (value !== stored) localStorage.setItem(THEME_KEY, value)
   return CSS_THEMES.some((t) => t.id === value) || findTheme(value, custom) ? value : 'dark'
 }
 

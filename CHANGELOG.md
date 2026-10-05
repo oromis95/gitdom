@@ -2,6 +2,16 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Removed
+
+- Five built-in themes that looked like others; if you used one, GitDom switches you to the closest:
+  - Tokyo Night and Catppuccin Mocha → Dark
+  - Catppuccin Latte → Light
+  - Dracula → Studio
+  - Monokai → Nord
+
 ## 1.7.0 — 2026-10-02
 
 ### Added

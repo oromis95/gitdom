@@ -8,6 +8,7 @@ import {
   mix,
   PALETTE_VARS,
   PRESET_THEMES,
+  REMOVED_THEMES,
   readableOn,
   themeVars,
   type PaletteKey,
@@ -86,6 +87,15 @@ describe('themes', () => {
   it('have unique ids', () => {
     const ids = PRESET_THEMES.map((t) => t.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('send the users of a removed theme to one that is still there', () => {
+    const ids = PRESET_THEMES.map((t) => t.id)
+    const css = ['dark', 'light', 'retro', 'matrix', 'studio', 'focus', 'mail', 'ide']
+    for (const [removed, instead] of Object.entries(REMOVED_THEMES)) {
+      expect(ids).not.toContain(removed)
+      expect([...ids, ...css]).toContain(instead)
+    }
   })
 
   it.each([...CSS_THEMES, ...PRESET_THEMES.map((t) => [t.name, t.palette] as const)])(
