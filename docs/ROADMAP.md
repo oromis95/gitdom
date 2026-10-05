@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.7.0 pubblicata il 2026-10-02 (Step 1–13 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.8.0 pubblicata il 2026-10-05 (Step 1–14 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -190,7 +190,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Step 14 — v1.8: Installer, avvio rapido, meno temi ✅
 
-> Completato: installer per Windows accanto all'exe portable, avvio più rapido, cinque temi doppioni tolti.
+> Completato con la v1.8.0: installer per Windows accanto all'exe portable, avvio più rapido, cinque temi doppioni tolti.
 
 - ✅ **Installer per Windows**: installazione per il solo utente, senza diritti di amministratore, con collegamenti nel menu Start e sul desktop; si aggiorna da solo come il portable, eseguendo il nuovo installer in silenzio (D8)
 - ✅ **Avvio più rapido**: l'installer non decomprime nulla a ogni avvio; il portable è più leggero (solo le lingue inglese e italiana di Chromium, niente sorgenti già incluse nel bundle); meno processi git prima del grafo (LFS cercato su disco, radice del repository in parallelo), tab ripristinate una alla volta quando l'app è libera, terminale e changelog caricati solo quando servono
