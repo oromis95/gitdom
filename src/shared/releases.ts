@@ -24,9 +24,15 @@ export function tagOfReleaseUrl(url: string): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-/** The names of the portable exe of a version and of its checksum, as the release workflow makes them. */
-export function portableAssets(version: string): { exe: string; checksum: string } {
-  const exe = `GitDom-${version}-portable.exe`
+/** How GitDom was distributed: the self-contained exe, or the installer */
+export type ReleaseKind = 'portable' | 'setup'
+
+/** The names of a version's exe and of its checksum, as the release workflow makes them. */
+export function releaseAssets(
+  version: string,
+  kind: ReleaseKind
+): { exe: string; checksum: string } {
+  const exe = `GitDom-${version}-${kind}.exe`
   return { exe, checksum: `${exe}.sha256` }
 }
 

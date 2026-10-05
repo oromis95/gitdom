@@ -1,16 +1,20 @@
-// Updates: reads GitDom's latest release from GitHub and, for the portable exe, downloads it,
-// checks it against the release's SHA-256 and puts it in place of the running exe, at a restart or
-// when GitDom closes. Other builds (development, unpacked) only tell the user and link the download.
+// Updates: reads GitDom's latest release from GitHub and downloads the exe for this copy, checked
+// against the release's SHA-256. The portable exe is put in place of the running one; the installed
+// GitDom runs the new installer silently. Both at a restart or when GitDom closes. Other builds
+// (development, unpacked) only tell the user and link the download.
+import { spawn } from 'child_process'
 import { createHash } from 'crypto'
-import { open, rm } from 'fs/promises'
-import { dirname } from 'path'
+import { existsSync } from 'fs'
+import { open, readdir, rename, rm } from 'fs/promises'
+import { dirname, join } from 'path'
 import { app, net } from 'electron'
 import type { ReleaseInfo, UpdateProgress } from '../shared/api'
 import {
   compareVersions,
   parseChangelog,
-  portableAssets,
-  tagOfReleaseUrl
+  releaseAssets,
+  tagOfReleaseUrl,
+  type ReleaseKind
 } from '../shared/releases'
 import { checksumFor, cleanUpAfterUpdate, downloadPathOf, swapExecutable } from './updateFiles'
 
@@ -36,13 +40,28 @@ export const isRepoUrl = (url: unknown): url is string =>
 /** The exe the user started: the portable build runs from a temporary copy and says where it is. */
 const portableExe = (): string | null => process.env.PORTABLE_EXECUTABLE_FILE || null
 
-export const canSelfUpdate = (): boolean => portableExe() !== null
+/** The installer leaves its uninstaller next to GitDom */
+const installed = (): boolean =>
+  app.isPackaged && existsSync(join(dirname(process.execPath), `Uninstall ${app.getName()}.exe`))
+
+/** How this copy updates itself; null when it can't (development, unpacked) */
+function kind(): ReleaseKind | null {
+  return portableExe() ? 'portable' : installed() ? 'setup' : null
+}
+
+export const canSelfUpdate = (): boolean => kind() !== null
+
+/** Where the new installer is downloaded: the temporary folder, removed at the next start */
+const setupPathOf = (name: string): string => join(app.getPath('temp'), name)
+const SETUP_FILE = /^GitDom-[\w.-]+-setup\.exe(\.download)?$/
 
 /** The release the renderer was last told about: the one a download fetches. */
 let latest: (ReleaseInfo & { exeName: string | null }) | null = null
 let downloading: AbortController | null = null
 /** Version downloaded and checked, put in place at the next restart or when GitDom closes */
 let ready: string | null = null
+/** The installer of that version, for the installed GitDom */
+let setup: string | null = null
 
 export async function latestRelease(): Promise<ReleaseInfo> {
   // net.fetch goes through the system proxy, like the browser
@@ -63,8 +82,10 @@ export async function latestRelease(): Promise<ReleaseInfo> {
       ? { name: found.name as string, url: found.browser_download_url }
       : null
   }
-  const exe = asset('-portable.exe')
-  const checksum = asset('-portable.exe.sha256')
+  // A copy that can't update itself links the portable exe
+  const suffix = `-${kind() ?? 'portable'}.exe`
+  const exe = asset(suffix)
+  const checksum = asset(`${suffix}.sha256`)
   const info: ReleaseInfo = {
     version: release.tag_name.replace(/^v/, ''),
     url: release.html_url,
@@ -79,7 +100,8 @@ export async function latestRelease(): Promise<ReleaseInfo> {
 function remember(info: ReleaseInfo, exeName: string | null = null): ReleaseInfo {
   latest = {
     ...info,
-    exeName: exeName ?? (info.downloadUrl ? portableAssets(info.version).exe : null)
+    exeName:
+      exeName ?? (info.downloadUrl ? releaseAssets(info.version, kind() ?? 'portable').exe : null)
   }
   return { ...info, readyToInstall: ready === info.version }
 }
@@ -95,7 +117,7 @@ async function releaseFromWebsite(): Promise<ReleaseInfo> {
   void page.body?.cancel()
   if (!page.ok || !tag) throw new Error(`GitHub answered ${page.status} ${page.statusText}`)
   const version = tag.replace(/^v/, '')
-  const { exe, checksum } = portableAssets(version)
+  const { exe, checksum } = releaseAssets(version, kind() ?? 'portable')
   const download = `${REPO_URL}/releases/download/${encodeURIComponent(tag)}`
   // The files come a few minutes after the release, once built: only offered when there
   const attached = await net
@@ -124,14 +146,15 @@ async function fetchOk(url: string, signal: AbortSignal): Promise<Response> {
 }
 
 /**
- * Downloads the latest release's exe next to the running one, checking its SHA-256 on the way.
- * A download that fails, is cancelled or doesn't match is deleted.
+ * Downloads the latest release's exe, checking its SHA-256 on the way: next to the running one for
+ * the portable exe, in the temporary folder for the installer. A download that fails, is cancelled
+ * or doesn't match is deleted.
  */
 export async function downloadUpdate(
   onProgress: (progress: UpdateProgress) => void
 ): Promise<void> {
-  const exe = portableExe()
-  if (!exe) throw new Error('Only the portable exe can update itself')
+  const how = kind()
+  if (!how) throw new Error('Only the portable exe and the installed GitDom can update themselves')
   const release = latest
   if (!release?.downloadUrl || !release.exeName) throw new Error('This release has no exe')
   if (!release.checksumUrl) {
@@ -142,9 +165,13 @@ export async function downloadUpdate(
   }
   if (ready === release.version) return
   if (downloading) throw new Error('The update is already downloading')
+  // The name becomes a path in the temporary folder: only the installer's own pattern
+  if (how === 'setup' && !SETUP_FILE.test(release.exeName))
+    throw new Error('This release has no installer')
 
   const controller = new AbortController()
   downloading = controller
+  const exe = how === 'portable' ? (portableExe() as string) : setupPathOf(release.exeName)
   const target = downloadPathOf(exe)
   try {
     const listing = await (await fetchOk(release.checksumUrl, controller.signal)).text()
@@ -185,6 +212,10 @@ export async function downloadUpdate(
     if (hash.digest('hex') !== expected) {
       throw new Error('The download is damaged (its checksum does not match): try again')
     }
+    if (how === 'setup') {
+      await rename(target, exe)
+      setup = exe
+    }
     ready = release.version
   } catch (e) {
     await rm(target, { force: true }).catch(() => undefined)
@@ -197,33 +228,54 @@ export async function downloadUpdate(
 
 export const cancelUpdate = (): void => downloading?.abort()
 
-/** Puts the downloaded exe in place; false when there's nothing to install. */
-function applyUpdate(): boolean {
+/**
+ * Installs the downloaded update; false when there's nothing to install. The portable exe swaps
+ * files; the installer runs silently once GitDom has closed (it waits for it), and with `start`
+ * opens the new version when done.
+ */
+function applyUpdate(start: boolean): boolean {
+  if (!ready) return false
   const exe = portableExe()
-  if (!exe || !ready) return false
-  swapExecutable(exe, downloadPathOf(exe))
+  if (exe) swapExecutable(exe, downloadPathOf(exe))
+  else if (setup)
+    spawn(setup, ['/S', '--updated', ...(start ? ['--force-run'] : [])], {
+      detached: true,
+      stdio: 'ignore'
+    }).unref()
+  else return false
   ready = null
   return true
 }
 
 /** Installs the downloaded update and starts the new version. */
 export function installUpdateNow(): void {
+  if (!applyUpdate(true)) throw new Error('No update is ready to install')
   const exe = portableExe()
-  if (!exe || !applyUpdate()) throw new Error('No update is ready to install')
-  app.relaunch({ execPath: exe, args: [] })
+  // The installer starts the new version itself
+  if (exe) app.relaunch({ execPath: exe, args: [] })
   app.quit()
 }
 
 /** At startup, removes what the last update left; when GitDom closes, installs a pending one. */
 export function registerUpdateLifecycle(): void {
+  const how = kind()
+  if (!how) return
   const exe = portableExe()
-  if (!exe) return
-  void cleanUpAfterUpdate(exe)
+  if (exe) void cleanUpAfterUpdate(exe)
+  else void removeOldInstallers()
   app.on('will-quit', () => {
     try {
-      applyUpdate()
+      applyUpdate(false)
     } catch {
       // The exe is in use or read-only: the update is downloaded again next time
     }
   })
+}
+
+/** The installers downloaded by earlier updates, done by now */
+async function removeOldInstallers(): Promise<void> {
+  const temp = app.getPath('temp')
+  const files = await readdir(temp).catch(() => [] as string[])
+  for (const file of files.filter((f) => SETUP_FILE.test(f)))
+    await rm(join(temp, file), { force: true }).catch(() => undefined)
 }

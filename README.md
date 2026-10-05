@@ -120,7 +120,9 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 **Updates**
 
 - At startup GitDom tells you when a newer version is out on GitHub
-- **Update** downloads it in the background and checks it against the release's SHA-256; it's installed when you close GitDom, or right away with **Restart now**. The exe keeps its name and folder, so your shortcuts keep working
+- **Update** downloads it in the background and checks it against the release's SHA-256; it's installed when you close GitDom, or right away with **Restart now**
+  - Installed GitDom: the new installer runs silently, and **Restart now** opens the new version when it's done
+  - Portable exe: the new exe takes the old one's place, keeping its name and folder, so your shortcuts keep working
 - If the download is blocked, or GitDom's folder isn't writable, **Download** opens the release page instead
 - **Help → What's New** lists what each version added; the full list is in [CHANGELOG.md](CHANGELOG.md)
 - **Tips** explain a feature at a time with a small animation: one at startup, and one now and then right after doing something it builds on. **Help → Tips** lists them all; they can be turned off from the dialog or in Preferences
@@ -158,7 +160,10 @@ At startup GitDom shows its logo: cars on a six-lane highway change lanes withou
 
 ## Download
 
-Get `GitDom-<version>-portable.exe` from the [Releases](https://github.com/oromis95/gitdom/releases) page. It's a single self-contained exe that you start with a double-click; there's nothing to install. You need [Git](https://git-scm.com/) on the `PATH`.
+The [Releases](https://github.com/oromis95/gitdom/releases) page has two versions. Both need [Git](https://git-scm.com/) on the `PATH`, update themselves, and share settings, tabs and themes.
+
+- **Installer** (`GitDom-<version>-setup.exe`, recommended): installs GitDom for your user only, in `%LOCALAPPDATA%\Programs\GitDom`, with no administrator rights, and adds it to the Start menu and the desktop. It starts quickest, because nothing is unpacked at each start.
+- **Portable** (`GitDom-<version>-portable.exe`): a single exe that you start with a double-click, with nothing to install. At each start it unpacks itself to a temporary folder, so it takes a few seconds longer to open.
 
 ## Requirements
 
@@ -184,6 +189,7 @@ npm run dev
 | `npm run build:unpack`               | Builds a standalone app folder in `dist/`           |
 | `npm run build:win`                  | Builds a Windows installer                          |
 | `npm run build:portable`             | Builds a single self-contained Windows exe          |
+| `npm run build:release`              | Builds both, as the release workflow does           |
 
 ## Tech stack
 

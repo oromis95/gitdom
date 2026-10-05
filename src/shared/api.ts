@@ -751,7 +751,7 @@ export interface ReleaseInfo {
   version: string
   /** Release page */
   url: string
-  /** The portable exe, when attached */
+  /** The exe for this copy (portable or installer), when attached */
   downloadUrl: string | null
   /** Its SHA-256 (sha256sum format), which the in-app update requires */
   checksumUrl: string | null
@@ -773,7 +773,7 @@ export interface AppApi {
   latestRelease(): Promise<Result<ReleaseInfo>>
   /** Opens a page of GitDom's GitHub repository in the browser. */
   openRepoPage(url: string): void
-  /** Whether this copy can replace itself: only the portable exe can. */
+  /** Whether this copy can update itself: the portable exe and the installed GitDom can. */
   canSelfUpdate(): Promise<boolean>
   /** Downloads and checks the release latestRelease() returned; resolves when it's ready. */
   downloadUpdate(): Promise<Result<void>>

@@ -14,7 +14,7 @@ Le milestone 0–6 sono completate:
 - command palette, terminale integrato, blame e cronologia file;
 - submodule, LFS e profili di identità;
 - temi Scuro, Chiaro e Studio, animazioni e logo all'avvio;
-- exe portable generato da GitHub Actions;
+- exe portable e installer generati da GitHub Actions;
 - clone e nuovo repository, preferiti (Step 1);
 - preferenze, zoom, pannelli ridimensionabili, editor e merge tool esterni (Step 2);
 - diff affiancato, parole evidenziate, opzioni del diff, confronto tra revisioni e diff delle immagini (Step 3);
@@ -187,6 +187,14 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 - ✅ **Patch**: creazione da commit e applicazione di file .patch (ADV-07)
 - ✅ **Cruscotto dei workspace**: lo stato di tutti i repository in una vista (modifiche aperte, avanti/indietro), con "Fetch tutti"
 - ✅ **Cosa ho fatto questa settimana**: i tuoi commit su tutti i repository, per giorno, da copiare per uno standup o un report
+
+## Step 14 — v1.8: Installer, avvio rapido, meno temi ✅
+
+> Completato: installer per Windows accanto all'exe portable, avvio più rapido, cinque temi doppioni tolti.
+
+- ✅ **Installer per Windows**: installazione per il solo utente, senza diritti di amministratore, con collegamenti nel menu Start e sul desktop; si aggiorna da solo come il portable, eseguendo il nuovo installer in silenzio (D8)
+- ✅ **Avvio più rapido**: l'installer non decomprime nulla a ogni avvio; il portable è più leggero (solo le lingue inglese e italiana di Chromium, niente sorgenti già incluse nel bundle); meno processi git prima del grafo (LFS cercato su disco, radice del repository in parallelo), tab ripristinate una alla volta quando l'app è libera, terminale e changelog caricati solo quando servono
+- ✅ **Meno temi**: tolti Tokyo Night, Catppuccin Mocha e Latte, Dracula e Monokai, troppo simili ad altri; chi li usava passa al più vicino
 
 ---
 

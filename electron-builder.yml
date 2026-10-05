@@ -26,11 +26,17 @@ win:
 # A single self-contained exe: it unpacks itself to a temporary folder at each start, nothing to install
 portable:
   artifactName: ${productName}-${version}-portable.${ext}
+# The installer: for the current user only, in %LOCALAPPDATA%\Programs\GitDom, so no administrator
+# rights; it starts at once afterwards, without unpacking anything. The updater runs it silently.
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: ${productName}-${version}-setup.${ext}
+  oneClick: true
+  perMachine: false
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  createStartMenuShortcut: true
+  runAfterFinish: true
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:

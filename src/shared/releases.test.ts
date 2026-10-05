@@ -4,7 +4,7 @@ import {
   parseChangelog,
   parseInline,
   parseMarkdown,
-  portableAssets,
+  releaseAssets,
   tagOfReleaseUrl
 } from './releases'
 
@@ -22,9 +22,13 @@ describe('the release from the website', () => {
   })
 
   it('names the assets as the release workflow does', () => {
-    expect(portableAssets('1.6.0')).toEqual({
+    expect(releaseAssets('1.6.0', 'portable')).toEqual({
       exe: 'GitDom-1.6.0-portable.exe',
       checksum: 'GitDom-1.6.0-portable.exe.sha256'
+    })
+    expect(releaseAssets('1.8.0', 'setup')).toEqual({
+      exe: 'GitDom-1.8.0-setup.exe',
+      checksum: 'GitDom-1.8.0-setup.exe.sha256'
     })
   })
 })

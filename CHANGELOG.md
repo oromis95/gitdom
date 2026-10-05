@@ -4,6 +4,14 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 
 ## Unreleased
 
+### Added
+
+- **Windows installer** (`GitDom-<version>-setup.exe`) next to the portable exe on the Releases page
+  - Installs for your user only, without administrator rights, with Start menu and desktop shortcuts
+  - Starts quicker than the portable exe, which unpacks itself at every start
+  - Updates itself like the portable exe: the new installer runs silently when you close GitDom, or right away with **Restart now**
+  - Settings, tabs and themes are the same as the portable exe's
+
 ### Changed
 
 - Faster start

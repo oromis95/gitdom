@@ -20,7 +20,7 @@ interface WhatsNew {
   entries: ChangelogEntry[]
 }
 
-/** The in-app update of the portable exe */
+/** The in-app update of the portable exe or of the installed GitDom */
 export type UpdateDownload =
   | { state: 'idle' }
   | { state: 'downloading'; received: number; total: number | null }
@@ -61,7 +61,7 @@ export async function checkForUpdates(manual = false): Promise<void> {
   const release = result.value
   const newer = compareVersions(release.version, __APP_VERSION__) > 0
   if (newer && (manual || localStorage.getItem(SKIPPED_KEY) !== release.version)) {
-    // Needs the portable exe and a release with its checksum
+    // Needs the portable exe or the installed GitDom, and a release with its checksum
     const selfUpdate =
       !!release.downloadUrl && !!release.checksumUrl && (await window.api.app.canSelfUpdate())
     const { download } = useUpdates.getState()
