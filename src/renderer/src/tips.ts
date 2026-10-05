@@ -150,6 +150,116 @@ export const TIPS: Tip[] = [
     after: ['commitDiff']
   },
   {
+    id: 'compare',
+    title: 'What changed between two branches',
+    text: 'See every file that differs between two branches or commits, and open each diff, without checking anything out.',
+    steps: [
+      'Right-click a branch label or a commit in the graph',
+      'Choose Compare with … (your current branch)',
+      'The detail panel lists the files: click one for its diff'
+    ],
+    after: ['checkout']
+  },
+  {
+    id: 'soloBranch',
+    title: 'Only the branches you care about',
+    text: 'A busy graph gets quiet: show a single branch and its history, or hide the branches you are not working on.',
+    steps: [
+      'Right-click a branch label in the graph or in the sidebar',
+      'Choose Show only this branch, or Hide in graph',
+      'Show all branches brings the others back'
+    ],
+    after: ['createBranch']
+  },
+  {
+    id: 'hunkEdit',
+    title: 'Change a hunk before staging it',
+    text: 'Stage a hunk without the debug line in it, or with a fix: you change the lines that go in the commit, the file on disk stays as it is.',
+    steps: [
+      'Open the diff of a changed file',
+      'Click Edit… on the hunk and change its lines',
+      'Stage it: the commit gets your version, the file keeps the original'
+    ],
+    after: ['stage']
+  },
+  {
+    id: 'conflictWatch',
+    title: 'Conflicts with main, before they happen',
+    text: 'GitDom quietly tries merging the main branch into yours: when it would stop on conflicts, a warning shows up in the toolbar, while they are still small.',
+    steps: [
+      'Watch for "N conflicts with main" in the toolbar',
+      'Click it to see the files that would conflict',
+      'Merge main in, or rebase onto it, now rather than later'
+    ],
+    after: ['pull']
+  },
+  {
+    id: 'worktrees',
+    title: 'Two branches at once',
+    text: 'Fix something on another branch without stashing or committing half-done work: a worktree checks the branch out in a second folder, in its own tab.',
+    steps: [
+      'Right-click a branch and choose Check out in a new worktree…',
+      'It opens in a new tab; your current folder keeps its changes',
+      'The sidebar lists the worktrees, to open or remove them'
+    ],
+    after: ['stashPush']
+  },
+  {
+    id: 'bisect',
+    title: 'Find the commit that broke it',
+    text: "Something worked before and now it doesn't: mark a commit with the problem and one without, and GitDom checks out the commits between, halving them at each answer.",
+    steps: [
+      'Right-click a commit with the problem: Find where a problem started…',
+      'Mark a commit where it still worked as good',
+      'Answer Good or Bad on each commit it checks out, or Automate…'
+    ],
+    after: ['revert']
+  },
+  {
+    id: 'patches',
+    title: 'Commits as a patch file',
+    text: 'Send commits to someone without pushing, or bring them into another repository: a patch file keeps the changes, the messages and the authors.',
+    steps: [
+      'Right-click a commit, or select several, and choose Save as patch… or Copy as patch',
+      'In the other repository use File → Apply Patch…',
+      'Or drop the .patch file on the GitDom window'
+    ],
+    after: ['cherryPick']
+  },
+  {
+    id: 'branchOverview',
+    title: 'Tidy up old branches',
+    text: 'Every branch with its last commit, its age and how far it is from main: the merged ones can go in one go.',
+    steps: [
+      'Open View → Branches Overview',
+      'Click Choose merged, or tick the branches yourself',
+      'Delete them together; Undo brings them back'
+    ],
+    after: ['deleteBranch']
+  },
+  {
+    id: 'dashboard',
+    title: 'All your repositories in one view',
+    text: 'The branch, the uncommitted changes and what is ahead or behind, for every repository GitDom knows: fetch them all and bring the ones behind up to date.',
+    steps: [
+      'Open View → Workspace Dashboard',
+      'Click Fetch all',
+      'Pull the ones behind (fast-forward only), or open any of them'
+    ],
+    after: ['fetch']
+  },
+  {
+    id: 'myWeek',
+    title: 'What did I do this week?',
+    text: 'Your commits in every repository, day by day, ready for a standup or a report.',
+    steps: [
+      'Open View → What I Did',
+      'Pick this week, last week, or the last 7 or 30 days',
+      'Copy as text or as Markdown; click a commit to open it'
+    ],
+    after: ['push']
+  },
+  {
     id: 'statistics',
     title: 'Get to know the repository',
     text: 'Who works on it and when, how the code grew, its languages, the files changed most, and those only one person knows.',
@@ -222,11 +332,12 @@ export function startupTip(): void {
   }, STARTUP_DELAY)
 }
 
-/** After an action: the tip that builds on it, if never seen, at most one per run. */
+/** After an action: a tip that builds on it, never seen, at most one per run. */
 export function tipAfter(action: string): void {
   if (contextualShown || !useSettings.getState().showTips) return
-  const index = TIPS.findIndex((t) => t.after?.includes(action))
-  if (index < 0 || seen().has(TIPS[index].id)) return
+  const done = seen()
+  const index = TIPS.findIndex((t) => t.after?.includes(action) && !done.has(t.id))
+  if (index < 0) return
   contextualShown = true
   setTimeout(() => {
     // Not over something the user is doing: another action may bring it up later

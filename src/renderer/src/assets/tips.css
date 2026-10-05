@@ -2100,6 +2100,1060 @@
   }
 }
 
+/* --- Shared timeline of the later scenes --------------------------------------------------
+   Elements appear at a moment of the loop (ta-from-N, resting visible) or go away at one
+   (ta-until-N, resting hidden); the pointer clicks at 26% and 42% (and 58% with ta-cur3), on the
+   points given as --x0/--y0 … --x3/--y3; a menu opened by the first click closes after the second. */
+
+.ta-from-10 {
+  animation-name: ta-from-10;
+}
+@keyframes ta-from-10 {
+  0%,
+  10% {
+    opacity: 0;
+  }
+  13%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-14 {
+  animation-name: ta-from-14;
+}
+@keyframes ta-from-14 {
+  0%,
+  14% {
+    opacity: 0;
+  }
+  17%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-20 {
+  animation-name: ta-from-20;
+}
+@keyframes ta-from-20 {
+  0%,
+  20% {
+    opacity: 0;
+  }
+  23%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-26 {
+  animation-name: ta-from-26;
+}
+@keyframes ta-from-26 {
+  0%,
+  26% {
+    opacity: 0;
+  }
+  29%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-28 {
+  animation-name: ta-from-28;
+}
+@keyframes ta-from-28 {
+  0%,
+  28% {
+    opacity: 0;
+  }
+  31%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-30 {
+  animation-name: ta-from-30;
+}
+@keyframes ta-from-30 {
+  0%,
+  30% {
+    opacity: 0;
+  }
+  33%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-32 {
+  animation-name: ta-from-32;
+}
+@keyframes ta-from-32 {
+  0%,
+  32% {
+    opacity: 0;
+  }
+  35%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-38 {
+  animation-name: ta-from-38;
+}
+@keyframes ta-from-38 {
+  0%,
+  38% {
+    opacity: 0;
+  }
+  41%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-40 {
+  animation-name: ta-from-40;
+}
+@keyframes ta-from-40 {
+  0%,
+  40% {
+    opacity: 0;
+  }
+  43%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-48 {
+  animation-name: ta-from-48;
+}
+@keyframes ta-from-48 {
+  0%,
+  48% {
+    opacity: 0;
+  }
+  51%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-50 {
+  animation-name: ta-from-50;
+}
+@keyframes ta-from-50 {
+  0%,
+  50% {
+    opacity: 0;
+  }
+  53%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-52 {
+  animation-name: ta-from-52;
+}
+@keyframes ta-from-52 {
+  0%,
+  52% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-54 {
+  animation-name: ta-from-54;
+}
+@keyframes ta-from-54 {
+  0%,
+  54% {
+    opacity: 0;
+  }
+  57%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-56 {
+  animation-name: ta-from-56;
+}
+@keyframes ta-from-56 {
+  0%,
+  56% {
+    opacity: 0;
+  }
+  59%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-60 {
+  animation-name: ta-from-60;
+}
+@keyframes ta-from-60 {
+  0%,
+  60% {
+    opacity: 0;
+  }
+  63%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-62 {
+  animation-name: ta-from-62;
+}
+@keyframes ta-from-62 {
+  0%,
+  62% {
+    opacity: 0;
+  }
+  65%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-64 {
+  animation-name: ta-from-64;
+}
+@keyframes ta-from-64 {
+  0%,
+  64% {
+    opacity: 0;
+  }
+  67%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-from-70 {
+  animation-name: ta-from-70;
+}
+@keyframes ta-from-70 {
+  0%,
+  70% {
+    opacity: 0;
+  }
+  73%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ta-until-28 {
+  opacity: 0;
+  animation-name: ta-until-28;
+}
+@keyframes ta-until-28 {
+  0%,
+  28% {
+    opacity: 1;
+  }
+  32%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.ta-until-48 {
+  opacity: 0;
+  animation-name: ta-until-48;
+}
+@keyframes ta-until-48 {
+  0%,
+  48% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.ta-stage .ta-cur2 {
+  animation-name: ta-cur2;
+}
+@keyframes ta-cur2 {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translate(var(--x0), var(--y0));
+  }
+  12% {
+    opacity: 1;
+    transform: translate(var(--x0), var(--y0));
+  }
+  22% {
+    transform: translate(var(--x1), var(--y1));
+  }
+  26% {
+    transform: translate(var(--x1), var(--y1)) scale(0.85);
+  }
+  29% {
+    transform: translate(var(--x1), var(--y1));
+  }
+  38% {
+    transform: translate(var(--x2), var(--y2));
+  }
+  42% {
+    transform: translate(var(--x2), var(--y2)) scale(0.85);
+  }
+  45%,
+  52% {
+    opacity: 1;
+    transform: translate(var(--x2), var(--y2));
+  }
+  56%,
+  100% {
+    opacity: 0;
+    transform: translate(var(--x2), var(--y2));
+  }
+}
+.ta-stage .ta-cur3 {
+  animation-name: ta-cur3;
+}
+@keyframes ta-cur3 {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translate(var(--x0), var(--y0));
+  }
+  12% {
+    opacity: 1;
+    transform: translate(var(--x0), var(--y0));
+  }
+  22% {
+    transform: translate(var(--x1), var(--y1));
+  }
+  26% {
+    transform: translate(var(--x1), var(--y1)) scale(0.85);
+  }
+  29% {
+    transform: translate(var(--x1), var(--y1));
+  }
+  38% {
+    transform: translate(var(--x2), var(--y2));
+  }
+  42% {
+    transform: translate(var(--x2), var(--y2)) scale(0.85);
+  }
+  45% {
+    transform: translate(var(--x2), var(--y2));
+  }
+  54% {
+    transform: translate(var(--x3), var(--y3));
+  }
+  58% {
+    transform: translate(var(--x3), var(--y3)) scale(0.85);
+  }
+  61%,
+  66% {
+    opacity: 1;
+    transform: translate(var(--x3), var(--y3));
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: translate(var(--x3), var(--y3));
+  }
+}
+.ta-menu-open {
+  animation-name: ta-menu-open;
+}
+@keyframes ta-menu-open {
+  0%,
+  26% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  29%,
+  44% {
+    opacity: 1;
+    transform: none;
+  }
+  47%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-compare .ta-hit,
+.ta-soloBranch .ta-hit,
+.ta-worktrees .ta-hit,
+.ta-patches .ta-hit {
+  animation-name: ta-hit2;
+}
+@keyframes ta-hit2 {
+  0%,
+  36%,
+  46%,
+  100% {
+    background: transparent;
+  }
+  39%,
+  44% {
+    background: var(--bg-selected);
+  }
+}
+.ta-side-title {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.ta-a {
+  color: var(--green);
+}
+.ta-dim {
+  color: var(--text-dim);
+}
+/* --- Compare ------------------------------------------------------------------------------ */
+
+.ta-compare .ta-row {
+  width: 170px;
+}
+.ta-menu-cmp {
+  top: 98px;
+  left: 30px;
+}
+.ta-side-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 150px;
+  padding: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  line-height: 19px;
+}
+
+/* --- Show only this branch ---------------------------------------------------------------- */
+
+.ta-menu-solo {
+  top: 34px;
+  left: 34px;
+}
+.ta-banner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  color: var(--accent);
+  font-size: 11px;
+}
+
+/* --- Edit a hunk -------------------------------------------------------------------------- */
+
+.ta-he-head {
+  position: absolute;
+  top: 32px;
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 6px;
+  background: var(--bg-panel);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  font-size: 10.5px;
+}
+.ta-he-gap {
+  flex: 1;
+}
+.ta-he-head .ta-btn {
+  font-family: var(--font-ui);
+}
+.ta-hunkEdit .ta-code {
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 20px;
+}
+.ta-he-box {
+  position: absolute;
+  top: 57px;
+  right: 9px;
+  left: 9px;
+  height: 86px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  animation-name: ta-he-box;
+}
+@keyframes ta-he-box {
+  0%,
+  27%,
+  60%,
+  100% {
+    border-color: transparent;
+  }
+  30%,
+  57% {
+    border-color: var(--accent);
+  }
+}
+.ta-he-debug {
+  opacity: 0;
+  animation-name: ta-he-debug;
+}
+@keyframes ta-he-debug {
+  0%,
+  42% {
+    opacity: 1;
+    text-decoration: none;
+  }
+  44%,
+  48% {
+    opacity: 0.6;
+    text-decoration: line-through;
+  }
+  52%,
+  100% {
+    opacity: 0;
+    text-decoration: line-through;
+  }
+}
+.ta-he-stage {
+  animation-name: ta-he-stage;
+}
+@keyframes ta-he-stage {
+  0%,
+  56%,
+  62%,
+  100% {
+    background: var(--bg-elevated);
+  }
+  58%,
+  60% {
+    background: var(--success-bg);
+  }
+}
+
+/* --- Conflicts with main ------------------------------------------------------------------ */
+
+.ta-cw-branch {
+  margin-right: auto;
+  font-weight: 600;
+}
+.ta-cw-badge {
+  padding: 1px 8px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 4px;
+  color: var(--warning-text);
+  font-size: 11px;
+  line-height: 16px;
+}
+.ta-cw-menu {
+  position: absolute;
+  top: 30px;
+  right: 50px;
+  z-index: 4;
+  width: 180px;
+  padding: 3px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  opacity: 0;
+  animation-name: ta-cw-menu;
+}
+.ta-cw-menu > div {
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+.ta-cw-menu .ta-cw-file {
+  color: var(--text-dim);
+}
+.ta-cw-menu .ta-cw-sep {
+  height: 1px;
+  margin: 3px 0;
+  padding: 0;
+  background: var(--border);
+}
+@keyframes ta-cw-menu {
+  0%,
+  26% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  29%,
+  46% {
+    opacity: 1;
+    transform: none;
+  }
+  49%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-cw-hit {
+  animation-name: ta-hit2;
+}
+
+/* --- Worktrees ---------------------------------------------------------------------------- */
+
+.ta-wt-tabs {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 24px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+.ta-wt-tab {
+  padding: 4px 12px;
+  border-bottom: 2px solid transparent;
+}
+.ta-wt-old {
+  animation-name: ta-wt-old;
+}
+@keyframes ta-wt-old {
+  0%,
+  50% {
+    border-bottom-color: var(--accent);
+  }
+  53%,
+  100% {
+    border-bottom-color: transparent;
+  }
+}
+.ta-wt-new {
+  border-bottom-color: var(--accent);
+}
+.ta-wt-side {
+  position: absolute;
+  top: 32px;
+  left: 10px;
+  width: 130px;
+  line-height: 20px;
+}
+.ta-wt-side > div {
+  padding: 0 6px;
+}
+.ta-wt-card {
+  position: absolute;
+  top: 36px;
+  right: 12px;
+  left: 160px;
+  padding: 8px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.ta-wt-files {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+.ta-menu-wt {
+  top: 92px;
+  left: 44px;
+}
+
+/* --- Bisect ------------------------------------------------------------------------------- */
+
+.ta-bisect .ta-row {
+  width: 190px;
+}
+.ta-bis-tag {
+  position: absolute;
+  left: 300px;
+  padding: 0 6px;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 10.5px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+.ta-bis-bad {
+  background: var(--danger-bg);
+  border-color: var(--red);
+  color: var(--danger-text);
+}
+.ta-bis-good {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--green);
+}
+.ta-bis-test {
+  top: 0;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  opacity: 0;
+  animation-name: ta-bis-test;
+}
+@keyframes ta-bis-test {
+  0%,
+  27% {
+    opacity: 0;
+    transform: translateY(83px);
+  }
+  30%,
+  39% {
+    opacity: 1;
+    transform: translateY(83px);
+  }
+  41%,
+  44% {
+    opacity: 0;
+    transform: translateY(113px);
+  }
+  46%,
+  55% {
+    opacity: 1;
+    transform: translateY(113px);
+  }
+  57%,
+  100% {
+    opacity: 0;
+    transform: translateY(113px);
+  }
+}
+.ta-bis-first {
+  background: var(--danger-bg);
+  border-color: var(--red);
+  color: var(--danger-text);
+  font-weight: 600;
+}
+.ta-bis-culprit {
+  background: var(--danger-bg);
+  animation-name: ta-bis-culprit;
+}
+@keyframes ta-bis-culprit {
+  0%,
+  63% {
+    background: transparent;
+  }
+  67%,
+  100% {
+    background: var(--danger-bg);
+  }
+}
+
+/* --- Patches ------------------------------------------------------------------------------ */
+
+.ta-patches .ta-row {
+  width: 180px;
+}
+.ta-menu-patch {
+  top: 72px;
+  left: 150px;
+}
+.ta-patch-repo {
+  position: absolute;
+  top: 104px;
+  right: 12px;
+  width: 130px;
+  height: 64px;
+  padding: 6px 8px;
+  background: var(--bg-panel);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
+.ta-patch-new {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ta-patch-file {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  padding: 6px 10px 6px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-family: var(--font-code);
+  font-size: 10.5px;
+  opacity: 0;
+  animation-name: ta-patch-file;
+}
+@keyframes ta-patch-file {
+  0%,
+  44% {
+    opacity: 0;
+    transform: translate(300px, 30px) scale(0.9);
+  }
+  48%,
+  56% {
+    opacity: 1;
+    transform: translate(300px, 30px);
+  }
+  66% {
+    opacity: 1;
+    transform: translate(312px, 112px) scale(0.9);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: translate(312px, 112px) scale(0.6);
+  }
+}
+
+/* --- Branches overview -------------------------------------------------------------------- */
+
+.ta-bo-row {
+  position: absolute;
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+.ta-bo-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  margin-right: 10px;
+  border: 1px solid var(--text-dim);
+  border-radius: 3px;
+  font-size: 10px;
+  font-style: normal;
+}
+.ta-bo-check i {
+  font-style: normal;
+  color: var(--accent);
+}
+.ta-bo-name {
+  width: 150px;
+}
+.ta-bo-age {
+  width: 90px;
+  color: var(--text-muted);
+}
+.ta-bo-merged {
+  color: var(--purple);
+}
+.ta-bo-ahead {
+  color: var(--green);
+}
+.ta-bo-gone {
+  opacity: 0;
+  animation-name: ta-bo-gone;
+}
+@keyframes ta-bo-gone {
+  0%,
+  46% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-bo-stays {
+  transform: translateY(-48px);
+  animation-name: ta-bo-stays;
+}
+@keyframes ta-bo-stays {
+  0%,
+  52% {
+    transform: none;
+  }
+  58%,
+  100% {
+    transform: translateY(-48px);
+  }
+}
+.ta-bo-choose,
+.ta-bo-delete {
+  position: absolute;
+  bottom: 10px;
+}
+.ta-bo-choose {
+  left: 12px;
+}
+.ta-bo-delete {
+  right: 12px;
+  border-color: var(--red);
+  color: var(--danger-text);
+  animation-name: ta-bo-delete;
+}
+@keyframes ta-bo-delete {
+  0%,
+  27% {
+    opacity: 0.45;
+  }
+  30%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* --- Workspace dashboard ------------------------------------------------------------------ */
+
+.ta-db-row {
+  position: absolute;
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+.ta-db-row b {
+  width: 90px;
+}
+.ta-db-branch {
+  width: 100px;
+  color: var(--text-muted);
+}
+.ta-db-status {
+  display: inline-grid;
+  flex: 1;
+}
+.ta-db-status > span {
+  grid-area: 1 / 1;
+}
+.ta-db-ok {
+  color: var(--green);
+}
+.ta-db-behind {
+  color: var(--accent);
+}
+.ta-db-changes {
+  color: var(--orange);
+}
+.ta-db-pull {
+  padding: 0 6px;
+  font-size: 10.5px;
+}
+.ta-db-fetch {
+  font-weight: normal;
+  animation-name: ta-db-fetch;
+}
+@keyframes ta-db-fetch {
+  0%,
+  24%,
+  30%,
+  100% {
+    background: var(--bg-elevated);
+  }
+  26%,
+  28% {
+    background: var(--accent-soft);
+  }
+}
+.ta-db-shop-ok {
+  animation-name: ta-db-shop-ok;
+}
+@keyframes ta-db-shop-ok {
+  0%,
+  28%,
+  47%,
+  100% {
+    opacity: 1;
+  }
+  31%,
+  45% {
+    opacity: 0;
+  }
+}
+.ta-db-shop-behind,
+.ta-db-shop-pull {
+  opacity: 0;
+  animation-name: ta-db-shop-behind;
+}
+@keyframes ta-db-shop-behind {
+  0%,
+  28%,
+  46%,
+  100% {
+    opacity: 0;
+  }
+  31%,
+  44% {
+    opacity: 1;
+  }
+}
+
+/* --- What I did --------------------------------------------------------------------------- */
+
+.ta-mw-tabs {
+  position: absolute;
+  top: 32px;
+  left: 12px;
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 10.5px;
+}
+.ta-mw-tabs span {
+  padding: 1px 8px;
+}
+.ta-mw-tabs .ta-mw-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ta-mw-line {
+  position: absolute;
+  left: 24px;
+  white-space: nowrap;
+}
+.ta-mw-day {
+  left: 12px;
+  font-weight: 600;
+}
+.ta-mw-repo {
+  display: inline-block;
+  width: 44px;
+  color: var(--text-muted);
+}
+.ta-mw-copy {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  animation-name: ta-mw-copy;
+}
+@keyframes ta-mw-copy {
+  0%,
+  40%,
+  46%,
+  100% {
+    background: var(--bg-elevated);
+  }
+  42%,
+  44% {
+    background: var(--accent-soft);
+  }
+}
+.ta-myWeek .ta-toast,
+.ta-branchOverview .ta-toast {
+  bottom: 40px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ta-stage,
   .ta-stage * {

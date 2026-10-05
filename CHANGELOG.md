@@ -2,6 +2,13 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- Ten more **tips**, each with its animation, for the less obvious features: comparing two branches, showing only one branch, editing a hunk before staging it, the conflicts-with-main warning, worktrees, bisect, patches, the branches overview, the workspace dashboard and What I did
+  - Each shows up once by itself, right after something it builds on (a checkout, a fetch, a push…), or from **Help → Tips**
+
 ## 1.8.0 — 2026-10-05
 
 ### Added
