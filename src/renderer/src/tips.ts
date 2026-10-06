@@ -112,6 +112,7 @@ export const TIPS: Tip[] = [
     steps: [
       'Open the blame of a file',
       'Click a line number, then Shift+click another for a range',
+      'Click History of these lines in the bar above the code',
       'Or click Function… in the header and type its name'
     ],
     after: ['history']

@@ -429,8 +429,8 @@ function FileBlame({
         </div>
       ) : (
         <div className="diff-hint">
-          Click line numbers to follow those lines through the history (Shift+click for a range).
-          The arrow beside a commit shows the blame from before it.
+          Click a line number, Shift+click another for a range, then History of these lines. The
+          arrow beside a commit shows the blame from before it.
         </div>
       )}
       <div className="diff-body blame-body" ref={body}>

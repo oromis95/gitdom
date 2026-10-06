@@ -273,11 +273,18 @@ function LineHistory(): React.JSX.Element {
   return (
     <>
       <div className="ta-panel-title">Blame src/cart.ts</div>
+      <div className="ta-pick-bar">
+        <span className="ta-pick-hint">Click a line number, Shift+click another</span>
+        <span className="ta-picked">
+          <Swap a="Line 3 selected" b="Lines 3–5 selected" />
+          <span className="ta-btn ta-lines-btn">History of these lines</span>
+        </span>
+      </div>
       {CODE.map((line, i) => (
         <div
           key={i}
           className={`ta-code ${i >= 2 && i <= 4 ? `ta-pick ta-pick-${i === 2 ? 'a' : 'b'}` : ''}`}
-          style={{ top: 34 + i * 20 }}
+          style={{ top: 54 + i * 20 }}
         >
           <span className="ta-num">{i + 1}</span>
           {line}

@@ -1447,10 +1447,10 @@
 }
 @keyframes ta-pick-a {
   0%,
-  24% {
+  21% {
     background: transparent;
   }
-  26%,
+  22%,
   100% {
     background: var(--bg-selected);
   }
@@ -1461,10 +1461,10 @@
 }
 @keyframes ta-pick-b {
   0%,
-  42% {
+  35% {
     background: transparent;
   }
-  44%,
+  36%,
   100% {
     background: var(--bg-selected);
   }
@@ -1483,10 +1483,10 @@
 }
 @keyframes ta-slide-in {
   0%,
-  56% {
+  52% {
     transform: translateX(105%);
   }
-  62%,
+  58%,
   100% {
     transform: none;
   }
@@ -1525,30 +1525,127 @@
     opacity: 1;
     transform: translate(300px, 170px);
   }
-  20% {
-    transform: translate(24px, 80px);
+  18% {
+    transform: translate(24px, 100px);
   }
-  24% {
-    transform: translate(24px, 80px) scale(0.85);
+  21% {
+    transform: translate(24px, 100px) scale(0.85);
   }
-  27% {
-    transform: translate(24px, 80px);
+  23% {
+    transform: translate(24px, 100px);
   }
-  38% {
-    transform: translate(24px, 120px);
+  32% {
+    transform: translate(24px, 140px);
   }
-  42% {
-    transform: translate(24px, 120px) scale(0.85);
+  35% {
+    transform: translate(24px, 140px) scale(0.85);
   }
-  45%,
+  37% {
+    transform: translate(24px, 140px);
+  }
+  45% {
+    transform: translate(175px, 36px);
+  }
+  48% {
+    transform: translate(175px, 36px) scale(0.85);
+  }
+  50%,
   52% {
     opacity: 1;
-    transform: translate(24px, 120px);
+    transform: translate(175px, 36px);
   }
   56%,
   100% {
     opacity: 0;
-    transform: translate(24px, 120px);
+    transform: translate(175px, 36px);
+  }
+}
+/* The bar above the code: a hint, then what is picked and the button that follows it */
+.ta-pick-bar {
+  position: absolute;
+  top: 29px;
+  right: 0;
+  left: 0;
+  display: grid;
+  align-items: center;
+  height: 22px;
+  padding: 0 12px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+.ta-pick-bar > span {
+  grid-area: 1 / 1;
+}
+.ta-pick-hint {
+  opacity: 0;
+  animation-name: ta-pick-hint;
+}
+@keyframes ta-pick-hint {
+  0%,
+  21% {
+    opacity: 1;
+  }
+  22%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-picked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation-name: ta-picked;
+}
+@keyframes ta-picked {
+  0%,
+  21% {
+    opacity: 0;
+  }
+  22%,
+  100% {
+    opacity: 1;
+  }
+}
+.ta-lineHistory .ta-swap-a {
+  animation-name: ta-lines-swap-a;
+}
+.ta-lineHistory .ta-swap-b {
+  animation-name: ta-lines-swap-b;
+}
+@keyframes ta-lines-swap-a {
+  0%,
+  35% {
+    opacity: 1;
+  }
+  36%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ta-lines-swap-b {
+  0%,
+  35% {
+    opacity: 0;
+  }
+  36%,
+  100% {
+    opacity: 1;
+  }
+}
+.ta-lines-btn {
+  color: var(--text);
+  animation-name: ta-lines-btn;
+}
+@keyframes ta-lines-btn {
+  0%,
+  46%,
+  52%,
+  100% {
+    background: var(--bg-elevated);
+  }
+  48%,
+  50% {
+    background: var(--accent-soft);
   }
 }
 
