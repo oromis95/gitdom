@@ -136,7 +136,15 @@ button.graph-filter-chip {
   display: none;
 }
 .cell-sha {
-  font-family: var(--font-code, 'Cascadia Code', Consolas, monospace);
+  font-family: var(
+    --font-code,
+    'Cascadia Code',
+    Consolas,
+    'SF Mono',
+    Menlo,
+    'DejaVu Sans Mono',
+    monospace
+  );
   font-size: 12px;
 }
 

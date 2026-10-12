@@ -1,7 +1,8 @@
+# The Windows builds use the Electron already in node_modules (the package.json scripts pass
+# electronDist): no download, which the corporate network makes unreliable. macOS and Linux are
+# built on GitHub, for processors other than the runner's too, so Electron is downloaded there.
 appId: com.gitdom.app
 productName: GitDom
-# The Electron already in node_modules: no download, which the corporate network makes unreliable
-electronDist: node_modules/electron/dist
 directories:
   buildResources: build
 files:
@@ -37,25 +38,29 @@ nsis:
   createDesktopShortcut: always
   createStartMenuShortcut: true
   runAfterFinish: true
+# A disk image per processor, signed ad hoc (Apple Silicon runs nothing unsigned) but not by a
+# registered developer: macOS asks to confirm the first opening
 mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  target: dmg
+  category: public.app-category.developer-tools
+  identity: '-'
+  hardenedRuntime: false
+  gatekeeperAssess: false
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}-${arch}.${ext}
+# The AppImage runs anywhere without installing; the deb installs on Debian and Ubuntu
 linux:
   target:
     - AppImage
-    - snap
     - deb
-  maintainer: electronjs.org
-  category: Utility
+  executableName: gitdom
+  maintainer: dtropeano <dtropeano@hotmail.it>
+  category: Development
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}-${arch}.${ext}
+deb:
+  artifactName: ${productName}-${version}-${arch}.${ext}
 npmRebuild: false
 publish:
   provider: generic

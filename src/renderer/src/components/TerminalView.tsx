@@ -1,5 +1,6 @@
 // One xterm terminal session: loaded on first use, xterm is a big part of the bundle.
 import { useEffect, useRef } from 'react'
+import { isMac, primaryKey } from '../keys'
 import { isAppShortcut } from '../shortcuts'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
@@ -144,10 +145,11 @@ export default function TerminalView({
       if (e.type !== 'keydown') return true
       // App shortcuts: toggle the terminal, command palette, activity log
       if (isAppShortcut(e)) return false
-      if (!e.ctrlKey || e.altKey) return true
+      // On macOS Control+C and Control+V go to the shell; Command+C and Command+V copy and paste
+      if (!primaryKey(e) || e.altKey) return true
       const key = e.key.toLowerCase()
       // Ctrl+C copies when there is a selection, and interrupts otherwise
-      if (key === 'c' && (e.shiftKey || term.hasSelection())) {
+      if (key === 'c' && (isMac() || e.shiftKey || term.hasSelection())) {
         void navigator.clipboard.writeText(term.getSelection())
         term.clearSelection()
         e.preventDefault()

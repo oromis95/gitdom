@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import { useApp } from './store'
 import { confirm, notify, prompt, type MenuItem } from './ui'
+import { samePath } from './worktrees'
 
 export interface Workspace {
   name: string
@@ -35,7 +36,7 @@ export function knownRepositories(
   recent: string[]
 ): string[] {
   const paths = [...tabs, ...workspaces.flatMap((w) => w.paths), ...favorites, ...recent]
-  return paths.filter((p, i) => paths.findIndex((q) => q.toLowerCase() === p.toLowerCase()) === i)
+  return paths.filter((p, i) => paths.findIndex((q) => samePath(q, p)) === i)
 }
 
 /** Repositories read or fetched at the same time */

@@ -12,6 +12,7 @@ import type { ReleaseInfo, UpdateProgress } from '../shared/api'
 import {
   compareVersions,
   parseChangelog,
+  downloadAsset,
   releaseAssets,
   tagOfReleaseUrl,
   type ReleaseKind
@@ -51,6 +52,12 @@ function kind(): ReleaseKind | null {
 
 export const canSelfUpdate = (): boolean => kind() !== null
 
+/** This system's files of a version: a copy that can't update itself links the portable exe */
+const filesOf = (version: string): { exe: string; checksum: string } | null =>
+  process.platform === 'win32'
+    ? releaseAssets(version, kind() ?? 'portable')
+    : downloadAsset(version, process.platform, process.arch)
+
 /** Where the new installer is downloaded: the temporary folder, removed at the next start */
 const setupPathOf = (name: string): string => join(app.getPath('temp'), name)
 const SETUP_FILE = /^GitDom-[\w.-]+-setup\.exe(\.download)?$/
@@ -76,18 +83,18 @@ export async function latestRelease(): Promise<ReleaseInfo> {
   if (typeof release.tag_name !== 'string' || !isRepoUrl(release.html_url)) {
     throw new Error('Unexpected answer from GitHub')
   }
-  const asset = (suffix: string): { name: string; url: string } | null => {
-    const found = release.assets?.find((a) => typeof a.name === 'string' && a.name.endsWith(suffix))
+  const asset = (name: string | undefined): { name: string; url: string } | null => {
+    const found = release.assets?.find((a) => a.name === name)
     return found && isRepoUrl(found.browser_download_url)
       ? { name: found.name as string, url: found.browser_download_url }
       : null
   }
-  // A copy that can't update itself links the portable exe
-  const suffix = `-${kind() ?? 'portable'}.exe`
-  const exe = asset(suffix)
-  const checksum = asset(`${suffix}.sha256`)
+  const version = release.tag_name.replace(/^v/, '')
+  const files = filesOf(version)
+  const exe = asset(files?.exe)
+  const checksum = asset(files?.checksum)
   const info: ReleaseInfo = {
-    version: release.tag_name.replace(/^v/, ''),
+    version,
     url: release.html_url,
     downloadUrl: exe?.url ?? null,
     checksumUrl: checksum?.url ?? null,
@@ -100,8 +107,7 @@ export async function latestRelease(): Promise<ReleaseInfo> {
 function remember(info: ReleaseInfo, exeName: string | null = null): ReleaseInfo {
   latest = {
     ...info,
-    exeName:
-      exeName ?? (info.downloadUrl ? releaseAssets(info.version, kind() ?? 'portable').exe : null)
+    exeName: exeName ?? (info.downloadUrl ? (filesOf(info.version)?.exe ?? null) : null)
   }
   return { ...info, readyToInstall: ready === info.version }
 }
@@ -117,13 +123,15 @@ async function releaseFromWebsite(): Promise<ReleaseInfo> {
   void page.body?.cancel()
   if (!page.ok || !tag) throw new Error(`GitHub answered ${page.status} ${page.statusText}`)
   const version = tag.replace(/^v/, '')
-  const { exe, checksum } = releaseAssets(version, kind() ?? 'portable')
+  const files = filesOf(version)
   const download = `${REPO_URL}/releases/download/${encodeURIComponent(tag)}`
   // The files come a few minutes after the release, once built: only offered when there
-  const attached = await net
-    .fetch(`${download}/${checksum}`, { method: 'HEAD', headers })
-    .then((r) => r.ok)
-    .catch(() => false)
+  const attached =
+    !!files &&
+    (await net
+      .fetch(`${download}/${files.checksum}`, { method: 'HEAD', headers })
+      .then((r) => r.ok)
+      .catch(() => false))
   const notes = await net
     .fetch(`${RAW_FILES}/${encodeURIComponent(tag)}/CHANGELOG.md`, { headers })
     .then((r) => (r.ok ? r.text() : ''))
@@ -132,8 +140,8 @@ async function releaseFromWebsite(): Promise<ReleaseInfo> {
   return {
     version,
     url: page.url,
-    downloadUrl: attached ? `${download}/${exe}` : null,
-    checksumUrl: attached ? `${download}/${checksum}` : null,
+    downloadUrl: attached ? `${download}/${files.exe}` : null,
+    checksumUrl: attached ? `${download}/${files.checksum}` : null,
     notes,
     readyToInstall: false
   }

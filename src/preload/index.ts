@@ -9,9 +9,11 @@ import {
   type ThemeChoice,
   type UpdateProgress
 } from '../shared/api'
+import type { AskpassRequest } from '../shared/askpass'
 import type { StatisticsProgress } from '../shared/types'
 
 const api: GitDomApi = {
+  platform: process.platform,
   pickRepository: () => ipcRenderer.invoke(IPC.pickRepository),
   openRepository: (path, filter, limit) =>
     ipcRenderer.invoke(IPC.openRepository, path, filter, limit),
@@ -116,6 +118,14 @@ const api: GitDomApi = {
       ipcRenderer.on(IPC.statsProgress, handler)
       return () => ipcRenderer.removeListener(IPC.statsProgress, handler)
     }
+  },
+  askpass: {
+    onRequest: (listener) => {
+      const handler = (_event: IpcRendererEvent, request: AskpassRequest): void => listener(request)
+      ipcRenderer.on(IPC.askpassRequest, handler)
+      return () => ipcRenderer.removeListener(IPC.askpassRequest, handler)
+    },
+    reply: (id, answer) => ipcRenderer.send(IPC.askpassReply, id, answer)
   }
 }
 

@@ -1,5 +1,13 @@
 import { execFileSync } from 'child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -317,6 +325,8 @@ describe('staging and commit', () => {
 
   it('reports hook failures with their output', async () => {
     write(join('.git', 'hooks', 'pre-commit'), '#!/bin/sh\necho "lint failed" >&2\nexit 1\n')
+    // Outside Windows git runs only executable hooks
+    chmodSync(join(repo, '.git', 'hooks', 'pre-commit'), 0o755)
     write('a.txt', 'a\n')
     await runOp(repo, 'stageAll', [])
     await expect(runOp(repo, 'commit', ['msg', false])).rejects.toMatchObject({
@@ -1346,7 +1356,9 @@ describe('complete commits', () => {
 
   it('skips hooks and sets another author', async () => {
     mkdirSync(join(repo, '.git', 'hooks'), { recursive: true })
-    writeFileSync(join(repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\necho no >&2\nexit 1\n')
+    writeFileSync(join(repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\necho no >&2\nexit 1\n', {
+      mode: 0o755
+    })
     write('b.txt', 'b\n')
     await runOp(repo, 'stage', [['b.txt']])
     await expect(runOp(repo, 'commit', ['blocked', false])).rejects.toThrow()
@@ -1382,7 +1394,7 @@ describe('complete commits', () => {
   it('rewords without running the commit hooks', async () => {
     await commitFile('b.txt', 'b\n', 'three')
     mkdirSync(join(repo, '.git', 'hooks'), { recursive: true })
-    writeFileSync(join(repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\nexit 1\n')
+    writeFileSync(join(repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\nexit 1\n', { mode: 0o755 })
     await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD'), 'three, reworded'])
     const outcome = await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD~2'), 'one, reworded'])
     expect(outcome.conflicts).toBe(false)
@@ -1864,6 +1876,11 @@ describe('hooks', () => {
       state: 'active',
       runnable: false
     })
+    // Without the executable bit git skips it, outside Windows; turning it on gives the bit
+    const skipped = (await runOp(repo, 'hooks', [])).hooks.at(-1)?.notExecutable
+    expect(skipped).toBe(process.platform === 'win32' ? undefined : true)
+    await runOp(repo, 'setHookEnabled', ['my-check', true])
+    expect((await runOp(repo, 'hooks', [])).hooks.at(-1)?.notExecutable).toBeUndefined()
 
     await expect(runOp(repo, 'readHook', ['../config'])).rejects.toThrow('Not a hook name')
     await expect(runOp(repo, 'runHook', ['commit-msg'])).rejects.toThrow("can't run by itself")

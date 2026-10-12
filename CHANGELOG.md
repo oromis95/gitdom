@@ -6,11 +6,24 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 
 ### Added
 
+- **Credentials in GitDom**: when git needs a username with a password or token, the passphrase of an SSH key, or asks whether to trust a server seen for the first time, GitDom asks in a dialog instead of failing
+  - The username and the password are asked together, once
+  - Your credential helper keeps them, if you have one; GitDom stores nothing
+  - The periodic fetch never asks: when it needs credentials it says so once, and **Fetch all** asks
+- **macOS and Linux** versions on the Releases page: a disk image for Apple Silicon and one for Intel Macs, an AppImage and a deb for Linux
+  - On macOS the shortcuts use ⌘ and show as ⌘⇧P, GitDom has its app menu, and ⌘+click picks several commits
+  - Git, Git LFS, GPG and editors installed with Homebrew or on your shell's `PATH` are found
+  - The terminal offers zsh, bash and fish; Control+C and Control+V go to the shell, ⌘C and ⌘V copy and paste
+  - Hooks without the executable bit, which git skips, are marked, with a button to make them executable
+  - Trash and Finder (or File Manager) where Windows says Recycle Bin and Explorer
+  - When a new version is out, **Download** gets the file for your system
 - Ten more **tips**, each with its animation, for the less obvious features: comparing two branches, showing only one branch, editing a hunk before staging it, the conflicts-with-main warning, worktrees, bisect, patches, the branches overview, the workspace dashboard and What I did
   - Each shows up once by itself, right after something it builds on (a checkout, a fetch, a push…), or from **Help → Tips**
 
 ### Changed
 
+- Safer: the interface runs in Chromium's sandbox and can't be navigated away from GitDom, and the name of a file opened in the external editor is quoted, so nothing in it can run as a command
+- Tests at every push now run on Windows, Linux and macOS, and include end-to-end tests that drive the app
 - The tip on the history of a few lines, and the hint above the blame, now tell you to click **History of these lines** once the lines are picked
 
 ## 1.8.0 — 2026-10-05

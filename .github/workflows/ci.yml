@@ -1,5 +1,6 @@
-# Checks every push to main: formatting, lint, types, tests and a build.
-# The Release workflow runs it too, so a version that fails it is never published.
+# Checks every push to main: formatting, lint, types, tests, a build and the end-to-end tests, on
+# Windows, Linux and macOS. The Release workflow runs it too, so a version that fails it is never
+# published.
 name: CI
 
 on:
@@ -14,10 +15,13 @@ permissions:
 
 jobs:
   checks:
-    # GitDom runs on Windows, and most tests drive a real git: paths, line endings and timings
-    # are Windows ones
-    runs-on: windows-latest
-    timeout-minutes: 30
+    # Most tests drive a real git: paths, line endings, permissions and timings differ by system
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     steps:
       # Before the checkout, so files keep their LF endings (.gitattributes asks for them too).
       # The tests make commits in their own repositories; some also read the global identity
@@ -26,6 +30,7 @@ jobs:
           git config --global user.name "GitDom CI"
           git config --global user.email "ci@gitdom.invalid"
           git config --global core.autocrlf false
+          git config --global init.defaultBranch main
 
       - uses: actions/checkout@v5
 
@@ -36,13 +41,17 @@ jobs:
 
       - run: npm ci
 
+      # Once, on Windows: the same on every system
       - name: Formatting
-        run: npx prettier --check src bench
+        if: runner.os == 'Windows'
+        run: npx prettier --check src bench e2e
 
       - name: Lint
-        run: npx eslint src bench
+        if: runner.os == 'Windows'
+        run: npx eslint src bench e2e
 
       - name: Types
+        if: runner.os == 'Windows'
         run: npm run typecheck
 
       - name: Tests
@@ -50,3 +59,15 @@ jobs:
 
       - name: Build
         run: npx electron-vite build
+
+      # The built app, driven by Playwright; Linux has no screen, so a virtual one
+      - name: End-to-end tests
+        if: runner.os != 'Linux'
+        run: npx vitest run -c vitest.e2e.config.ts
+
+      # Ubuntu 24.04 lets AppArmor refuse the user namespaces Chromium's sandbox is made of
+      - name: End-to-end tests
+        if: runner.os == 'Linux'
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          xvfb-run --auto-servernum npx vitest run -c vitest.e2e.config.ts

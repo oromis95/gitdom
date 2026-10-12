@@ -1,7 +1,7 @@
 // The native menu bar: File (repositories, preferences), Electron's standard Edit menu, View with the
 // zoom and the recovery tools, Window with the themes, and Help. Commands go to the renderer,
-// which owns the state.
-import { BrowserWindow, ipcMain, Menu, shell, type MenuItemConstructorOptions } from 'electron'
+// which owns the state. On macOS the app's own menu comes first, with Preferences and Quit.
+import { app, BrowserWindow, ipcMain, Menu, shell, type MenuItemConstructorOptions } from 'electron'
 import {
   IPC,
   type MenuCommand,
@@ -37,8 +37,20 @@ let keys: MenuShortcuts = {
   activity: 'Ctrl+Shift+L'
 }
 
+const mac = process.platform === 'darwin'
+
+/**
+ * A shortcut of the renderer as Electron writes it: there "Ctrl" stands for Command on macOS
+ * (renderer/src/keys.ts), and "Control" for the Control key.
+ */
+const accelerator = (combo: string): string =>
+  combo
+    .split('+')
+    .map((part) => (part === 'Ctrl' ? 'CmdOrCtrl' : part))
+    .join('+')
+
 const shown = (key: keyof MenuShortcuts): Partial<MenuItemConstructorOptions> =>
-  keys[key] ? { accelerator: keys[key], registerAccelerator: false } : {}
+  keys[key] ? { accelerator: accelerator(keys[key]), registerAccelerator: false } : {}
 
 const send = (command: MenuCommand) => (_item: unknown, win: unknown) =>
   (win as BrowserWindow | undefined)?.webContents.send(IPC.menuCommand, command)
@@ -52,8 +64,28 @@ function build(): void {
       { label: 'New Repository…', click: send('init') },
       { type: 'separator' },
       { label: 'Apply Patch…', click: send('applyPatch') },
+      ...(mac
+        ? []
+        : ([
+            { type: 'separator' },
+            { label: 'Preferences…', ...shown('preferences'), click: send('preferences') },
+            { type: 'separator' },
+            { role: 'quit' }
+          ] satisfies MenuItemConstructorOptions[]))
+    ]
+  }
+  const appMenu: MenuItemConstructorOptions = {
+    label: app.name,
+    submenu: [
+      { role: 'about' },
       { type: 'separator' },
       { label: 'Preferences…', ...shown('preferences'), click: send('preferences') },
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
       { type: 'separator' },
       { role: 'quit' }
     ]
@@ -97,6 +129,9 @@ function build(): void {
       },
       { type: 'separator' },
       { role: 'minimize' },
+      ...(mac
+        ? ([{ role: 'zoom' }, { role: 'front' }] satisfies MenuItemConstructorOptions[])
+        : []),
       { role: 'close' }
     ]
   }
@@ -110,7 +145,16 @@ function build(): void {
       { label: 'GitDom on GitHub', click: () => void shell.openExternal(REPO_URL) }
     ]
   }
-  Menu.setApplicationMenu(Menu.buildFromTemplate([file, { role: 'editMenu' }, view, window, help]))
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      ...(mac ? [appMenu] : []),
+      file,
+      { role: 'editMenu' },
+      view,
+      window,
+      help
+    ])
+  )
 }
 
 export function registerMenu(): void {

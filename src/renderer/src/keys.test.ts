@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { comboOf, displayCombo, shellKey, SHORTCUTS } from './keys'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { comboOf, displayCombo, setMac, shellKey, SHORTCUTS } from './keys'
 
 const press = (
   key: string,
@@ -51,6 +51,48 @@ describe('key combinations', () => {
     expect(shellKey('Ctrl+P')).toBe(true)
     expect(shellKey('Ctrl+Shift+P')).toBe(false)
     expect(shellKey('Ctrl+`')).toBe(false)
+  })
+})
+
+describe('key combinations on macOS', () => {
+  beforeAll(() => setMac(true))
+  afterAll(() => setMac(false))
+
+  const pressMac = (
+    key: string,
+    code: string,
+    mods: { cmd?: boolean; ctrl?: boolean; alt?: boolean; shift?: boolean } = {}
+  ): string | null =>
+    comboOf({
+      key,
+      code,
+      metaKey: !!mods.cmd,
+      ctrlKey: !!mods.ctrl,
+      altKey: !!mods.alt,
+      shiftKey: !!mods.shift
+    })
+
+  it('takes Command for Ctrl, so saved shortcuts keep working', () => {
+    expect(pressMac('p', 'KeyP', { cmd: true, shift: true })).toBe('Ctrl+Shift+P')
+    expect(pressMac('1', 'Digit1', { cmd: true })).toBe('Ctrl+1')
+    expect(pressMac('Enter', 'Enter', { cmd: true })).toBe('Ctrl+Enter')
+  })
+
+  it('names the Control key apart, and leaves Control+letter to the shell', () => {
+    expect(pressMac('`', 'Backquote', { ctrl: true })).toBe('Control+`')
+    expect(pressMac('c', 'KeyC', { ctrl: true })).toBe('Control+C')
+    expect(shellKey('Control+C')).toBe(true)
+    expect(shellKey('Ctrl+C')).toBe(false)
+    // Command+Space is not Space: it doesn't stage a file
+    expect(pressMac(' ', 'Space', { cmd: true })).toBe('Ctrl+Space')
+  })
+
+  it('shows the macOS symbols', () => {
+    expect(displayCombo('Ctrl+Shift+P')).toBe('⌘⇧P')
+    expect(displayCombo('Ctrl+Plus')).toBe('⌘+')
+    expect(displayCombo('Control+`')).toBe('⌃`')
+    expect(displayCombo('Alt+Down')).toBe('⌥Down')
+    expect(displayCombo('Space')).toBe('Space')
   })
 })
 

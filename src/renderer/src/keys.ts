@@ -1,5 +1,21 @@
 // The keyboard shortcuts and their default keys (UI-03), and key combinations as text, e.g.
 // "Ctrl+Shift+P": what a key press stands for, and how it reads.
+//
+// On macOS the Command key does what Ctrl does elsewhere: "Ctrl" in a combination stands for it,
+// so saved shortcuts mean the same everywhere, and reads ⌘. The Control key itself is "Control".
+
+let mac = typeof window !== 'undefined' && window.api?.platform === 'darwin'
+
+export const isMac = (): boolean => mac
+
+/** For the tests */
+export function setMac(value: boolean): void {
+  mac = value
+}
+
+/** Ctrl, or Command on macOS: held for a shortcut, or for Ctrl+click */
+export const primaryKey = (e: { ctrlKey: boolean; metaKey: boolean }): boolean =>
+  mac ? e.metaKey : e.ctrlKey
 
 export type ShortcutId =
   | 'palette'
@@ -52,7 +68,8 @@ export const SHORTCUTS: ShortcutDef[] = [
     id: 'terminal',
     label: 'Show or hide the terminal',
     group: 'General',
-    keys: ['Ctrl+`'],
+    // Command+` switches windows on macOS
+    keys: [mac ? 'Control+`' : 'Ctrl+`'],
     terminal: true
   },
   {
@@ -132,23 +149,33 @@ const MODIFIERS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'CapsL
  * Letters come from the key's position, so they work on any layout; the rest from what it types.
  */
 export function comboOf(
-  e: Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'altKey' | 'shiftKey'>
+  e: Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'altKey' | 'shiftKey'> & { metaKey?: boolean }
 ): string | null {
   if (MODIFIERS.has(e.key) || e.key === 'Dead' || e.key === 'Unidentified') return null
+  const primary = mac ? !!e.metaKey : e.ctrlKey
+  const control = mac && e.ctrlKey
   let key: string
   if (/^Key[A-Z]$/.test(e.code)) key = e.code.slice(3)
   else if (CODES[e.code]) key = CODES[e.code]
-  else if (/^Digit[0-9]$/.test(e.code) && e.ctrlKey && !e.altKey) key = e.code.slice(5)
+  else if (/^Digit[0-9]$/.test(e.code) && primary && !e.altKey) key = e.code.slice(5)
   else key = NAMED[e.key] ?? (e.key.length === 1 ? e.key.toUpperCase() : e.key)
-  return [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', key]
+  return [primary && 'Ctrl', control && 'Control', e.altKey && 'Alt', e.shiftKey && 'Shift', key]
     .filter(Boolean)
     .join('+')
 }
 
-/** How a combination is shown: "Ctrl+Plus" reads "Ctrl++". */
+const MAC_SYMBOLS: Record<string, string> = { Ctrl: '⌘', Control: '⌃', Alt: '⌥', Shift: '⇧' }
+
+/** How a combination is shown: "Ctrl+Plus" reads "Ctrl++", and "⌘+" on macOS. */
 export function displayCombo(combo: string): string {
-  return combo.replace(/Plus$/, '+').replace(/Esc$/, 'Escape')
+  const shown = combo.replace(/Plus$/, '+').replace(/Esc$/, 'Escape')
+  if (!mac) return shown
+  const parts = shown.split('+')
+  // "Ctrl++" splits into a last empty part: the key is the plus
+  const key = parts.pop() || (parts.pop(), '+')
+  return parts.map((m) => MAC_SYMBOLS[m] ?? m).join('') + key
 }
 
-/** A plain Ctrl+letter, which in the terminal belongs to the shell. */
-export const shellKey = (combo: string): boolean => /^Ctrl\+[A-Z]$/.test(combo)
+/** A plain Ctrl+letter (Control+letter on macOS), which in the terminal belongs to the shell. */
+export const shellKey = (combo: string): boolean =>
+  (mac ? /^Control\+[A-Z]$/ : /^Ctrl\+[A-Z]$/).test(combo)

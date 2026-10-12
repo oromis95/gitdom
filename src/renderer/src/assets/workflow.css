@@ -523,6 +523,20 @@
   line-height: 1.45;
   white-space: pre-line;
 }
+/* The question of ssh about an unknown server, with its fingerprint */
+.credential-prompt {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 160px;
+  overflow: auto;
+  font-family: var(--font-code);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
 .modal-field {
   display: flex;
   flex-direction: column;

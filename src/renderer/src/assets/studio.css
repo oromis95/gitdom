@@ -42,7 +42,12 @@
 }
 
 :root[data-theme='studio'] body {
-  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  font-family:
+    'Segoe UI Variable Text',
+    'Segoe UI',
+    -apple-system,
+    system-ui,
+    sans-serif;
 }
 
 /* --- Layout ------------------------------------------------------------------------------ */

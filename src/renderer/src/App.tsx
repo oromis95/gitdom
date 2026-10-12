@@ -40,6 +40,7 @@ import { splashEnabled, toggleSidebarDrawer, useTheme } from './theme'
 import { startActivityLog, toggleActivity, useActivity } from './activity'
 import { checkForUpdates, showWhatsNew, startupChecks } from './updates'
 import { showTip, startupTip } from './tips'
+import { primaryKey } from './keys'
 import { useShortcut, useShortcutLabel } from './shortcuts'
 import { focusPanel, type Panel } from './focus'
 
@@ -197,9 +198,9 @@ function App(): React.JSX.Element {
   )
 
   // Watch the open repositories so changes made elsewhere (terminal, IDE) show up by themselves
-  // Joined into a string so the selector result is stable; '|' cannot appear in Windows paths
-  const openPaths = useApp((s) => s.tabs.map((t) => t.path).join('|'))
-  useEffect(() => window.api.watch(openPaths ? openPaths.split('|') : []), [openPaths])
+  // Joined into a string so the selector result is stable; no path can hold a NUL
+  const openPaths = useApp((s) => s.tabs.map((t) => t.path).join('\0'))
+  useEffect(() => window.api.watch(openPaths ? openPaths.split('\0') : []), [openPaths])
 
   useEffect(
     () =>
@@ -248,10 +249,10 @@ function App(): React.JSX.Element {
   const activityKey = useShortcutLabel('activity')
   const zoomResetKey = useShortcutLabel('zoomReset')
 
-  // Ctrl+wheel zooms too
+  // Ctrl+wheel zooms too (on macOS also Command+wheel; a pinch arrives with Ctrl)
   useEffect(() => {
     const onWheel = (e: WheelEvent): void => {
-      if (!e.ctrlKey || e.deltaY === 0) return
+      if (!(e.ctrlKey || primaryKey(e)) || e.deltaY === 0) return
       e.preventDefault()
       stepZoom(e.deltaY < 0 ? 1 : -1)
     }

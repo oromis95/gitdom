@@ -5,6 +5,7 @@ import type { CloneProgress } from '../../../shared/api'
 import { GITIGNORE_TEMPLATES, LICENSE_TEMPLATES, repoNameFromUrl } from '../../../shared/templates'
 import { useApp } from '../store'
 import { notify, useUi } from '../ui'
+import { EXAMPLE_FOLDER } from '../platform'
 
 // Last folder repositories were cloned or created in, proposed again next time
 const PARENT_KEY = 'gitdom.parentFolder'
@@ -27,7 +28,7 @@ function FolderField({
         <input
           value={value}
           disabled={disabled}
-          placeholder="C:\Users\me\Projects"
+          placeholder={EXAMPLE_FOLDER}
           onChange={(e) => onChange(e.target.value)}
         />
         <button

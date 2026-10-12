@@ -180,7 +180,7 @@
   flex: none;
   display: flex;
   gap: 5px;
-  font-family: 'Cascadia Code', Consolas, monospace;
+  font-family: 'Cascadia Code', Consolas, 'SF Mono', Menlo, 'DejaVu Sans Mono', monospace;
   font-size: 11px;
 }
 

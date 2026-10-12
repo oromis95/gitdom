@@ -208,7 +208,9 @@ export function roomBeside(other: string, min: number): number {
 /** Font of code views, for components that can't read CSS variables (the terminal). */
 export function codeFont(s: Settings = useSettings.getState()): { family: string; size: number } {
   return {
-    family: fontStack(s.codeFont, 'monospace') || "Consolas, 'Cascadia Mono', monospace",
+    family:
+      fontStack(s.codeFont, 'monospace') ||
+      "Consolas, 'Cascadia Mono', 'SF Mono', Menlo, 'DejaVu Sans Mono', monospace",
     size: s.codeFontSize
   }
 }

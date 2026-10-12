@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { buildEditedPatch, hunkNewText } from '../../../shared/diff'
 import type { FileDiff, Hunk } from '../../../shared/types'
 import { run } from '../actions'
+import { displayCombo, primaryKey } from '../keys'
 
 /**
  * Edits what a hunk stages: the lines as they will be in the index, while the file on disk keeps
@@ -52,7 +53,7 @@ export default function HunkEditor({
         className="modal hunk-editor"
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void stage()
+          if (e.key === 'Enter' && primaryKey(e)) void stage()
         }}
       >
         <div className="modal-title">Edit before staging</div>
@@ -79,7 +80,9 @@ export default function HunkEditor({
           }}
         />
         <div className="hunk-editor-hint">
-          {patch ? 'Ctrl+Enter stages' : 'Nothing to stage: these lines are as in the index'}
+          {patch
+            ? `${displayCombo('Ctrl+Enter')} stages`
+            : 'Nothing to stage: these lines are as in the index'}
         </div>
         <div className="modal-actions">
           <button

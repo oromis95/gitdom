@@ -4,6 +4,7 @@ import type { CleanPreview, CleanScope } from '../../../shared/api'
 import { confirm, notify, useUi, type CleanSession } from '../ui'
 import { run } from '../actions'
 import { formatBytes } from '../statistics'
+import { TRASH } from '../platform'
 
 const SCOPES: { scope: CleanScope; label: string; title: string }[] = [
   { scope: 'untracked', label: 'Untracked', title: 'New files git doesn’t know about yet' },
@@ -85,7 +86,7 @@ function Dialog({ session }: { session: CleanSession }): React.JSX.Element {
       !toTrash &&
       !(await confirm(
         'Delete for good',
-        `Delete ${what} (${size}) for good? They are not in the repository, so git has no copy, and they don’t go to the Recycle Bin.`,
+        `Delete ${what} (${size}) for good? They are not in the repository, so git has no copy, and they don’t go to the ${TRASH}.`,
         'Delete',
         true
       ))
@@ -103,7 +104,7 @@ function Dialog({ session }: { session: CleanSession }): React.JSX.Element {
     if (!ok) return
     notify(
       'success',
-      toTrash ? `Moved ${what} to the Recycle Bin (${size})` : `Deleted ${what} (${size})`
+      toTrash ? `Moved ${what} to the ${TRASH} (${size})` : `Deleted ${what} (${size})`
     )
     close()
   }
@@ -199,7 +200,7 @@ function Dialog({ session }: { session: CleanSession }): React.JSX.Element {
         )}
         <label className="modal-check">
           <input type="checkbox" checked={toTrash} onChange={(e) => setToTrash(e.target.checked)} />
-          Move to the Recycle Bin, where they can be restored
+          Move to the {TRASH}, where they can be restored
         </label>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={close}>
@@ -211,7 +212,7 @@ function Dialog({ session }: { session: CleanSession }): React.JSX.Element {
             disabled={busy || chosen.length === 0}
             onClick={() => void remove()}
           >
-            {toTrash ? 'Move to Recycle Bin' : 'Delete for good'}
+            {toTrash ? `Move to ${TRASH}` : 'Delete for good'}
             {chosen.length > 0 && ` (${chosen.length})`}
           </button>
         </div>

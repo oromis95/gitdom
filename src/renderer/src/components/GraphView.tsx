@@ -27,6 +27,7 @@ import { markMatches, matchesCommit, nextMatch, searchKey, type SearchMode } fro
 import { firstParentChain } from '../graph/highlight'
 import { avatarImage, onAvatarLoaded } from '../graph/avatars'
 import { useTheme } from '../theme'
+import { primaryKey } from '../keys'
 import { useShortcut, useShortcutLabel } from '../shortcuts'
 import { focusPanel } from '../focus'
 import { readableOn } from '../themes'
@@ -246,7 +247,7 @@ export default function GraphView({
   const theme = useTheme((s) => s.revision)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(0)
-  /** Commits selected with Ctrl+click, for actions on several commits */
+  /** Commits selected with Ctrl+click (Command+click on macOS), for actions on several commits */
   const [picked, setPicked] = useState<string[]>([])
   /** Row whose branch pill is under the mouse (GRAPH-15) */
   const [hoverRow, setHoverRow] = useState<number | null>(null)
@@ -424,7 +425,7 @@ export default function GraphView({
 
   const clickRow = (e: React.MouseEvent, hash: string): void => {
     if (e.button !== 0) return
-    if (e.ctrlKey && hash !== WIP_HASH) {
+    if (primaryKey(e) && hash !== WIP_HASH) {
       const start = pickedNow.length
         ? pickedNow
         : selected && selected !== WIP_HASH
@@ -549,7 +550,7 @@ export default function GraphView({
   // Keyboard (NFR-09): arrows, pages, Home and End move the selection; the menu key or Shift+F10
   // opens the commit's menu; Enter goes on to its details
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
-    if (e.ctrlKey || e.altKey) return
+    if (e.ctrlKey || e.metaKey || e.altKey) return
     const page = Math.max(1, Math.floor(viewportHeight / ROW_HEIGHT) - 1)
     const steps: Record<string, number> = {
       ArrowDown: 1,

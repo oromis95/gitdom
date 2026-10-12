@@ -389,7 +389,7 @@ function BrowseFiles(): React.JSX.Element {
           README.md <span className="ta-btn ta-save">Save as…</span>
         </div>
         <div className="ta-md"># GitDom</div>
-        <div>A Git client for Windows.</div>
+        <div>A desktop Git client.</div>
         <div className="ta-dim">## Install</div>
       </div>
       <Cursor />

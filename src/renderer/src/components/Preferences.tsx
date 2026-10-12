@@ -16,6 +16,7 @@ import { setSplashEnabled, setTheme, splashEnabled, themeOptions, useTheme } fro
 import { useUi } from '../ui'
 import { checkForUpdates, showWhatsNew } from '../updates'
 import { showTip } from '../tips'
+import { displayCombo, isMac } from '../keys'
 import ThemeSettings from './ThemeSettings'
 import ShortcutSettings from './ShortcutSettings'
 import ConfigSettings from './ConfigSettings'
@@ -130,7 +131,10 @@ function Appearance({ s }: { s: Settings }): React.JSX.Element {
           ))}
         </select>
       </Row>
-      <Row label="Interface size" hint="Ctrl+= and Ctrl+-, or Ctrl+mouse wheel">
+      <Row
+        label="Interface size"
+        hint={`${displayCombo('Ctrl+=')} and ${displayCombo('Ctrl+-')}, or ${isMac() ? 'Command' : 'Ctrl'}+mouse wheel`}
+      >
         <select value={s.zoom} onChange={(e) => updateSettings({ zoom: Number(e.target.value) })}>
           {ZOOM_STEPS.map((z) => (
             <option key={z} value={z}>
@@ -424,7 +428,7 @@ function Tools({ s }: { s: Settings }): React.JSX.Element {
         hint={
           <>
             Command that opens a file, e.g. <code>code</code>. Quote paths with spaces. Empty: the
-            app Windows associates with the file.
+            app the system associates with the file.
           </>
         }
       >

@@ -1,3 +1,4 @@
+import type { AskpassAnswer, AskpassRequest } from './askpass'
 import type {
   Backup,
   Blame,
@@ -229,6 +230,8 @@ export interface HookInfo {
   skippable: boolean
   /** Whether GitDom can run it by itself, to try it: it takes no arguments */
   runnable: boolean
+  /** On macOS and Linux, an active script without the executable bit: git skips it */
+  notExecutable?: boolean
 }
 
 export interface HooksInfo {
@@ -495,7 +498,8 @@ export interface RepoOps {
   deleteRemoteBranch(remote: string, branch: string): void
   setUpstream(branch: string, upstream: string | null): void
 
-  fetch(): void
+  /** In the background nothing is asked: a fetch that needs credentials fails at once. */
+  fetch(background?: boolean): void
   /** Local changes are stashed around the pull. */
   pull(mode: PullMode): OpOutcome
   /** Pushes the current branch, setting the upstream on the first push. */
@@ -792,6 +796,13 @@ export interface StatisticsApi {
   onProgress(listener: (progress: StatisticsProgress) => void): () => void
 }
 
+/** Questions of git and ssh while a command runs: credentials, key passphrases, unknown hosts. */
+export interface AskpassApi {
+  onRequest(listener: (request: AskpassRequest) => void): () => void
+  /** The dialog's answer to request `id`, null when cancelled. */
+  reply(id: number, answer: AskpassAnswer): void
+}
+
 /**
  * A theme offered in the app and in the Window menu: 'dark', 'light', 'studio', 'system' (Windows'
  * light or dark setting), a built-in palette such as 'nord', or one of the user's ('custom-...').
@@ -853,6 +864,8 @@ export type MenuCommand =
 
 /** API exposed by the preload script on `window.api`. */
 export interface GitDomApi {
+  /** The operating system: shortcuts, menus and wording differ on macOS and Linux. */
+  platform: NodeJS.Platform
   /** Shows a folder picker; resolves null when cancelled. */
   pickRepository(): Promise<string | null>
   /**
@@ -872,6 +885,7 @@ export interface GitDomApi {
   activity: ActivityApi
   app: AppApi
   statistics: StatisticsApi
+  askpass: AskpassApi
 }
 
 export const IPC = {
@@ -918,5 +932,7 @@ export const IPC = {
   appInstallUpdate: 'app:install-update',
   statsLoad: 'stats:load',
   statsCancel: 'stats:cancel',
-  statsProgress: 'stats:progress'
+  statsProgress: 'stats:progress',
+  askpassRequest: 'askpass:request',
+  askpassReply: 'askpass:reply'
 } as const

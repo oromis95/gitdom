@@ -3,6 +3,7 @@ import { FileText, Folder } from 'lucide-react'
 import { isNegation, type IgnoreRule } from '../../../shared/ignore'
 import { useUi, type IgnoredSession } from '../ui'
 import { openInEditor, run, showCleanUp } from '../actions'
+import { TRASH } from '../platform'
 
 /** Typing settles before the path is checked */
 const SETTLE_MS = 250
@@ -179,7 +180,7 @@ function Dialog({ session }: { session: IgnoredSession }): React.JSX.Element {
             <button
               type="button"
               className="btn"
-              title="Remove ignored files such as build output, to the Recycle Bin"
+              title={`Remove ignored files such as build output, to the ${TRASH}`}
               onClick={() => {
                 close()
                 showCleanUp(repo, 'ignored')

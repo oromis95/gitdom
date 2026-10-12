@@ -1,7 +1,9 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react'
+import { primaryKey } from '../keys'
 import { useUi, type FormValues } from '../ui'
 import CommandPalette from './CommandPalette'
+import CredentialDialog from './CredentialDialog'
 import RepoDialogs from './RepoDialogs'
 
 // Loaded on first use, to keep the startup bundle small
@@ -89,7 +91,7 @@ function FormDialog(): React.JSX.Element | null {
         }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') closeForm(null)
-          if (e.key === 'Enter' && e.ctrlKey) submit()
+          if (e.key === 'Enter' && primaryKey(e)) submit()
         }}
       >
         <div className="modal-title">{form.title}</div>
@@ -296,6 +298,8 @@ export default function Overlays(): React.JSX.Element {
       <CommandPalette />
       <RepoDialogs />
       <FormDialog />
+      {/* Above any other dialog: a command that asks waits on it */}
+      <CredentialDialog />
       <Toasts />
     </>
   )

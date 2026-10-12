@@ -150,7 +150,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, p: DrawParams): void {
         ctx.restore()
       } else if (node) {
         ctx.fillStyle = '#fff'
-        ctx.font = '600 9px "Segoe UI", sans-serif'
+        ctx.font = '600 9px "Segoe UI", system-ui, sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(initials(node.authorName), x, y + 0.5)

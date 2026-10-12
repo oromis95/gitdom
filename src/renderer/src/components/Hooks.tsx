@@ -5,6 +5,7 @@ import { FolderOpen, Play } from 'lucide-react'
 import type { HookInfo, HookRun, HooksInfo } from '../../../shared/api'
 import { confirm, notify, useUi, type HooksSession } from '../ui'
 import { run as runOp, runValue, showInFolder } from '../actions'
+import { samePath } from '../worktrees'
 
 const STATES: Record<HookInfo['state'], string> = {
   active: 'on',
@@ -110,8 +111,18 @@ function Dialog({ session }: { session: HooksSession }): React.JSX.Element {
   const toggle = (): Promise<boolean> | undefined =>
     hook
       ? act(
-          () => runOp(repo, 'setHookEnabled', hook.name, hook.state === 'disabled'),
-          hook.state === 'disabled' ? `${hook.name} turned on` : `${hook.name} turned off`
+          () =>
+            runOp(
+              repo,
+              'setHookEnabled',
+              hook.name,
+              hook.state === 'disabled' || !!hook.notExecutable
+            ),
+          hook.notExecutable
+            ? `${hook.name} is executable now`
+            : hook.state === 'disabled'
+              ? `${hook.name} turned on`
+              : `${hook.name} turned off`
         )
       : undefined
 
@@ -138,10 +149,8 @@ function Dialog({ session }: { session: HooksSession }): React.JSX.Element {
 
   const relativeDir =
     info &&
-    info.dir
-      .replace(/\\/g, '/')
-      .toLowerCase()
-      .startsWith(repo.replace(/\\/g, '/').toLowerCase() + '/')
+    /[\\/]/.test(info.dir.charAt(repo.length)) &&
+    samePath(info.dir.slice(0, repo.length), repo)
       ? info.dir.slice(repo.length + 1)
       : null
   const result = run?.name === name ? run.result : null
@@ -195,8 +204,12 @@ function Dialog({ session }: { session: HooksSession }): React.JSX.Element {
                     onClick={() => void choose(h.name)}
                   >
                     <span className="mono">{h.name}</span>
-                    {STATES[h.state] && (
-                      <span className={`hooks-state ${h.state}`}>{STATES[h.state]}</span>
+                    {h.notExecutable ? (
+                      <span className="hooks-state disabled">skipped</span>
+                    ) : (
+                      STATES[h.state] && (
+                        <span className={`hooks-state ${h.state}`}>{STATES[h.state]}</span>
+                      )
                     )}
                   </button>
                 ))}
@@ -208,13 +221,15 @@ function Dialog({ session }: { session: HooksSession }): React.JSX.Element {
                     <span className="hooks-description">{hook.description}</span>
                   </div>
                   <div className="hooks-status">
-                    {hook.state === 'active'
-                      ? 'On: git runs it.'
-                      : hook.state === 'disabled'
-                        ? 'Off: kept as ' + hook.name + '.disabled, git ignores it.'
-                        : hook.state === 'sample'
-                          ? 'Not set: below is the example git ships, save it to turn it on.'
-                          : 'Not set: write a script and save it to turn it on.'}
+                    {hook.notExecutable
+                      ? 'Not executable: git skips it. Make it executable to turn it on.'
+                      : hook.state === 'active'
+                        ? 'On: git runs it.'
+                        : hook.state === 'disabled'
+                          ? 'Off: kept as ' + hook.name + '.disabled, git ignores it.'
+                          : hook.state === 'sample'
+                            ? 'Not set: below is the example git ships, save it to turn it on.'
+                            : 'Not set: write a script and save it to turn it on.'}
                     {hook.skippable && ' "Skip hooks" in the commit box skips it.'}
                   </div>
                   <textarea
@@ -254,7 +269,11 @@ function Dialog({ session }: { session: HooksSession }): React.JSX.Element {
                         title={edited ? 'Save first' : undefined}
                         onClick={() => void toggle()}
                       >
-                        {hook.state === 'disabled' ? 'Turn on' : 'Turn off'}
+                        {hook.notExecutable
+                          ? 'Make executable'
+                          : hook.state === 'disabled'
+                            ? 'Turn on'
+                            : 'Turn off'}
                       </button>
                     )}
                     {hook.runnable && hook.state === 'active' && (

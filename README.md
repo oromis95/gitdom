@@ -56,6 +56,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Branches overview (**View → Branches Overview**, or the list button on the Local section): each branch with its age, how far ahead and behind main it is, and whether it is merged, squash-merged or its upstream is gone; tick the old ones and delete them at once, with a backup and Undo
 - Release notes: the commits between two tags (or since the last one), grouped by type into Markdown ready to copy
 - Pull (merge, fast-forward only or rebase), push, and a periodic background fetch
+- Credentials when git needs them: a username with a password or token, an SSH key's passphrase, or whether to trust a server seen for the first time, asked in a GitDom dialog. Your credential helper keeps them, if you have one; GitDom stores nothing. The periodic fetch never asks: if it needs credentials it says so once, and **Fetch** asks
 
 **Advanced operations**
 
@@ -104,7 +105,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Submodules: status, add, initialize, update and sync their URLs
 - Git LFS: tracked patterns, LFS badges on files, track or untrack from the file list, download and upload the LFS files
 - Author identity per repository or global, with saved profiles to switch between
-- Open a file in your editor (VS Code or any command you choose) or show it in Explorer
+- Open a file in your editor (VS Code or any command you choose) or show it in Explorer (Finder on macOS)
 - Launch your merge tool on a conflicted file, or your diff tool on any change
 
 **Preferences** (**File → Preferences**, `Ctrl+,`)
@@ -160,16 +161,24 @@ At startup GitDom shows its logo: cars on a six-lane highway change lanes withou
 
 ## Download
 
-The [Releases](https://github.com/oromis95/gitdom/releases) page has two versions. Both need [Git](https://git-scm.com/) on the `PATH`, update themselves, and share settings, tabs and themes.
+The [Releases](https://github.com/oromis95/gitdom/releases) page has a version for each system. All need [Git](https://git-scm.com/) on the `PATH`.
+
+**Windows**: two versions, which update themselves and share settings, tabs and themes.
 
 - **Installer** (`GitDom-<version>-setup.exe`, recommended): installs GitDom for your user only, in `%LOCALAPPDATA%\Programs\GitDom`, with no administrator rights, and adds it to the Start menu and the desktop. It starts quickest, because nothing is unpacked at each start.
 - **Portable** (`GitDom-<version>-portable.exe`): a single exe that you start with a double-click, with nothing to install. At each start it unpacks itself to a temporary folder, so it takes a few seconds longer to open.
+
+**macOS**: `GitDom-<version>-arm64.dmg` for Apple Silicon, `GitDom-<version>-x64.dmg` for Intel Macs. Drag GitDom to Applications. It isn't signed by a registered Apple developer, so the first time right-click it and choose **Open** (or run `xattr -cr /Applications/GitDom.app`).
+
+**Linux**: `GitDom-<version>-x86_64.AppImage` runs without installing (make it executable first); `GitDom-<version>-amd64.deb` installs on Debian and Ubuntu. On Ubuntu 24.04 and later the AppImage may need `--no-sandbox`, as AppArmor restricts the sandbox of apps not installed as packages; the deb doesn't.
+
+On macOS and Linux GitDom tells you when a new version is out, and **Download** gets the file for your system.
 
 ## Requirements
 
 - [Git](https://git-scm.com/) on the `PATH`
 - [Node.js](https://nodejs.org/) 22 or later, to build from source
-- Windows 10/11 is the tested platform. macOS and Linux should work through Electron, but they haven't been tested.
+- Windows 10/11, macOS 12 or later, or a 64-bit Linux. Windows is used every day; macOS and Linux run the automated tests, including the end-to-end ones, at every push.
 
 ## Getting started
 
@@ -185,11 +194,13 @@ npm run dev
 | `npm run dev`                        | Starts the app in development mode, with hot reload |
 | `npm start`                          | Builds and starts a production preview              |
 | `npm test`                           | Runs the unit and integration tests (Vitest)        |
+| `npm run test:e2e`                   | Builds the app and drives it with Playwright        |
 | `npm run lint` / `npm run typecheck` | Checks code style and types                         |
 | `npm run build:unpack`               | Builds a standalone app folder in `dist/`           |
 | `npm run build:win`                  | Builds a Windows installer                          |
 | `npm run build:portable`             | Builds a single self-contained Windows exe          |
 | `npm run build:release`              | Builds both, as the release workflow does           |
+| `npm run build:mac` / `build:linux`  | Builds the macOS disk images / Linux packages       |
 
 ## Tech stack
 
@@ -199,7 +210,8 @@ npm run dev
 - **Canvas 2D** for the commit graph
 - **highlight.js** for diffs
 - **xterm.js** + **node-pty** for the integrated terminal
-- **Vitest** tests, run against real temporary repositories, on GitHub Actions at every push (formatting, lint, types, tests and a build; a release is published only when they pass); `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository
+- **Vitest** tests, run against real temporary repositories, and end-to-end tests that drive the built app with **Playwright**; GitHub Actions runs them at every push on Windows, Linux and macOS (with formatting, lint, types and a build; a release is published only when they pass); `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository
+- The interface runs in Chromium's sandbox and reaches git only through the typed API of the preload script
 
 ```
 src/
@@ -207,6 +219,8 @@ src/
   preload/    Bridge that exposes a typed API to the interface
   renderer/   React interface: graph, panels, diff, dialogs, themes
   shared/     Types and helpers shared by both sides
+e2e/          End-to-end tests of the built app
+resources/    The askpass helper git and ssh call for credentials
 docs/         Requirements (Italian) and screenshots
 ```
 

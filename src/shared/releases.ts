@@ -36,6 +36,24 @@ export function releaseAssets(
   return { exe, checksum: `${exe}.sha256` }
 }
 
+/**
+ * The file of a version for macOS (the disk image) or Linux (the AppImage), which don't update
+ * themselves: "Download" opens it. Null where there is no build, such as Linux on ARM.
+ */
+export function downloadAsset(
+  version: string,
+  platform: string,
+  arch: string
+): { exe: string; checksum: string } | null {
+  const exe =
+    platform === 'darwin'
+      ? `GitDom-${version}-${arch === 'arm64' ? 'arm64' : 'x64'}.dmg`
+      : platform === 'linux' && arch === 'x64'
+        ? `GitDom-${version}-x86_64.AppImage`
+        : null
+  return exe ? { exe, checksum: `${exe}.sha256` } : null
+}
+
 export interface ChangelogEntry {
   version: string
   /** As written in the heading, e.g. 2026-09-25 */

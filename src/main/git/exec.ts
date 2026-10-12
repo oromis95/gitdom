@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import { gitBinary } from '../settings'
+import { askpassEnv } from '../askpass'
 import { logCommand } from './activity'
 
 export class GitError extends Error {
@@ -34,6 +35,11 @@ export interface RunOptions {
    * the whole history with its changed files. The promise then resolves with an empty string.
    */
   onStdout?: (chunk: Buffer) => void
+  /**
+   * Fails at once when git needs credentials or a passphrase, instead of asking in a dialog: for
+   * work nobody is waiting for, such as the periodic fetch.
+   */
+  noPrompt?: boolean
 }
 
 // Options forced on every invocation so output is stable and parseable
@@ -59,8 +65,15 @@ export function runGit(cwd: string, args: string[], options: RunOptions = {}): P
       windowsHide: true,
       signal: options.signal,
       // Read-only commands (status, log) must not take index.lock and block the user's terminal.
-      // Prompts can't be answered without a terminal: fail fast instead of hanging.
-      env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', ...options.env }
+      // There is no terminal to answer prompts in: questions go to GitDom's dialog (askpass.ts),
+      // or fail fast when nobody is waiting.
+      env: {
+        ...process.env,
+        GIT_OPTIONAL_LOCKS: '0',
+        GIT_TERMINAL_PROMPT: '0',
+        ...(options.noPrompt ? {} : askpassEnv()),
+        ...options.env
+      }
     })
 
     const out: Buffer[] = []

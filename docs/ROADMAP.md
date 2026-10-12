@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.8.0 pubblicata il 2026-10-05 (Step 1–14 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.8.0 pubblicata il 2026-10-05 (Step 1–14 completati; Step 15 pronto per la v1.9). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -195,6 +195,16 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 - ✅ **Installer per Windows**: installazione per il solo utente, senza diritti di amministratore, con collegamenti nel menu Start e sul desktop; si aggiorna da solo come il portable, eseguendo il nuovo installer in silenzio (D8)
 - ✅ **Avvio più rapido**: l'installer non decomprime nulla a ogni avvio; il portable è più leggero (solo le lingue inglese e italiana di Chromium, niente sorgenti già incluse nel bundle); meno processi git prima del grafo (LFS cercato su disco, radice del repository in parallelo), tab ripristinate una alla volta quando l'app è libera, terminale e changelog caricati solo quando servono
 - ✅ **Meno temi**: tolti Tokyo Night, Catppuccin Mocha e Latte, Dracula e Monokai, troppo simili ad altri; chi li usava passa al più vicino
+
+## Step 15 — v1.9: Credenziali, sicurezza, macOS e Linux ✅
+
+> Completato: le cinque cose da migliorare emerse dall'analisi della v1.8.
+
+- ✅ **Credenziali nell'app**: quando git chiede nome utente e password o token, la passphrase di una chiave SSH o se fidarsi di un server mai visto, GitDom lo chiede in una finestra (helper `GIT_ASKPASS`/`SSH_ASKPASS` che parla con l'app su una pipe locale protetta da un token). Nome utente e password si chiedono insieme, una volta sola; li conserva il credential helper di git, GitDom non salva niente. Il fetch periodico non chiede mai: se servono credenziali lo segnala una volta
+- ✅ **Sandbox**: l'interfaccia gira nella sandbox di Chromium, la navigazione verso altre pagine è bloccata, e il nome del file passato all'editor esterno è quotato, così niente in un nome di file può diventare un comando
+- ✅ **File più piccoli**: `operations.ts`, `actions.ts` e `DetailPanel.tsx` divisi in moduli per area, senza cambiare il comportamento
+- ✅ **Test end-to-end**: `npm run test:e2e` costruisce l'app e la guida con Playwright (grafo, stage e commit, branch, palette, sandbox, credenziali); la CI li esegue a ogni push
+- ✅ **macOS e Linux**: scorciatoie con ⌘ e menu dell'app su macOS, ⌘+clic per scegliere più commit, PATH della shell di login (git, LFS ed editor di Homebrew), shell zsh/bash/fish nel terminale, testi e font del sistema, watcher che su Linux ripiega sulla cartella `.git` se finiscono i watch; CI su Windows, Linux e macOS; nelle release dmg per Apple Silicon e Intel, AppImage e deb
 
 ---
 

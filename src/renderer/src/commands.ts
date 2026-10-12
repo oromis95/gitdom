@@ -28,6 +28,7 @@ import {
   editSigning,
   loadProfiles
 } from './identity'
+import { FILE_MANAGER, TRASH } from './platform'
 
 export interface Command {
   title: string
@@ -259,7 +260,7 @@ export function buildCommands(): Command[] {
     add('Repository', 'Ignored files: why a file is ignored, and by which rule', () =>
       actions.showIgnoredFiles(repo, '')
     )
-    add('Repository', 'Clean up untracked or ignored files, to the Recycle Bin', () =>
+    add('Repository', `Clean up untracked or ignored files, to the ${TRASH}`, () =>
       actions.showCleanUp(repo)
     )
     add('Repository', 'Release notes: the commits since the last tag, grouped by type', () =>
@@ -267,7 +268,7 @@ export function buildCommands(): Command[] {
     )
     add('Repository', 'Refresh', () => void app.refresh(), shortcutLabel('refresh'))
     add('Repository', 'Open repository in editor', () => void actions.openInEditor(repo, null))
-    add('Repository', 'Show repository in Explorer', () => actions.showInFolder(repo, null))
+    add('Repository', `Show repository in ${FILE_MANAGER}`, () => actions.showInFolder(repo, null))
   }
 
   add('Repository', 'Open repository…', () => void app.pickAndOpen(), shortcutLabel('openRepo'))

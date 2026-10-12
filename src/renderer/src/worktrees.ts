@@ -1,6 +1,8 @@
 // Working trees (REPO-09): more than one branch checked out at once, each in its own folder.
 import type { Ref, RepoSnapshot, Worktree } from '../../shared/types'
-import { copy, run, runValue, showInFolder } from './actions'
+// From the modules, not the barrel: actions/refs.ts imports this file
+import { copy, run, runValue } from './actions/core'
+import { showInFolder } from './actions/workingTree'
 import { useApp } from './store'
 import { confirm, notify, showForm, type MenuItem } from './ui'
 

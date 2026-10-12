@@ -4,6 +4,7 @@ import {
   parseChangelog,
   parseInline,
   parseMarkdown,
+  downloadAsset,
   releaseAssets,
   tagOfReleaseUrl
 } from './releases'
@@ -30,6 +31,13 @@ describe('the release from the website', () => {
       exe: 'GitDom-1.8.0-setup.exe',
       checksum: 'GitDom-1.8.0-setup.exe.sha256'
     })
+  })
+
+  it('names the macOS and Linux files', () => {
+    expect(downloadAsset('1.9.0', 'darwin', 'arm64')?.exe).toBe('GitDom-1.9.0-arm64.dmg')
+    expect(downloadAsset('1.9.0', 'darwin', 'x64')?.checksum).toBe('GitDom-1.9.0-x64.dmg.sha256')
+    expect(downloadAsset('1.9.0', 'linux', 'x64')?.exe).toBe('GitDom-1.9.0-x86_64.AppImage')
+    expect(downloadAsset('1.9.0', 'linux', 'arm64')).toBeNull()
   })
 })
 

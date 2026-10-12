@@ -1,6 +1,6 @@
 // Integrated terminal: shells running in pseudo-terminals, streamed to the renderer over IPC.
 import { execFile } from 'child_process'
-import { existsSync, statSync } from 'fs'
+import { existsSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { ipcMain, type WebContents } from 'electron'
 import type { IPty } from '@lydell/node-pty'
@@ -33,10 +33,41 @@ function gitBash(): Promise<string | null> {
   })
 }
 
+/** Shells offered on macOS and Linux */
+const POSIX_SHELLS = ['zsh', 'bash', 'fish']
+
+/**
+ * The user's login shell first, then the other common shells /etc/shells lists. macOS starts
+ * zsh when SHELL is missing, Linux bash.
+ */
+export function posixShells(
+  login: string | undefined,
+  listed: string,
+  exists: (file: string) => boolean,
+  platform: NodeJS.Platform = process.platform
+): Shell[] {
+  const fallback = platform === 'darwin' ? '/bin/zsh' : '/bin/bash'
+  const files = [login || fallback]
+  for (const line of listed.split('\n')) {
+    const file = line.trim()
+    const name = file.split('/').pop()!
+    if (!file.startsWith('/') || !POSIX_SHELLS.includes(name)) continue
+    if (!files.some((f) => f.split('/').pop() === name)) files.push(file)
+  }
+  return files
+    .filter(exists)
+    .map((file) => ({ id: file, name: file.split('/').pop()!, file, args: ['-l'] }))
+}
+
 async function findShells(): Promise<Shell[]> {
   if (process.platform !== 'win32') {
-    const file = process.env.SHELL || '/bin/bash'
-    return [{ id: 'default', name: file.split('/').pop()!, file, args: ['-l'] }]
+    let listed = ''
+    try {
+      listed = readFileSync('/etc/shells', 'utf8')
+    } catch {
+      // Not every system has it: the login shell alone
+    }
+    return posixShells(process.env.SHELL, listed, existsSync)
   }
   const system = process.env.SystemRoot ?? 'C:\\Windows'
   const found: Shell[] = [

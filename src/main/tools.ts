@@ -12,6 +12,7 @@ import {
   type ToolSettings
 } from '../shared/api'
 import { parseMergeTools } from './git/parsers'
+import { shellQuote } from './shellQuote'
 import { gitBinary, setToolSettings, toolSettings } from './settings'
 
 /** Absolute path of a file of the repository, refusing paths that leave it. */
@@ -36,11 +37,12 @@ function execText(file: string, args: string[], timeout = 15000, cwd?: string): 
 /**
  * Starts the editor on `target`, detached so it outlives GitDom.
  * The command runs in a shell, so it may be a PATH command (`code`) or a quoted path with options;
+ * the target is quoted so nothing in a file name runs.
  * a command that fails right away (not found) is reported, a running editor is left alone.
  */
 function launchEditor(command: string, target: string): Promise<void> {
   return new Promise((done, fail) => {
-    const child = spawn(`${command} "${target}"`, {
+    const child = spawn(`${command} ${shellQuote(target)}`, {
       shell: true,
       detached: true,
       stdio: ['ignore', 'ignore', 'pipe'],

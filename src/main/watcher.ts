@@ -1,6 +1,6 @@
 // Watches open repositories and tells the renderer when files change on disk (e.g. from a terminal or editor).
 import { readFileSync, statSync, watch, type FSWatcher } from 'fs'
-import { relative, resolve } from 'path'
+import { join, relative, resolve } from 'path'
 import type { ChangeScope } from '../shared/api'
 
 const DEBOUNCE_MS = 400
@@ -62,6 +62,10 @@ export function classifyLinked(own: string, file: string): ChangeScope | null {
   return classify(`.git/${path}`)
 }
 
+/** The system has no watches left: Linux's inotify limit, or too many open files */
+const outOfWatches = (error: NodeJS.ErrnoException): boolean =>
+  error.code === 'ENOSPC' || error.code === 'EMFILE'
+
 /** Replaces the set of watched repositories; `notify` is called debounced, once per burst of changes. */
 export function setWatchedRepos(
   paths: string[],
@@ -88,25 +92,43 @@ export function setWatchedRepos(
         notify(path, burst)
       }, DEBOUNCE_MS)
     }
-    const add = (folder: string, onChange: (file: string | null) => void): void => {
+    const add = (
+      folder: string,
+      onChange: (file: string | null) => void,
+      tooMany?: () => void
+    ): void => {
       try {
         const watcher = watch(folder, { recursive: true }, (_event, file) =>
           onChange(file ? file.toString() : null)
         )
         // e.g. the folder was deleted: stop watching instead of crashing the main process; the
         // next update of the watched set tries again
-        watcher.on('error', () => {
+        watcher.on('error', (error: NodeJS.ErrnoException) => {
+          if (tooMany && outOfWatches(error)) {
+            watcher.close()
+            entry.watchers = entry.watchers.filter((w) => w !== watcher)
+            return tooMany()
+          }
           clearTimeout(entry.timer)
           entry.watchers.forEach((w) => w.close())
           if (watched.get(path) === entry) watched.delete(path)
         })
         entry.watchers.push(watcher)
-      } catch {
-        // Unwatchable path (missing, permissions): the app still works with manual refresh
+      } catch (error) {
+        if (tooMany && outOfWatches(error as NodeJS.ErrnoException)) tooMany()
+        // Otherwise an unwatchable path (missing, permissions): the app still works with manual
+        // refresh
       }
     }
 
-    add(path, (file) => changed(file ? classify(file) : 'git'))
+    add(
+      path,
+      (file) => changed(file ? classify(file) : 'git'),
+      // On Linux each folder takes one of a limited number of watches, node_modules included: a
+      // big working tree can use them up. Then only the .git folder is watched, so commits,
+      // checkouts and staging made elsewhere still show up; edits to files need a refresh
+      () => add(join(path, '.git'), (file) => changed(file ? classify(`.git/${file}`) : 'git'))
+    )
     const linked = linkedGitDir(path)
     if (linked)
       add(linked.common, (file) => changed(file ? classifyLinked(linked.own, file) : 'git'))
