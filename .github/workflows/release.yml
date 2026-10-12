@@ -1,13 +1,19 @@
 # Builds GitDom after the CI checks pass: for Windows the installer and the self-contained exe, for
 # macOS a disk image per processor, for Linux an AppImage and a deb. Pushing a tag like v0.1.0
-# publishes them in a GitHub Release, each with its SHA-256 checksum that the app's updater verifies;
-# running it by hand from the Actions tab only attaches them to the run, as downloadable artifacts.
+# publishes them in a GitHub Release, each with its SHA-256 checksum that the app's updater verifies.
+# Run by hand from the Actions tab it only attaches them to the run, as downloadable artifacts; with
+# a release's tag given, it uploads them to that release, e.g. to add files a failed job left out.
 name: Release
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release:
+        description: Tag of an existing release to upload the files to (e.g. v1.9.1); empty to only build
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -99,7 +105,8 @@ jobs:
       # needs its own as well
       - name: Terminal module for Intel Macs
         run: |
-          version=$(node -p "require('@lydell/node-pty/package.json').version")
+          # Read from disk: the package's exports don't include its package.json
+          version=$(node -p "JSON.parse(require('fs').readFileSync('node_modules/@lydell/node-pty/package.json', 'utf8')).version")
           npm install --no-save --force "@lydell/node-pty-darwin-x64@$version"
 
       - name: Build the disk images
@@ -125,7 +132,7 @@ jobs:
   # that failed leaves only its own files out, to be added by rerunning its job
   publish:
     needs: [windows, linux, mac]
-    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/') && needs.windows.result == 'success' }}
+    if: ${{ !cancelled() && (startsWith(github.ref, 'refs/tags/') || inputs.release != '') && needs.windows.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -140,8 +147,9 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release || github.ref_name }}
         run: |
-          awk -v version="${GITHUB_REF_NAME#v}" '
+          awk -v version="${TAG#v}" '
             /^## / {
               if (found) exit
               split(substr($0, 4), words, " ")
@@ -153,9 +161,12 @@ jobs:
           ' CHANGELOG.md > notes.md
           if grep -q '[^[:space:]]' notes.md; then notes=(--notes-file notes.md); else notes=(--generate-notes); fi
           files=(dist/*)
-          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
-            if [ "${notes[0]}" = --notes-file ]; then gh release edit "$GITHUB_REF_NAME" --notes-file notes.md; fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+            if [ "${notes[0]}" = --notes-file ]; then gh release edit "$TAG" --notes-file notes.md; fi
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            gh release create "$TAG" "${files[@]}" --title "GitDom $TAG" "${notes[@]}"
           else
-            gh release create "$GITHUB_REF_NAME" "${files[@]}" --title "GitDom $GITHUB_REF_NAME" "${notes[@]}"
+            echo "There is no release $TAG to upload to" >&2
+            exit 1
           fi
