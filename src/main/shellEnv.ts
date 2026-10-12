@@ -5,19 +5,39 @@ import { execFile } from 'child_process'
 
 const MARK = '__GITDOM_ENV__'
 
+/**
+ * The options tried in turn: interactive and login, as a terminal starts the shell, reads every
+ * startup file; some shells, such as Debian's dash as /bin/sh, refuse those, and plain -c still
+ * gives the PATH they inherited.
+ */
+const ATTEMPTS = [['-ilc'], ['-lc'], ['-c']]
+
 /** The PATH the user's login shell sets up, or null when it can't be read in time. */
-export function loginShellPath(shell: string, timeout = 5000): Promise<string | null> {
+export async function loginShellPath(shell: string, timeout = 5000): Promise<string | null> {
+  for (const options of ATTEMPTS) {
+    const { path, timedOut } = await shellPath(shell, options, timeout)
+    // A shell that hangs would hang again: GitDom starts with the PATH it has
+    if (path || timedOut) return path
+  }
+  return null
+}
+
+function shellPath(
+  shell: string,
+  options: string[],
+  timeout: number
+): Promise<{ path: string | null; timedOut: boolean }> {
   return new Promise((done) => {
     // `env` prints the same way in sh, bash, zsh and fish; the marks fence off what the shell's
     // startup files print themselves
     execFile(
       shell,
-      ['-ilc', `echo ${MARK}; env; echo ${MARK}`],
+      [...options, `echo ${MARK}; env; echo ${MARK}`],
       { timeout, env: { ...process.env, DISABLE_AUTO_UPDATE: 'true' } },
       (error, stdout) => {
         const fenced = stdout?.split(MARK)[1]
         const line = fenced?.split('\n').find((l) => l.startsWith('PATH='))
-        done(error && !line ? null : (line?.slice(5).trim() ?? null))
+        done({ path: line?.slice(5).trim() || null, timedOut: !!error?.killed })
       }
     )
   })
