@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.9.0 pubblicata il 2026-10-12 (Step 1–15 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.9.1 pubblicata il 2026-10-12 (Step 1–15 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -198,7 +198,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Step 15 — v1.9: Credenziali, sicurezza, macOS e Linux ✅
 
-> Completato con la v1.9.0: le cinque cose da migliorare emerse dall'analisi della v1.8.
+> Completato con la v1.9.1 (la v1.9.0 non è mai stata pubblicata: un test falliva su Linux): le cinque cose da migliorare emerse dall'analisi della v1.8.
 
 - ✅ **Credenziali nell'app**: quando git chiede nome utente e password o token, la passphrase di una chiave SSH o se fidarsi di un server mai visto, GitDom lo chiede in una finestra (helper `GIT_ASKPASS`/`SSH_ASKPASS` che parla con l'app su una pipe locale protetta da un token). Nome utente e password si chiedono insieme, una volta sola; li conserva il credential helper di git, GitDom non salva niente. Il fetch periodico non chiede mai: se servono credenziali lo segnala una volta
 - ✅ **Sandbox**: l'interfaccia gira nella sandbox di Chromium, la navigazione verso altre pagine è bloccata, e il nome del file passato all'editor esterno è quotato, così niente in un nome di file può diventare un comando
