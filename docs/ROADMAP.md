@@ -206,6 +206,18 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 - ✅ **Test end-to-end**: `npm run test:e2e` costruisce l'app e la guida con Playwright (grafo, stage e commit, branch, palette, sandbox, credenziali); la CI li esegue a ogni push
 - ✅ **macOS e Linux**: scorciatoie con ⌘ e menu dell'app su macOS, ⌘+clic per scegliere più commit, PATH della shell di login (git, LFS ed editor di Homebrew), shell zsh/bash/fish nel terminale, testi e font del sistema, watcher che su Linux ripiega sulla cartella `.git` se finiscono i watch; CI su Windows, Linux e macOS; nelle release dmg per Apple Silicon e Intel, AppImage e deb
 
+## Step 16 — v1.10: Time-lapse di un file ✅
+
+> Completato (da pubblicare). Il blame che scorre nel tempo, come il Time-lapse View di Perforce: GitDom ha già blame, storia delle righe e ricerca nel codice, qui diventano una vista sola da scorrere.
+
+- ✅ **Timeline da trascinare**: sotto il codice una barra con un segno per ogni commit che ha cambiato il file; trascinandola (o con le frecce, Shift per dieci alla volta, Home/End) il file cambia versione all'istante, con autore, data e commit su ogni riga. Tutte le versioni si leggono con un `git log` e un `git cat-file --batch`, e il blame di ognuna si calcola in GitDom, senza un `git blame` a ogni passo
+- ✅ **Colore per età**: le righe appena cambiate sono evidenziate e sbiadiscono man mano che si va avanti nella storia
+- ✅ **Righe fantasma**: le righe che il commit ha tolto restano visibili in rosso, al loro posto
+- ✅ **Segui una riga**: si blocca una riga con un clic; resta ferma sullo schermo mentre si scorre, e la barra segna i commit in cui esiste
+- ✅ **Ricerca nella storia**: mentre si scrive, la barra segna i commit che aggiungono o tolgono righe con quel testo, o il cui messaggio, autore o hash lo contiene; filtri per righe aggiunte, tolte e commit; F3 / Invio passano al prossimo
+- ✅ **Tag e segnalibro sulla barra**: i tag di release segnati sulla timeline; un segnalibro su un commit per tornarci (M per metterlo, ' per saltare avanti e indietro) e aprire il diff tool esterno tra il segnalibro e la versione mostrata
+- ✅ Le modifiche non ancora committate sono l'ultimo passo della timeline; il dettaglio del commit mostrato segue la timeline
+
 ---
 
 ## Forse, un giorno

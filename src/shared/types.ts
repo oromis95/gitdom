@@ -306,6 +306,52 @@ export interface Blame {
   lines: BlameLine[]
 }
 
+/** A version of a file in its time-lapse: a commit that changed it, or the uncommitted changes. */
+export interface TimelapseRevision {
+  /** Empty for the uncommitted changes */
+  hash: string
+  authorName: string
+  authorEmail: string
+  authorDate: number
+  subject: string
+  /** The commit deleted the file */
+  deleted: boolean
+}
+
+/** Lines a version removed from the one before it, shown before its line `at` (0-based). */
+export interface TimelapseGhosts {
+  at: number
+  lines: number[]
+}
+
+/**
+ * Every version of a file, with the identity of each line through them: a line keeps its id from
+ * one version to the next until it is changed or removed, and an edited line is a new line.
+ */
+export interface Timelapse {
+  path: string
+  /** Oldest first */
+  revisions: TimelapseRevision[]
+  /** Text of each line, by line id */
+  text: string[]
+  /** Index of the revision that added each line, by line id */
+  born: Int32Array
+  /** The line ids of each version, top to bottom */
+  frames: Int32Array[]
+  /** The lines each version removed */
+  ghosts: TimelapseGhosts[][]
+  /** The latest tags, each at the version of the file it has */
+  tags: FileTag[]
+  /** Older commits were left out: their lines count as added by the oldest one shown */
+  truncated: boolean
+}
+
+/** A tag, and the version of a file it has: the commit that last changed the file before it. */
+export interface FileTag {
+  name: string
+  hash: string
+}
+
 /**
  * uninitialized: not cloned yet; clean: at the commit the repository records;
  * moved: checked out at another commit; conflict: unmerged in a merge

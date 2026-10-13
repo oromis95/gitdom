@@ -55,6 +55,11 @@ export function TreeFileList({ repo, hash }: { repo: string; hash: string }): Re
       onClick: () => inspectFile({ path: f.path, mode: 'blame', rev: hash })
     },
     {
+      label: 'Time-lapse',
+      disabled: f.kind === 'submodule',
+      onClick: () => inspectFile({ path: f.path, mode: 'timelapse', rev: hash })
+    },
+    {
       label: 'Save as…',
       disabled: f.kind === 'submodule',
       onClick: () => void saveFileAt(repo, hash, f.path)

@@ -4,6 +4,7 @@ import {
   ChevronsUpDown,
   Download,
   FileText,
+  Film,
   History,
   ListTree,
   ScanText,
@@ -11,7 +12,6 @@ import {
   Undo2,
   X
 } from 'lucide-react'
-import type { Result } from '../../../shared/api'
 import type {
   Blame,
   BlameCommit,
@@ -28,45 +28,8 @@ import { foldContext, functionRange, rangeLabel } from '../lineRange'
 import { formatBytes } from '../statistics'
 import { saveFileAt } from '../actions'
 import DiffView from './DiffView'
-
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
-const formatDate = (seconds: number, format = dateFormat): string =>
-  format.format(new Date(seconds * 1000))
-
-interface Loaded<T> {
-  key: string
-  result: Result<T>
-}
-
-/** Loads with an operation whenever `key` changes, dropping the answers to outdated requests. */
-function useLoaded<T>(key: string, load: () => Promise<Result<T>>): Result<T> | null {
-  const [loaded, setLoaded] = useState<Loaded<T> | null>(null)
-  useEffect(() => {
-    let cancelled = false
-    void load().then((result) => {
-      if (!cancelled) setLoaded({ key, result })
-    })
-    return () => {
-      cancelled = true
-    }
-    // key identifies what load fetches
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
-  return loaded?.key === key ? loaded.result : null
-}
-
-function copyHash(hash: string): void {
-  void navigator.clipboard.writeText(hash)
-  notify('info', 'Copied commit hash')
-}
-
-/** Leaves the inspector and selects the commit in the graph. */
-function showInGraph(hash: string): void {
-  const { inspectFile, select } = useApp.getState()
-  inspectFile(null)
-  select(hash, true)
-}
+import FileTimelapse from './FileTimelapse'
+import { copyHash, dayFormat, formatDate, showInGraph, useLoaded } from './inspect'
 
 function FileHistory({
   snapshot,
@@ -590,7 +553,12 @@ export default function FileInspector({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && !fromTerminal(e) && !document.querySelector('.modal, .menu'))
+      if (
+        e.key === 'Escape' &&
+        !e.defaultPrevented &&
+        !fromTerminal(e) &&
+        !document.querySelector('.modal, .menu')
+      )
         inspectFile(null)
     }
     window.addEventListener('keydown', onKey)
@@ -705,6 +673,13 @@ export default function FileInspector({
           >
             <ScanText size={14} /> Blame
           </button>
+          <button
+            className={inspect.mode === 'timelapse' ? 'active' : ''}
+            onClick={() => mode('timelapse')}
+            title="Drag through every version of the file, with who changed each line"
+          >
+            <Film size={14} /> Time-lapse
+          </button>
           {inspect.range && (
             <button
               className={inspect.mode === 'lines' ? 'active' : ''}
@@ -725,6 +700,8 @@ export default function FileInspector({
         <FileLines snapshot={snapshot} inspect={inspect} />
       ) : inspect.mode === 'file' ? (
         <FileContents snapshot={snapshot} inspect={inspect} />
+      ) : inspect.mode === 'timelapse' ? (
+        <FileTimelapse snapshot={snapshot} inspect={inspect} />
       ) : (
         <FileBlame snapshot={snapshot} inspect={inspect} />
       )}

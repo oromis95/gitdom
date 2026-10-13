@@ -138,6 +138,9 @@ export function buildCommands(): Command[] {
           revPath: file ? undefined : tab.inspect?.revPath
         })
       )
+      add('File', `Time-lapse of ${inspected}`, () =>
+        app.inspectFile({ path: inspected, mode: 'timelapse', rev })
+      )
     }
 
     const pending = snapshot.submodules.filter(

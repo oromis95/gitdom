@@ -1,5 +1,7 @@
 // Operations that read the history: searches, commit details, file and line histories.
+import { readFile } from 'fs/promises'
 import type { MyCommit } from '../../../shared/api'
+import type { FileTag, TimelapseRevision } from '../../../shared/types'
 import { lineBefore, parseDiff } from '../../../shared/diff'
 import {
   FILE_LOG_FORMAT,
@@ -17,6 +19,7 @@ import {
   loadCommitDetail,
   logRevisions
 } from '../repository'
+import { buildFrames, type TimelapseVersion } from '../timelapse'
 import {
   type OpImpl,
   assertArg,
@@ -24,12 +27,96 @@ import {
   assertRev,
   assertHash,
   exists,
-  getConfig
+  getConfig,
+  repoFile
 } from './shared'
 
 const FILE_HISTORY_LIMIT = 5000
 /** Each commit of a line history carries a diff: fewer of them */
 const LINE_HISTORY_LIMIT = 500
+
+/** Versions of a file in its time-lapse */
+const TIMELAPSE_LIMIT = 2000
+/** Lines of all the versions together: older versions are left out beyond it */
+const TIMELAPSE_LINES = 8_000_000
+/** A version bigger than this stops the time-lapse */
+const TIMELAPSE_FILE_LIMIT = 2 * 1024 * 1024
+/** Tags looked up for the time-lapse, the latest first */
+const FILE_TAG_LIMIT = 100
+
+/** The lines of a version, or an error for content the time-lapse can't show. */
+function versionLines(data: Buffer, path: string): string[] {
+  if (data.length > TIMELAPSE_FILE_LIMIT)
+    throw new Error(`${path} is too large for a time-lapse in some versions`)
+  // Like git: a NUL byte near the start makes a file binary
+  if (data.subarray(0, 8000).includes(0)) throw new Error(`${path} is a binary file`)
+  const text = data.toString('utf8').replace(/\r?\n$/, '')
+  return text ? text.split(/\r?\n/) : []
+}
+
+/** Objects read with `git cat-file --batch`: the id and content of each, or null when missing. */
+function parseBatch(output: Buffer): ({ oid: string; data: Buffer } | null)[] {
+  const objects: ({ oid: string; data: Buffer } | null)[] = []
+  let at = 0
+  while (at < output.length) {
+    const end = output.indexOf(0x0a, at)
+    if (end < 0) break
+    const header = output.subarray(at, end).toString('utf8')
+    at = end + 1
+    if (header.endsWith(' missing') || header.endsWith(' ambiguous')) {
+      objects.push(null)
+      continue
+    }
+    const [oid, type, size] = header.split(' ')
+    if (type !== 'blob') throw new Error('Not a file in some versions')
+    objects.push({ oid, data: output.subarray(at, at + Number(size)) })
+    at += Number(size) + 1
+  }
+  return objects
+}
+
+/**
+ * The latest tags with a version of the file among `commits` (oldest first, with the id of the
+ * file in each): the newest one with the file as the tag has it, made before the tag if any is.
+ */
+async function fileTags(
+  repo: string,
+  path: string,
+  commits: { hash: string; authorDate: number }[],
+  blobs: (string | undefined)[]
+): Promise<FileTag[]> {
+  const tags = (
+    await runGit(repo, [
+      'for-each-ref',
+      '--sort=-creatordate',
+      `--count=${FILE_TAG_LIMIT}`,
+      '--format=%(refname)%1f%(refname:short)%1f%(creatordate:unix)',
+      'refs/tags'
+    ])
+  )
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [ref, name, date] = line.split('\x1f')
+      return { ref, name, date: Number(date) }
+    })
+  if (!tags.length || !commits.length) return []
+  // The file as each tag has it, all in one process
+  const checked = (
+    await runGit(repo, ['cat-file', '--batch-check'], {
+      input: tags.map((t) => `${t.ref}:${path}\n`).join('')
+    })
+  ).split('\n')
+  const found: FileTag[] = []
+  tags.forEach((tag, i) => {
+    const [oid, type] = checked[i]?.split(' ') ?? []
+    if (type !== 'blob') return
+    const same = commits.filter((_, c) => blobs[c] === oid)
+    const commit = same.findLast((c) => c.authorDate <= tag.date) ?? same[same.length - 1]
+    if (commit) found.push({ name: tag.name, hash: commit.hash })
+  })
+  return found
+}
 
 /** The running search in the changes of each repository: a new one, or clearing it, stops it */
 const contentSearches = new Map<string, AbortController>()
@@ -83,6 +170,7 @@ export const logOps: Pick<
   | 'fileHistory'
   | 'lineHistory'
   | 'blame'
+  | 'timelapse'
   | 'lineBefore'
   | 'releaseCommits'
   | 'previousTag'
@@ -214,6 +302,101 @@ export const logOps: Pick<
       path
     ])
     return parseBlame(output, path)
+  },
+
+  async timelapse(repo, path) {
+    assertArg(path, 'path')
+    // Parents rewritten to the commits that changed the file; children before parents
+    const log = await runGit(repo, [
+      '--literal-pathspecs',
+      'log',
+      '--parents',
+      '--date-order',
+      `-n${TIMELAPSE_LIMIT}`,
+      '--format=%H%x1f%P%x1f%an%x1f%ae%x1f%at%x1f%s%x1e',
+      '--',
+      path
+    ])
+    const commits = log
+      .split('\x1e')
+      .map((record) => record.replace(/^\n/, ''))
+      .filter(Boolean)
+      .map((record) => {
+        const [hash, parents, authorName, authorEmail, date, subject] = record.split('\x1f')
+        return {
+          hash,
+          parents: parents.split(' ').filter(Boolean),
+          authorName,
+          authorEmail,
+          authorDate: Number(date),
+          subject
+        }
+      })
+    const chunks: Buffer[] = []
+    if (commits.length)
+      await runGit(repo, ['cat-file', '--batch'], {
+        input: commits.map((c) => `${c.hash}:${path}\n`).join(''),
+        onStdout: (chunk) => chunks.push(chunk)
+      })
+    const contents = parseBatch(Buffer.concat(chunks))
+    // Newest first, until the lines of all versions get too many
+    let total = 0
+    let kept = 0
+    const texts: (string[] | null)[] = []
+    for (; kept < commits.length; kept++) {
+      const object = contents[kept]
+      const lines = object ? versionLines(object.data, path) : null
+      total += lines?.length ?? 0
+      if (total > TIMELAPSE_LINES && kept > 0) break
+      texts.push(lines)
+    }
+    const shown = commits.slice(0, kept).reverse()
+    const blobs = contents.slice(0, kept).reverse()
+    texts.reverse()
+    const index = new Map(shown.map((c, i) => [c.hash, i]))
+    const versions: TimelapseVersion[] = shown.map((c, i) => ({
+      parents: c.parents.map((p) => index.get(p) ?? -1).filter((p) => p >= 0),
+      lines: texts[i]
+    }))
+    const revisions: TimelapseRevision[] = shown.map((c, i) => ({
+      hash: c.hash,
+      authorName: c.authorName,
+      authorEmail: c.authorEmail,
+      authorDate: c.authorDate,
+      subject: c.subject,
+      deleted: texts[i] === null
+    }))
+
+    // The uncommitted changes, as a last version
+    const onDisk = await readFile(repoFile(repo, path)).catch(() => null)
+    const latest = versions.length ? versions[versions.length - 1].lines : null
+    if (onDisk) {
+      const lines = versionLines(onDisk, path)
+      if (!latest || lines.length !== latest.length || lines.some((l, i) => l !== latest[i])) {
+        versions.push({ parents: versions.length ? [versions.length - 1] : [], lines })
+        revisions.push({
+          hash: '',
+          authorName: '',
+          authorEmail: '',
+          authorDate: Math.floor(Date.now() / 1000),
+          subject: 'Uncommitted changes',
+          deleted: false
+        })
+      }
+    }
+    if (!versions.length) throw new Error(`${path} has no history on this branch`)
+    return {
+      path,
+      revisions,
+      ...buildFrames(versions),
+      tags: await fileTags(
+        repo,
+        path,
+        shown,
+        blobs.map((b) => b?.oid)
+      ),
+      truncated: kept < commits.length || commits.length >= TIMELAPSE_LIMIT
+    }
   },
 
   async lineBefore(repo, hash, path, previous, line) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Columns2, History, ScanText, X } from 'lucide-react'
+import { Columns2, Film, History, ScanText, X } from 'lucide-react'
 import type { Result } from '../../../shared/api'
 import { buildPatch } from '../../../shared/diff'
 import type {
@@ -429,6 +429,19 @@ export default function DiffView({
                 <ScanText size={14} /> Blame
               </button>
             )}
+            <button
+              className="btn"
+              title="Drag through every version of the file"
+              onClick={() =>
+                inspectFile({
+                  path: target.path,
+                  mode: 'timelapse',
+                  rev: source.kind === 'commit' ? source.hash : null
+                })
+              }
+            >
+              <Film size={14} /> Time-lapse
+            </button>
             <button
               className="btn"
               title="Open the changes in the external diff tool (Preferences > Tools)"

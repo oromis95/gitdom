@@ -48,6 +48,7 @@ const READ_ONLY = new Set<OpName>([
   'fileAt',
   'saveFileAt',
   'blame',
+  'timelapse',
   'lineBefore',
   'lastCommitMessage',
   'commitTemplate',

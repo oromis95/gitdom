@@ -114,6 +114,16 @@ export function FileList({
             onClick: () =>
               inspectFile({ path: f.path, mode: 'blame', rev: kind === 'commit' ? hash! : null })
           },
+          {
+            label: 'Time-lapse',
+            disabled: kind === 'conflicted',
+            onClick: () =>
+              inspectFile({
+                path: f.path,
+                mode: 'timelapse',
+                rev: kind === 'commit' ? hash! : null
+              })
+          },
           'separator' as const
         ]
       : []),

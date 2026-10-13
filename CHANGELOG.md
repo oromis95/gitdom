@@ -2,6 +2,18 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- **Time-lapse of a file**: drag a timeline under the code and watch the file change version by version, with who changed each line and when (**Time-lapse** in the file inspector, on a file's right-click menu, beside a diff, or in the command palette)
+  - Every version is read at once, so moving along the timeline is instant; ← and → step one commit (Shift for ten), Home and End go to the first and the last
+  - Recent changes stand out and fade as the timeline moves on; the lines a commit removed stay in sight, in red, where they were
+  - Click a line to anchor it: it stays in place on screen while you scrub, and the timeline marks the versions that have it
+  - Search the history of the file as you type: the timeline marks the commits that add or remove lines with the text, or whose message, author or hash has it; Enter and F3 go to the next one
+  - Tags on the timeline; bookmark a version (M), jump back and forth with ', and open the bookmark and the version shown in your diff tool
+  - The uncommitted changes are the last step, and the commit detail follows the timeline
+
 ## 1.9.1 — 2026-10-12
 
 Version 1.9.0 was never published: this release also brings everything listed under it.

@@ -2,6 +2,7 @@ import type { AskpassAnswer, AskpassRequest } from './askpass'
 import type {
   Backup,
   Blame,
+  Timelapse,
   Commit,
   CommitDetail,
   CommitPreview,
@@ -291,6 +292,8 @@ export interface RepoOps {
   lineHistory(path: string, range: string, rev: string | null): LineRevision[]
   /** Who last changed each line of a file, at a commit or in the working tree (null). */
   blame(path: string, rev: string | null): Blame
+  /** Every version of a file on the current branch, with its lines through them, for the time-lapse. */
+  timelapse(path: string): Timelapse
   /**
    * Where a line of a file at a commit was in the version before it (a blame
    * commit's `previous`), to blame that version at the same place.
