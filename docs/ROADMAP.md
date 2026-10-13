@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.9.1 pubblicata il 2026-10-12 (Step 1–15 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.10.0 pubblicata il 2026-10-13 (Step 1–16 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -208,7 +208,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Step 16 — v1.10: Time-lapse di un file ✅
 
-> Completato (da pubblicare). Il blame che scorre nel tempo, come il Time-lapse View di Perforce: GitDom ha già blame, storia delle righe e ricerca nel codice, qui diventano una vista sola da scorrere.
+> Completato con la v1.10.0. Il blame che scorre nel tempo, come il Time-lapse View di Perforce: GitDom ha già blame, storia delle righe e ricerca nel codice, qui diventano una vista sola da scorrere.
 
 - ✅ **Timeline da trascinare**: sotto il codice una barra con un segno per ogni commit che ha cambiato il file; trascinandola (o con le frecce, Shift per dieci alla volta, Home/End) il file cambia versione all'istante, con autore, data e commit su ogni riga. Tutte le versioni si leggono con un `git log` e un `git cat-file --batch`, e il blame di ognuna si calcola in GitDom, senza un `git blame` a ogni passo
 - ✅ **Colore per età**: le righe appena cambiate sono evidenziate e sbiadiscono man mano che si va avanti nella storia
