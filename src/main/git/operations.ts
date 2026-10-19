@@ -44,7 +44,6 @@ const READ_ONLY = new Set<OpName>([
   'tagInfo',
   'fileHistory',
   'lineHistory',
-  'treeFiles',
   'fileAt',
   'saveFileAt',
   'blame',

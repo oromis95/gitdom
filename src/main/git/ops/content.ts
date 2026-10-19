@@ -2,7 +2,6 @@
 import { readFile, stat, writeFile } from 'fs/promises'
 import { isAbsolute, relative, resolve } from 'path'
 import { parseDiff } from '../../../shared/diff'
-import { parseTreeFiles } from '../parsers'
 import type { DiffOptions, FileContent, FileDiff, ImagePair } from '../../../shared/types'
 import { runGit, tryGit } from '../exec'
 import { loadStatus } from '../repository'
@@ -125,10 +124,7 @@ async function worktreeImage(repo: string, path: string): Promise<string | null>
   return `data:${imageType(path)};base64,${(await readFile(full)).toString('base64')}`
 }
 
-export const contentOps: Pick<
-  OpImpl,
-  'status' | 'diff' | 'imagePair' | 'treeFiles' | 'fileAt' | 'saveFileAt'
-> = {
+export const contentOps: Pick<OpImpl, 'status' | 'diff' | 'imagePair' | 'fileAt' | 'saveFileAt'> = {
   status: (repo) => loadStatus(repo),
 
   async diff(repo, source, path, oldPath, options = {}): Promise<FileDiff> {
@@ -229,11 +225,6 @@ export const contentOps: Pick<
           after: await blobImage(repo, `${source.to}:${path}`, path)
         }
     }
-  },
-
-  async treeFiles(repo, rev) {
-    assertRev(rev)
-    return parseTreeFiles(await runGit(repo, ['ls-tree', '-r', '-l', '-z', '--full-tree', rev]))
   },
 
   async fileAt(repo, rev, path) {

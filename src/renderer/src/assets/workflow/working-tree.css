@@ -31,34 +31,6 @@
 .file-row.active {
   background: var(--bg-selected);
 }
-/* Changed or all files of a commit */
-.file-scope button {
-  padding: 2px 10px;
-  font-size: 13px;
-}
-.file-size {
-  margin-left: auto;
-  padding-left: 8px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.file-filter {
-  width: 100%;
-  margin: 6px 0;
-  padding: 4px 8px;
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  outline: none;
-}
-.file-filter:focus {
-  border-color: var(--accent);
-}
-.file-filter-note {
-  padding: 4px;
-}
 .row-action {
   display: none;
   margin-left: auto;

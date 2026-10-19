@@ -13,15 +13,7 @@ import {
   SplitCommit,
   Undo
 } from './tips/commits'
-import {
-  Bisect,
-  BlameBack,
-  BrowseFiles,
-  CodeSearch,
-  Compare,
-  LineHistory,
-  Statistics
-} from './tips/history'
+import { Bisect, BlameBack, CodeSearch, Compare, LineHistory, Statistics } from './tips/history'
 import { Dashboard, MyWeek, Palette } from './tips/tools'
 
 const SCENES: Record<string, () => React.JSX.Element> = {
@@ -36,7 +28,6 @@ const SCENES: Record<string, () => React.JSX.Element> = {
   lineHistory: LineHistory,
   blameBack: BlameBack,
   codeSearch: CodeSearch,
-  browseFiles: BrowseFiles,
   statistics: Statistics,
   compare: Compare,
   soloBranch: SoloBranch,

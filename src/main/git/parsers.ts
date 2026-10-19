@@ -7,7 +7,6 @@ import type {
   FileChange,
   FileRevision,
   LineRevision,
-  TreeFile,
   FileStat,
   FileStatusCode,
   Identity,
@@ -538,21 +537,4 @@ export function parseMergeTools(output: string): MergeToolInfo[] {
     }
   }
   return tools
-}
-
-/** Files of a tree, from `git ls-tree -r -l -z`: "mode type hash size<TAB>path" NUL records. */
-export function parseTreeFiles(output: string): TreeFile[] {
-  const files: TreeFile[] = []
-  for (const record of output.split('\0')) {
-    const tab = record.indexOf('\t')
-    if (tab < 0) continue
-    const [mode, type, , size] = record.slice(0, tab).split(/\s+/)
-    if (type !== 'blob' && type !== 'commit') continue
-    files.push({
-      path: record.slice(tab + 1),
-      size: Number(size) || 0,
-      kind: type === 'commit' ? 'submodule' : mode === '120000' ? 'link' : 'file'
-    })
-  }
-  return files
 }

@@ -141,17 +141,6 @@ export const TIPS: Tip[] = [
     after: ['search']
   },
   {
-    id: 'browseFiles',
-    title: 'Every file of any commit',
-    text: 'Not only the changed files: read any file as it was in a commit, and save it anywhere.',
-    steps: [
-      'Select a commit',
-      'Click All files in the commit panel',
-      'Open a file from the tree; Save as… keeps a copy'
-    ],
-    after: ['commitDiff']
-  },
-  {
     id: 'compare',
     title: 'What changed between two branches',
     text: 'See every file that differs between two branches or commits, and open each diff, without checking anything out.',

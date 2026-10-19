@@ -7,6 +7,11 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 ### Changed
 
 - Statistics: in **Hot files** and **Files only one person knows**, each file shows its name in full, with its folder beneath, and both lists take the whole width
+- The commit panel lists the changed files under **Changed Files**, as a list or a folder tree, without the tabs above them
+
+### Removed
+
+- **All files** in the commit panel, and its tip: a file as it was at a commit is still in the file inspector (**File**, beside History and Blame), with **Save as…**
 
 ## 1.11.1 — 2026-10-19
 

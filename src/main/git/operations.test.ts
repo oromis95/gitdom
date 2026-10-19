@@ -1020,7 +1020,7 @@ describe('runOp', () => {
 })
 
 describe('file inspection', () => {
-  it('lists the files of a commit, shows one as it was and saves it', async () => {
+  it('shows a file as it was at a commit and saves it', async () => {
     mkdirSync(join(repo, 'docs'))
     await commitFile('docs/read me.md', '\uFEFFfirst\n', 'create')
     const first = git(repo, 'rev-parse', 'HEAD')
@@ -1031,14 +1031,6 @@ describe('file inspection', () => {
     await runOp(repo, 'commit', ['more', false])
     write('docs/read me.md', 'third\n')
 
-    expect(await runOp(repo, 'treeFiles', [first])).toEqual([
-      { path: 'docs/read me.md', size: 9, kind: 'file' }
-    ])
-    expect((await runOp(repo, 'treeFiles', ['HEAD'])).map((f) => f.path)).toEqual([
-      'data.bin',
-      'docs/read me.md',
-      'logo.png'
-    ])
     const old = await runOp(repo, 'fileAt', [first, 'docs/read me.md'])
     expect(old).toMatchObject({ text: 'first\n', binary: false, image: null, tooLarge: false })
     expect((await runOp(repo, 'fileAt', ['HEAD', 'docs/read me.md'])).text).toBe('second\n')
@@ -1052,7 +1044,7 @@ describe('file inspection', () => {
     expect([logo.binary, logo.image?.startsWith('data:image/png;base64,')]).toEqual([false, true])
     await expect(runOp(repo, 'fileAt', [first, 'logo.png'])).rejects.toThrow()
     await expect(runOp(repo, 'fileAt', [null, '../outside.txt'])).rejects.toThrow(/Invalid path/)
-    await expect(runOp(repo, 'treeFiles', ['HEAD:docs'])).rejects.toThrow(/Invalid revision/)
+    await expect(runOp(repo, 'fileAt', ['HEAD:docs', 'x'])).rejects.toThrow(/Invalid revision/)
 
     const dest = join(root, 'saved.bin')
     await runOp(repo, 'saveFileAt', ['HEAD', 'data.bin', dest])

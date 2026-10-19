@@ -22,7 +22,6 @@ import type {
   StatisticsOptions,
   StatisticsProgress,
   TagInfo,
-  TreeFile,
   WorkingTreeStatus
 } from './types'
 import type { RepoOperation } from './types'
@@ -304,8 +303,6 @@ export interface RepoOps {
     previous: { hash: string; path: string },
     line: number
   ): number
-  /** Every file of a commit's tree. */
-  treeFiles(rev: string): TreeFile[]
   /** A file as stored at a revision, or in the working tree (null), to show it. */
   fileAt(rev: string | null, path: string): FileContent
   /** Writes a file as stored at a revision to `dest`, an absolute path picked by the user. */

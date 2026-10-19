@@ -12,7 +12,6 @@ import { reword } from '../../actions'
 import { useFileView } from './fileListing'
 import { ViewToggle } from './ViewToggle'
 import { FileList } from './FileList'
-import { TreeFileList } from './TreeFileList'
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -93,8 +92,6 @@ export function CommitPanel({
   const [saving, setSaving] = useState(false)
   const head = snapshot?.head.hash
   const [view, changeView] = useFileView()
-  /** Every file of the commit, instead of the changed ones */
-  const [allFiles, setAllFiles] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -263,33 +260,18 @@ export function CommitPanel({
       </dl>
       <div>
         <div className="file-group-title file-group-header">
-          <span className="segmented file-scope">
-            <button className={allFiles ? '' : 'active'} onClick={() => setAllFiles(false)}>
-              {detail.files.length} changed
-            </button>
-            <button
-              className={allFiles ? 'active' : ''}
-              title="Every file of the project as it was at this commit"
-              onClick={() => setAllFiles(true)}
-            >
-              All files
-            </button>
-          </span>
-          {!allFiles && detail.parents.length > 1 && <span className="muted">vs first parent</span>}
+          <span>Changed Files ({detail.files.length})</span>
+          {detail.parents.length > 1 && <span className="muted">vs first parent</span>}
           <span className="toolbar-spacer" />
-          {!allFiles && <ViewToggle view={view} onChange={changeView} />}
+          <ViewToggle view={view} onChange={changeView} />
         </div>
-        {allFiles ? (
-          <TreeFileList repo={repoPath} hash={detail.hash} />
-        ) : (
-          <FileList
-            files={detail.files}
-            kind="commit"
-            view={view}
-            repo={repoPath}
-            hash={detail.hash}
-          />
-        )}
+        <FileList
+          files={detail.files}
+          kind="commit"
+          view={view}
+          repo={repoPath}
+          hash={detail.hash}
+        />
       </div>
     </div>
   )

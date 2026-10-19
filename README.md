@@ -85,7 +85,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - For the current branch or all of them, over any period; reading a big history can be stopped
 - History of some lines or of a function: pick the lines in the blame, or type the function's name, and see every commit that changed them
 - Search the code (**Code** beside the graph search): the commits where some text appeared or went away, or whose changed lines match a regular expression
-- Browse the files of any commit (**All files** in the commit panel): read one as it was, with highlighting or as an image, and save it anywhere
+- A file as it was at a commit (**File** in the file inspector): with highlighting or as an image, and **Save as…** to keep a copy
 - Blame back in time: from a line of the blame, the file just before that commit changed it, at the same place, and back again
 - Time-lapse of a file (**Time-lapse** in the file inspector, or on a file's right-click menu): drag the timeline under the code and the file changes version by version at once, with who changed each line. Recent changes stand out and fade as you move on, and the lines each commit removed stay in sight in red
   - Click a line to anchor it: it stays in place while you scrub, and the timeline marks the versions that have it

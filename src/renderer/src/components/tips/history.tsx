@@ -97,38 +97,6 @@ export function CodeSearch(): React.JSX.Element {
   )
 }
 
-export function BrowseFiles(): React.JSX.Element {
-  return (
-    <>
-      <div className="ta-panel-title">a1b2c3d Fix login</div>
-      <div className="ta-tabs">
-        <span className="ta-tab ta-tab-changes">Changes</span>
-        <span className="ta-tab ta-tab-all">All files</span>
-      </div>
-      <div className="ta-changes">
-        <div>
-          <b className="ta-m">M</b> src/login.ts
-        </div>
-      </div>
-      <div className="ta-tree">
-        <div>▾ src</div>
-        <div className="ta-indent">app.ts</div>
-        <div className="ta-indent">login.ts</div>
-        <div className="ta-readme">README.md</div>
-      </div>
-      <div className="ta-file">
-        <div className="ta-file-title">
-          README.md <span className="ta-btn ta-save">Save as…</span>
-        </div>
-        <div className="ta-md"># GitDom</div>
-        <div>A desktop Git client.</div>
-        <div className="ta-dim">## Install</div>
-      </div>
-      <Cursor />
-    </>
-  )
-}
-
 const BARS = [3, 5, 4, 7, 6, 9, 8, 11, 7, 10, 12, 9]
 const HOT = [
   ['src/app.ts', 92],

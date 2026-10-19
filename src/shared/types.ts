@@ -251,14 +251,6 @@ export interface FileRevision extends Commit {
 }
 
 /** A commit that changed some lines of a file, with how they changed (`git log -L`). */
-/** A file of the tree of a commit */
-export interface TreeFile {
-  path: string
-  /** Bytes; 0 for submodules */
-  size: number
-  kind: 'file' | 'link' | 'submodule'
-}
-
 /** A file as stored at a revision, or in the working tree, ready to show */
 export interface FileContent {
   size: number
