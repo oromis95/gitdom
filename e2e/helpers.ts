@@ -1,7 +1,7 @@
 // Starts the built GitDom (out/, from `electron-vite build`) with Playwright, in empty settings,
 // on repositories made for each test.
 import { execFileSync } from 'child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import electronPath from 'electron'
@@ -52,12 +52,41 @@ export function makeRepo(parent: string, name = 'demo'): string {
   return git(repo, 'rev-parse', '--show-toplevel')
 }
 
+export interface LaunchOptions {
+  env?: Record<string, string>
+  /** The userData folder, kept after close(); a new one by default */
+  profile?: string
+  seed?: boolean
+}
+
+/** The settings of a new profile: no splash, tips or update check, and `repos` open in tabs. */
+export function seedProfile(userData: string, repos: string[]): void {
+  const settings = {
+    'gitdom.settings': JSON.stringify({
+      showTips: false,
+      checkUpdates: false,
+      autoFetchMinutes: 0
+    }),
+    'gitdom.splash': 'off',
+    'gitdom.lastVersion': version,
+    'gitdom.theme': 'dark',
+    'gitdom.tabs': JSON.stringify({ paths: repos, active: 0 })
+  }
+  writeFileSync(join(userData, 'settings.json'), JSON.stringify(settings))
+}
+
 /**
  * Starts GitDom with `repos` open in tabs. The welcome splash, the tips and the update check are
- * off, so the first thing shown is the graph of the first repository.
+ * off, so the first thing shown is the graph of the first repository. A `profile` folder given
+ * is kept, so a test can start GitDom again on it; it's seeded only if it has no settings yet,
+ * and not at all with `seed: false`.
  */
-export async function launch(repos: string[], env: Record<string, string> = {}): Promise<Running> {
-  const userData = scratch('profile')
+export async function launch(
+  repos: string[],
+  { env = {}, profile, seed = true }: LaunchOptions = {}
+): Promise<Running> {
+  const userData = profile ?? scratch('profile')
+  if (seed && !existsSync(join(userData, 'settings.json'))) seedProfile(userData, repos)
   // GITDOM_E2E_EXE runs the tests on a packaged GitDom instead, e.g. dist/win-unpacked/gitdom.exe
   const packaged = process.env.GITDOM_E2E_EXE
   const app = await _electron.launch({
@@ -68,29 +97,15 @@ export async function launch(repos: string[], env: Record<string, string> = {}):
   const win = await app.firstWindow()
   const errors: string[] = []
   win.on('pageerror', (e) => errors.push(e.message))
-  await win.waitForLoadState('domcontentloaded')
-  await win.evaluate(
-    ([v, tabs]) => {
-      localStorage.setItem(
-        'gitdom.settings',
-        JSON.stringify({ showTips: false, checkUpdates: false, autoFetchMinutes: 0 })
-      )
-      localStorage.setItem('gitdom.splash', 'off')
-      localStorage.setItem('gitdom.lastVersion', v)
-      localStorage.setItem('gitdom.theme', 'dark')
-      localStorage.setItem('gitdom.tabs', JSON.stringify({ paths: tabs, active: 0 }))
-    },
-    [version, repos] as const
-  )
-  await win.reload()
   if (repos.length > 0) await win.waitForSelector('.graph-row', { timeout: 60000 })
+  else await win.waitForLoadState('domcontentloaded')
   return {
     app,
     win,
     errors,
     close: async () => {
       await app.close()
-      cleanUp(userData)
+      if (!profile) cleanUp(userData)
     }
   }
 }

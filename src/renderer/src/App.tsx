@@ -25,7 +25,9 @@ import Tips from './components/Tips'
 import Splash, { HighwayLogo } from './components/Splash'
 import { restoreSession, useActiveTab, useApp } from './store'
 import {
+  exportSettings,
   fetchAll,
+  importSettings,
   showBranchOverview,
   showCleanUp,
   showIgnoredFiles,
@@ -192,6 +194,8 @@ function App(): React.JSX.Element {
         } else if (command === 'whatsNew') void showWhatsNew()
         else if (command === 'tips') showTip()
         else if (command === 'checkUpdates') void checkForUpdates(true)
+        else if (command === 'exportSettings') void exportSettings()
+        else if (command === 'importSettings') void importSettings()
         else stepZoom(command === 'zoomIn' ? 1 : command === 'zoomOut' ? -1 : 0)
       }),
     []

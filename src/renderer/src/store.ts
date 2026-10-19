@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { notify } from './ui'
 import { tipAfter } from './tips'
 import type { DiffSource, GraphFilter, RepoSnapshot } from '../../shared/types'
+import { storage } from './storage'
 
 export const WIP_HASH = 'WIP'
 
@@ -151,7 +152,7 @@ const MAX_RECENT = 10
 
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = storage.getItem(key)
     return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
     return fallback
@@ -159,7 +160,7 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function persist(tabs: RepoTab[], active: number): void {
-  localStorage.setItem(TABS_KEY, JSON.stringify({ paths: tabs.map((t) => t.path), active }))
+  storage.setItem(TABS_KEY, JSON.stringify({ paths: tabs.map((t) => t.path), active }))
 }
 
 function baseName(path: string): string {
@@ -229,7 +230,7 @@ export const useApp = create<AppState>((set, get) => {
         0,
         MAX_RECENT
       )
-      localStorage.setItem(RECENT_KEY, JSON.stringify(recent))
+      storage.setItem(RECENT_KEY, JSON.stringify(recent))
 
       if (existing >= 0) {
         set({ active: existing, recent })
@@ -253,15 +254,15 @@ export const useApp = create<AppState>((set, get) => {
       const next = favorites.includes(path)
         ? favorites.filter((p) => p !== path)
         : [...favorites, path]
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(next))
+      storage.setItem(FAVORITES_KEY, JSON.stringify(next))
       set({ favorites: next })
     },
 
     forgetRepo(path) {
       const recent = get().recent.filter((p) => p !== path)
       const favorites = get().favorites.filter((p) => p !== path)
-      localStorage.setItem(RECENT_KEY, JSON.stringify(recent))
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
+      storage.setItem(RECENT_KEY, JSON.stringify(recent))
+      storage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
       set({ recent, favorites })
     },
 
@@ -418,7 +419,7 @@ export const useApp = create<AppState>((set, get) => {
       const graphFilters = { ...get().graphFilters }
       if (filter.solo || filter.hidden.length) graphFilters[path] = filter
       else delete graphFilters[path]
-      localStorage.setItem(GRAPH_FILTERS_KEY, JSON.stringify(graphFilters))
+      storage.setItem(GRAPH_FILTERS_KEY, JSON.stringify(graphFilters))
       set({ graphFilters })
       for (const tab of get().tabs) {
         if (tab.path !== path && tab.snapshot?.path !== path) continue

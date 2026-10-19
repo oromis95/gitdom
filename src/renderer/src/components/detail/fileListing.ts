@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import type { DiffSource, FileChange } from '../../../../shared/types'
 import type { CompareTarget } from '../../store'
+import { storage } from '../../storage'
 
 const VIEW_KEY = 'gitdom.fileView'
 
@@ -10,10 +11,10 @@ export type FileView = 'path' | 'tree'
 /** The layout of the file lists, the same in every panel and remembered. */
 export function useFileView(): [FileView, (view: FileView) => void] {
   const [view, setView] = useState<FileView>(() =>
-    localStorage.getItem(VIEW_KEY) === 'tree' ? 'tree' : 'path'
+    storage.getItem(VIEW_KEY) === 'tree' ? 'tree' : 'path'
   )
   const change = (next: FileView): void => {
-    localStorage.setItem(VIEW_KEY, next)
+    storage.setItem(VIEW_KEY, next)
     setView(next)
   }
   return [view, change]

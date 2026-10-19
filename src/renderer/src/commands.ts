@@ -348,6 +348,8 @@ export function buildCommands(): Command[] {
   add('View', 'Zoom out', () => stepZoom(-1), shortcutLabel('zoomOut'))
   add('View', 'Reset zoom', () => stepZoom(0), shortcutLabel('zoomReset'))
   add('Preferences', 'Preferences…', () => openPreferences(), shortcutLabel('preferences'))
+  add('Preferences', 'Export settings to a file…', () => void actions.exportSettings())
+  add('Preferences', 'Import settings from a file…', () => void actions.importSettings())
   add('Help', 'Tips: what GitDom can do', () => showTip())
   add('Help', "What's new in GitDom", () => void showWhatsNew())
   add('Help', 'Check for updates', () => void checkForUpdates(true))

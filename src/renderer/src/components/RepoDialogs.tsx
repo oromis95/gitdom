@@ -6,6 +6,7 @@ import { GITIGNORE_TEMPLATES, LICENSE_TEMPLATES, repoNameFromUrl } from '../../.
 import { useApp } from '../store'
 import { notify, useUi } from '../ui'
 import { EXAMPLE_FOLDER } from '../platform'
+import { storage } from '../storage'
 
 // Last folder repositories were cloned or created in, proposed again next time
 const PARENT_KEY = 'gitdom.parentFolder'
@@ -61,7 +62,7 @@ function TargetHint({ parent, name }: { parent: string; name: string }): React.J
 function CloneDialog({ onClose }: { onClose(): void }): React.JSX.Element {
   const openRepo = useApp((s) => s.openRepo)
   const [url, setUrl] = useState('')
-  const [parent, setParent] = useState(() => localStorage.getItem(PARENT_KEY) ?? '')
+  const [parent, setParent] = useState(() => storage.getItem(PARENT_KEY) ?? '')
   const [name, setName] = useState('')
   // The folder name follows the URL until the user edits it
   const [nameEdited, setNameEdited] = useState(false)
@@ -93,7 +94,7 @@ function CloneDialog({ onClose }: { onClose(): void }): React.JSX.Element {
     setRunning(id)
     setProgress(null)
     setError(null)
-    localStorage.setItem(PARENT_KEY, parent.trim())
+    storage.setItem(PARENT_KEY, parent.trim())
     const result = await window.api.repos.clone(id, {
       url: url.trim(),
       parent: parent.trim(),
@@ -233,7 +234,7 @@ function CloneDialog({ onClose }: { onClose(): void }): React.JSX.Element {
 
 function InitDialog({ onClose }: { onClose(): void }): React.JSX.Element {
   const openRepo = useApp((s) => s.openRepo)
-  const [parent, setParent] = useState(() => localStorage.getItem(PARENT_KEY) ?? '')
+  const [parent, setParent] = useState(() => storage.getItem(PARENT_KEY) ?? '')
   const [name, setName] = useState('')
   const [defaultBranch, setDefaultBranch] = useState('main')
   const [gitignore, setGitignore] = useState('')
@@ -248,7 +249,7 @@ function InitDialog({ onClose }: { onClose(): void }): React.JSX.Element {
     if (!valid || running) return
     setRunning(true)
     setError(null)
-    localStorage.setItem(PARENT_KEY, parent.trim())
+    storage.setItem(PARENT_KEY, parent.trim())
     const result = await window.api.repos.init({
       parent: parent.trim(),
       name: name.trim(),

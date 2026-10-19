@@ -10,7 +10,12 @@ import {
   type UpdateProgress
 } from '../shared/api'
 import type { AskpassRequest } from '../shared/askpass'
+import type { StoredSettings } from '../shared/storedSettings'
 import type { StatisticsProgress } from '../shared/types'
+
+// Once, before the renderer's modules read their settings
+const stored = ipcRenderer.sendSync(IPC.settingsLoad) as StoredSettings
+const settings = new Map(Object.entries(stored.values))
 
 const api: GitDomApi = {
   platform: process.platform,
@@ -126,6 +131,22 @@ const api: GitDomApi = {
       return () => ipcRenderer.removeListener(IPC.askpassRequest, handler)
     },
     reply: (id, answer) => ipcRenderer.send(IPC.askpassReply, id, answer)
+  },
+  storage: {
+    existed: stored.exists,
+    getItem: (key) => settings.get(key) ?? null,
+    setItem: (key, value) => {
+      const text = String(value)
+      if (settings.get(key) === text) return
+      settings.set(key, text)
+      ipcRenderer.send(IPC.settingsSet, key, text)
+    },
+    removeItem: (key) => {
+      if (!settings.delete(key)) return
+      ipcRenderer.send(IPC.settingsRemove, key)
+    },
+    exportFile: () => ipcRenderer.invoke(IPC.settingsExport),
+    importFile: () => ipcRenderer.invoke(IPC.settingsImport)
   }
 }
 

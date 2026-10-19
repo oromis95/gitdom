@@ -36,7 +36,7 @@ describe('credentials', () => {
     git(repo, 'remote', 'add', 'origin', `http://127.0.0.1:${port}/demo.git`)
     // No credential helper: the system's one would answer instead of the dialog
     git(repo, 'config', 'credential.helper', '')
-    gitdom = await launch([repo], { NO_PROXY: '127.0.0.1', no_proxy: '127.0.0.1' })
+    gitdom = await launch([repo], { env: { NO_PROXY: '127.0.0.1', no_proxy: '127.0.0.1' } })
   })
 
   afterEach(() => expect(gitdom.errors).toEqual([]))

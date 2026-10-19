@@ -11,6 +11,7 @@ import {
   type ShortcutDef,
   type ShortcutId
 } from './keys'
+import { storage } from './storage'
 
 export { SHORTCUTS, type ShortcutDef, type ShortcutId }
 
@@ -25,7 +26,7 @@ type Overrides = Partial<Record<ShortcutId, string[]>>
 
 function savedOverrides(): Overrides {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(KEY) ?? '{}')
+    const value: unknown = JSON.parse(storage.getItem(KEY) ?? '{}')
     if (!value || typeof value !== 'object') return {}
     const result: Overrides = {}
     for (const [id, keys] of Object.entries(value)) {
@@ -68,7 +69,7 @@ export function withShortcut(text: string, id: ShortcutId): string {
 }
 
 function save(overrides: Overrides): void {
-  localStorage.setItem(KEY, JSON.stringify(overrides))
+  storage.setItem(KEY, JSON.stringify(overrides))
   useShortcuts.setState({ overrides })
   sendToMenu()
 }

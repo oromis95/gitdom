@@ -1,8 +1,9 @@
-// User preferences (SET-01, SET-02, SET-04): saved in localStorage and applied at startup.
+// User preferences (SET-01, SET-02, SET-04): saved in the settings file and applied at startup.
 // Theme, pull mode and the startup logo keep their own keys (theme.ts, actions.ts).
 import { create } from 'zustand'
 import type { ToolSettings } from '../../shared/api'
 import type { CommitCheckKind } from '../../shared/commitChecks'
+import { storage } from './storage'
 
 export interface Settings extends ToolSettings {
   /** Interface font family; empty for the default */
@@ -117,7 +118,7 @@ const clamp = (value: number, min: number, max: number): number =>
 function load(): Settings {
   let saved: Record<string, unknown> = {}
   try {
-    saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}')
+    saved = JSON.parse(storage.getItem(SETTINGS_KEY) ?? '{}')
   } catch {
     // Unreadable: start over from the defaults
   }
@@ -181,7 +182,7 @@ function apply(s: Settings): void {
 export function updateSettings(patch: Partial<Settings>): void {
   useSettings.setState(patch)
   const next = useSettings.getState()
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
+  storage.setItem(SETTINGS_KEY, JSON.stringify(next))
   apply(next)
 }
 

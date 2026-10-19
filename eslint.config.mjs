@@ -28,5 +28,15 @@ export default defineConfig(
       ...eslintPluginReactRefresh.configs.vite.rules
     }
   },
+  {
+    // Settings go to the settings file (renderer/src/storage.ts), which survives a new profile
+    files: ['src/renderer/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'localStorage', message: 'Use storage from renderer/src/storage.ts' }
+      ]
+    }
+  },
   eslintConfigPrettier
 )

@@ -1,8 +1,9 @@
-// Tool dialogs, patches and bisect.
+// Tool dialogs, patches, bisect and the settings file.
 import type { BisectMark, CleanScope, PatchSource } from '../../../shared/api'
 import type { RepoSnapshot } from '../../../shared/types'
 import { notify, showForm, useUi } from '../ui'
 import { fail, run, runBusy, runOutcome, runValue } from './core'
+import { storage } from '../storage'
 
 /** Opens the ignored files of a repository, checking a path first when given. */
 export function showIgnoredFiles(repo: string, path: string): void {
@@ -130,7 +131,7 @@ export async function runBisect(repo: string): Promise<void> {
       {
         key: 'command',
         label: 'Command, run in the repository folder',
-        initial: localStorage.getItem(BISECT_COMMAND_KEY) ?? 'npm test'
+        initial: storage.getItem(BISECT_COMMAND_KEY) ?? 'npm test'
       }
     ],
     message:
@@ -139,7 +140,20 @@ export async function runBisect(repo: string): Promise<void> {
   })
   const command = values ? String(values.command).trim() : ''
   if (!command) return
-  localStorage.setItem(BISECT_COMMAND_KEY, command)
+  storage.setItem(BISECT_COMMAND_KEY, command)
   const result = await runBusy(repo, 'Bisecting', 'bisectRun', command)
   if (!result.ok) fail(result)
+}
+
+/** Saves every setting to a file, to keep or to take to another computer. */
+export async function exportSettings(): Promise<void> {
+  const result = await storage.exportFile()
+  if (!result.ok) notify('error', `Couldn't export the settings: ${result.error}`)
+  else if (result.value) notify('success', `Settings exported to ${result.value}`)
+}
+
+/** Replaces every setting with those of a file; GitDom then reloads to use them. */
+export async function importSettings(): Promise<void> {
+  const result = await storage.importFile()
+  if (!result.ok) notify('error', `Couldn't import the settings: ${result.error}`)
 }

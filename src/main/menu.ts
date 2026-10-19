@@ -64,6 +64,9 @@ function build(): void {
       { label: 'New Repository…', click: send('init') },
       { type: 'separator' },
       { label: 'Apply Patch…', click: send('applyPatch') },
+      { type: 'separator' },
+      { label: 'Export Settings…', click: send('exportSettings') },
+      { label: 'Import Settings…', click: send('importSettings') },
       ...(mac
         ? []
         : ([

@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { registerAskpass } from './askpassDialog'
 import { registerIpcHandlers } from './ipc'
 import { registerMenu } from './menu'
+import { registerSettings } from './settingsIpc'
 import { adoptShellEnv } from './shellEnv'
 import { closeAllTerminals } from './terminal'
 import { registerUpdateLifecycle } from './updates'
@@ -63,6 +64,7 @@ app.whenReady().then(async () => {
 
   // Before any git command: on macOS and Linux git may only be on the login shell's PATH
   await adoptShellEnv()
+  registerSettings()
   registerIpcHandlers()
   registerAskpass()
   registerUpdateLifecycle()

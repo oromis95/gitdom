@@ -799,6 +799,22 @@ export interface StatisticsApi {
   onProgress(listener: (progress: StatisticsProgress) => void): () => void
 }
 
+/**
+ * The settings file, with the calls of localStorage: reads come from a copy loaded at startup,
+ * so they stay synchronous, and writes reach the file a moment later.
+ */
+export interface StorageApi {
+  /** False on the first run with a settings file: the renderer moves localStorage's over. */
+  readonly existed: boolean
+  getItem(key: string): string | null
+  setItem(key: string, value: string): void
+  removeItem(key: string): void
+  /** Saves every setting to a file the user picks; resolves its path, null when cancelled. */
+  exportFile(): Promise<Result<string | null>>
+  /** Replaces every setting with those of a file, then reloads the window to use them. */
+  importFile(): Promise<Result<string | null>>
+}
+
 /** Questions of git and ssh while a command runs: credentials, key passphrases, unknown hosts. */
 export interface AskpassApi {
   onRequest(listener: (request: AskpassRequest) => void): () => void
@@ -864,6 +880,8 @@ export type MenuCommand =
   | 'myWeek'
   | 'whatsNew'
   | 'checkUpdates'
+  | 'exportSettings'
+  | 'importSettings'
 
 /** API exposed by the preload script on `window.api`. */
 export interface GitDomApi {
@@ -889,6 +907,7 @@ export interface GitDomApi {
   app: AppApi
   statistics: StatisticsApi
   askpass: AskpassApi
+  storage: StorageApi
 }
 
 export const IPC = {
@@ -937,5 +956,10 @@ export const IPC = {
   statsCancel: 'stats:cancel',
   statsProgress: 'stats:progress',
   askpassRequest: 'askpass:request',
-  askpassReply: 'askpass:reply'
+  askpassReply: 'askpass:reply',
+  settingsLoad: 'settings:load',
+  settingsSet: 'settings:set',
+  settingsRemove: 'settings:remove',
+  settingsExport: 'settings:export',
+  settingsImport: 'settings:import'
 } as const

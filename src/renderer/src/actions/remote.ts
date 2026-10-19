@@ -4,6 +4,7 @@ import { isAuthFailure } from '../../../shared/askpass'
 import type { RepoSnapshot, Submodule } from '../../../shared/types'
 import { confirm, notify, prompt, showForm } from '../ui'
 import { fail, reportOutcome, run, runBusy } from './core'
+import { storage } from '../storage'
 
 // --- Sync -----------------------------------------------------------------------------------
 
@@ -214,10 +215,10 @@ export async function lfsUntrack(repo: string, pattern: string): Promise<void> {
 const PULL_MODE_KEY = 'gitdom.pullMode'
 
 export function savedPullMode(): PullMode {
-  const saved = localStorage.getItem(PULL_MODE_KEY)
+  const saved = storage.getItem(PULL_MODE_KEY)
   return saved === 'ff-only' || saved === 'rebase' ? saved : 'ff'
 }
 
 export function savePullMode(mode: PullMode): void {
-  localStorage.setItem(PULL_MODE_KEY, mode)
+  storage.setItem(PULL_MODE_KEY, mode)
 }

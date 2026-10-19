@@ -20,6 +20,7 @@ import {
   yearsOf
 } from '../statistics'
 import { Avatar } from './HoverCards'
+import { storage } from '../storage'
 
 const OPTIONS_KEY = 'gitdom.statistics'
 const PERIODS: [number | null, string][] = [
@@ -40,9 +41,7 @@ const shortMonth = (month: string): string => monthLabel.format(new Date(`${mont
 
 function loadOptions(): StatisticsOptions {
   try {
-    const saved = JSON.parse(
-      localStorage.getItem(OPTIONS_KEY) ?? '{}'
-    ) as Partial<StatisticsOptions>
+    const saved = JSON.parse(storage.getItem(OPTIONS_KEY) ?? '{}') as Partial<StatisticsOptions>
     return {
       sinceDays: PERIODS.some(([days]) => days === saved.sinceDays) ? saved.sinceDays! : null,
       allBranches: saved.allBranches === true
@@ -616,7 +615,7 @@ export default function StatisticsView({
 
   const change = (next: Partial<StatisticsOptions>): void => {
     const merged = { ...options, ...next }
-    localStorage.setItem(OPTIONS_KEY, JSON.stringify(merged))
+    storage.setItem(OPTIONS_KEY, JSON.stringify(merged))
     setProgress(0)
     setOptions(merged)
   }

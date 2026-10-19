@@ -5,6 +5,7 @@ import type { ReleaseInfo } from '../../shared/api'
 import { compareVersions, parseChangelog, type ChangelogEntry } from '../../shared/releases'
 import { useSettings } from './settings'
 import { notify } from './ui'
+import { storage } from './storage'
 
 const LAST_VERSION_KEY = 'gitdom.lastVersion'
 const SKIPPED_KEY = 'gitdom.skippedVersion'
@@ -60,7 +61,7 @@ export async function checkForUpdates(manual = false): Promise<void> {
   }
   const release = result.value
   const newer = compareVersions(release.version, __APP_VERSION__) > 0
-  if (newer && (manual || localStorage.getItem(SKIPPED_KEY) !== release.version)) {
+  if (newer && (manual || storage.getItem(SKIPPED_KEY) !== release.version)) {
     // Needs the portable exe or the installed GitDom, and a release with its checksum
     const selfUpdate =
       !!release.downloadUrl && !!release.checksumUrl && (await window.api.app.canSelfUpdate())
@@ -113,7 +114,7 @@ export async function installUpdate(): Promise<void> {
 /** Stops the startup notice for this release; the next one shows again. */
 export function skipUpdate(): void {
   const { available } = useUpdates.getState()
-  if (available) localStorage.setItem(SKIPPED_KEY, available.version)
+  if (available) storage.setItem(SKIPPED_KEY, available.version)
   dismissUpdate()
 }
 
@@ -131,9 +132,9 @@ export function showReleaseNotes(release: ReleaseInfo): void {
  */
 export function startupChecks(): void {
   const last =
-    localStorage.getItem(LAST_VERSION_KEY) ??
-    (localStorage.getItem('gitdom.tabs') || localStorage.getItem('gitdom.recent') ? '0.5.0' : null)
-  localStorage.setItem(LAST_VERSION_KEY, __APP_VERSION__)
+    storage.getItem(LAST_VERSION_KEY) ??
+    (storage.getItem('gitdom.tabs') || storage.getItem('gitdom.recent') ? '0.5.0' : null)
+  storage.setItem(LAST_VERSION_KEY, __APP_VERSION__)
   if (last && compareVersions(__APP_VERSION__, last) > 0)
     void changelog().then((all) => {
       const entries = all.filter(

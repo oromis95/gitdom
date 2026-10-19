@@ -73,7 +73,9 @@ export {
   showReleaseNotes,
   showRepoHealth,
   startBisect,
-  stopBisect
+  stopBisect,
+  exportSettings,
+  importSettings
 } from './tools'
 export {
   commitMenu,

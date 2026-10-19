@@ -16,6 +16,7 @@ import {
   type ThemeDef,
   type ThemePalette
 } from './themes'
+import { storage } from './storage'
 
 export type { ThemeChoice }
 /** Colours the CSS rules follow, on <html data-theme> */
@@ -64,7 +65,7 @@ function validTheme(value: unknown): value is ThemeDef {
 
 function savedCustom(): ThemeDef[] {
   try {
-    const list: unknown = JSON.parse(localStorage.getItem(CUSTOM_KEY) ?? '[]')
+    const list: unknown = JSON.parse(storage.getItem(CUSTOM_KEY) ?? '[]')
     return Array.isArray(list) ? list.filter(validTheme) : []
   } catch {
     return []
@@ -76,10 +77,10 @@ function findTheme(id: ThemeChoice, custom: ThemeDef[]): ThemeDef | undefined {
 }
 
 function saved(custom: ThemeDef[]): ThemeChoice {
-  const stored = localStorage.getItem(THEME_KEY) ?? 'dark'
+  const stored = storage.getItem(THEME_KEY) ?? 'dark'
   // A custom theme can't have one of those ids (they start with "custom-")
   const value = REMOVED_THEMES[stored] ?? stored
-  if (value !== stored) localStorage.setItem(THEME_KEY, value)
+  if (value !== stored) storage.setItem(THEME_KEY, value)
   return CSS_THEMES.some((t) => t.id === value) || findTheme(value, custom) ? value : 'dark'
 }
 
@@ -132,7 +133,7 @@ export const useTheme = create<ThemeState>(() => {
     custom,
     revision: 0,
     layout: layoutOf(base),
-    detailHidden: localStorage.getItem(DETAIL_KEY) === '1',
+    detailHidden: storage.getItem(DETAIL_KEY) === '1',
     sidebarOpen: false,
     detailClosedFor: null
   }
@@ -176,7 +177,7 @@ function apply(choice: ThemeChoice): void {
 }
 
 export function setTheme(theme: ThemeChoice): void {
-  localStorage.setItem(THEME_KEY, theme)
+  storage.setItem(THEME_KEY, theme)
   apply(theme)
 }
 
@@ -204,14 +205,14 @@ export function saveCustomTheme(theme: ThemeDef): void {
   const next = custom.some((t) => t.id === theme.id)
     ? custom.map((t) => (t.id === theme.id ? theme : t))
     : [...custom, theme]
-  localStorage.setItem(CUSTOM_KEY, JSON.stringify(next))
+  storage.setItem(CUSTOM_KEY, JSON.stringify(next))
   useTheme.setState({ custom: next })
   apply(useTheme.getState().theme)
 }
 
 export function deleteCustomTheme(id: string): void {
   const next = useTheme.getState().custom.filter((t) => t.id !== id)
-  localStorage.setItem(CUSTOM_KEY, JSON.stringify(next))
+  storage.setItem(CUSTOM_KEY, JSON.stringify(next))
   useTheme.setState({ custom: next })
   if (useTheme.getState().theme === id) setTheme('dark')
   else apply(useTheme.getState().theme)
@@ -238,7 +239,7 @@ export function exportTheme(theme: ThemeDef): string {
 }
 
 export function toggleDetail(hidden = !useTheme.getState().detailHidden): void {
-  localStorage.setItem(DETAIL_KEY, hidden ? '1' : '0')
+  storage.setItem(DETAIL_KEY, hidden ? '1' : '0')
   useTheme.setState({ detailHidden: hidden })
 }
 
@@ -262,11 +263,11 @@ const SPLASH_KEY = 'gitdom.splash'
 /** Startup logo: on unless turned off, or when the system asks for reduced motion */
 export function splashEnabled(): boolean {
   return (
-    localStorage.getItem(SPLASH_KEY) !== 'off' &&
+    storage.getItem(SPLASH_KEY) !== 'off' &&
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   )
 }
 
 export function setSplashEnabled(enabled: boolean): void {
-  localStorage.setItem(SPLASH_KEY, enabled ? 'on' : 'off')
+  storage.setItem(SPLASH_KEY, enabled ? 'on' : 'off')
 }

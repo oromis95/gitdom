@@ -5,6 +5,7 @@ import type { ShortcutId } from './keys'
 import { updateSettings, useSettings } from './settings'
 import { shortcutLabel } from './shortcuts'
 import { useUpdates } from './updates'
+import { storage } from './storage'
 
 export interface Tip {
   id: string
@@ -281,7 +282,7 @@ const STARTUP_DELAY = 1200
 
 function seen(): Set<string> {
   try {
-    return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) ?? '[]') as string[])
+    return new Set(JSON.parse(storage.getItem(SEEN_KEY) ?? '[]') as string[])
   } catch {
     return new Set()
   }
@@ -306,8 +307,8 @@ export const useTips = create<TipsState>(() => ({ open: null }))
 export function showTip(index = 0): void {
   const i = (index + TIPS.length) % TIPS.length
   const ids = seen().add(TIPS[i].id)
-  localStorage.setItem(SEEN_KEY, JSON.stringify([...ids]))
-  localStorage.setItem(LAST_KEY, TIPS[i].id)
+  storage.setItem(SEEN_KEY, JSON.stringify([...ids]))
+  storage.setItem(LAST_KEY, TIPS[i].id)
   useTips.setState({ open: i })
 }
 
@@ -328,7 +329,7 @@ export function startupTip(): void {
     if (!useSettings.getState().showTips || useUpdates.getState().whatsNew || dialogOpen()) return
     const done = seen()
     const fresh = TIPS.findIndex((t) => !done.has(t.id))
-    const last = TIPS.findIndex((t) => t.id === localStorage.getItem(LAST_KEY))
+    const last = TIPS.findIndex((t) => t.id === storage.getItem(LAST_KEY))
     showTip(fresh >= 0 ? fresh : last + 1)
   }, STARTUP_DELAY)
 }

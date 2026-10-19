@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { useApp } from './store'
 import { confirm, notify, prompt, type MenuItem } from './ui'
 import { samePath } from './worktrees'
+import { storage } from './storage'
 
 export interface Workspace {
   name: string
@@ -13,7 +14,7 @@ const KEY = 'gitdom.workspaces'
 
 function read(): Workspace[] {
   try {
-    const list = JSON.parse(localStorage.getItem(KEY) ?? '[]')
+    const list = JSON.parse(storage.getItem(KEY) ?? '[]')
     return Array.isArray(list) ? list.filter((w) => w?.name && Array.isArray(w.paths)) : []
   } catch {
     return []
@@ -24,7 +25,7 @@ export const useWorkspaces = create<{ list: Workspace[] }>(() => ({ list: read()
 
 function save(list: Workspace[]): void {
   const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name))
-  localStorage.setItem(KEY, JSON.stringify(sorted))
+  storage.setItem(KEY, JSON.stringify(sorted))
   useWorkspaces.setState({ list: sorted })
 }
 

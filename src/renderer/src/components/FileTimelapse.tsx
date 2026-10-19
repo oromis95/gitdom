@@ -32,6 +32,7 @@ import {
 } from '../timelapse'
 import TimelapseTrack from './TimelapseTrack'
 import { copyHash, dayFormat, formatDate, showInGraph, useLoaded } from './inspect'
+import { storage } from '../storage'
 
 const VIEW_KEY = 'gitdom.timelapse'
 
@@ -52,7 +53,7 @@ const DEFAULT_VIEW: View = {
 
 function savedView(): View {
   try {
-    const saved = JSON.parse(localStorage.getItem(VIEW_KEY) ?? '{}') as Partial<View>
+    const saved = JSON.parse(storage.getItem(VIEW_KEY) ?? '{}') as Partial<View>
     return {
       ...DEFAULT_VIEW,
       ...saved,
@@ -223,7 +224,7 @@ function TimelapseView({
   const setView = (change: Partial<View>): void => {
     const next = { ...view, ...change }
     setViewState(next)
-    localStorage.setItem(VIEW_KEY, JSON.stringify(next))
+    storage.setItem(VIEW_KEY, JSON.stringify(next))
   }
 
   const lower = useMemo(() => t.text.map((s) => s.toLowerCase()), [t])

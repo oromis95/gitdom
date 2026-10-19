@@ -1,5 +1,6 @@
 // State of the integrated terminal dock: one shell per repository, kept alive while hidden.
 import { create } from 'zustand'
+import { storage } from './storage'
 
 const HEIGHT_KEY = 'gitdom.terminalHeight'
 const SHELL_KEY = 'gitdom.terminalShell'
@@ -16,8 +17,8 @@ interface TerminalState {
 
 export const useTerminal = create<TerminalState>(() => ({
   shown: false,
-  height: Number(localStorage.getItem(HEIGHT_KEY)) || 280,
-  shell: localStorage.getItem(SHELL_KEY),
+  height: Number(storage.getItem(HEIGHT_KEY)) || 280,
+  shell: storage.getItem(SHELL_KEY),
   sessions: {}
 }))
 
@@ -27,7 +28,7 @@ export function toggleTerminal(show = !useTerminal.getState().shown): void {
 
 export function setTerminalHeight(height: number): void {
   const clamped = Math.round(Math.max(MIN_HEIGHT, Math.min(height, window.innerHeight * 0.75)))
-  localStorage.setItem(HEIGHT_KEY, String(clamped))
+  storage.setItem(HEIGHT_KEY, String(clamped))
   useTerminal.setState({ height: clamped })
 }
 
@@ -54,6 +55,6 @@ export function pruneSessions(openRepos: string[]): void {
 
 /** Switches shell: the open terminals restart with it. */
 export function setShell(shell: string): void {
-  localStorage.setItem(SHELL_KEY, shell)
+  storage.setItem(SHELL_KEY, shell)
   useTerminal.setState({ shell })
 }

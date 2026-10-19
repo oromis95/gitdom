@@ -1,6 +1,7 @@
 // State of the activity log dock (UI-09): the git commands the main process reports as they end.
 import { create } from 'zustand'
 import type { ActivityEntry } from '../../shared/api'
+import { storage } from './storage'
 
 const HEIGHT_KEY = 'gitdom.activityHeight'
 const BACKGROUND_KEY = 'gitdom.activityBackground'
@@ -17,9 +18,9 @@ interface ActivityState {
 
 export const useActivity = create<ActivityState>(() => ({
   shown: false,
-  height: Number(localStorage.getItem(HEIGHT_KEY)) || 260,
+  height: Number(storage.getItem(HEIGHT_KEY)) || 260,
   entries: [],
-  background: localStorage.getItem(BACKGROUND_KEY) === 'true'
+  background: storage.getItem(BACKGROUND_KEY) === 'true'
 }))
 
 let listening = false
@@ -49,12 +50,12 @@ export function toggleActivity(show = !useActivity.getState().shown): void {
 
 export function setActivityHeight(height: number): void {
   const clamped = Math.round(Math.max(MIN_HEIGHT, Math.min(height, window.innerHeight * 0.75)))
-  localStorage.setItem(HEIGHT_KEY, String(clamped))
+  storage.setItem(HEIGHT_KEY, String(clamped))
   useActivity.setState({ height: clamped })
 }
 
 export function setShowBackground(background: boolean): void {
-  localStorage.setItem(BACKGROUND_KEY, String(background))
+  storage.setItem(BACKGROUND_KEY, String(background))
   useActivity.setState({ background })
 }
 

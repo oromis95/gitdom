@@ -3,6 +3,7 @@ import type { Identity, RepoSnapshot, Signing } from '../../shared/types'
 import { run } from './actions'
 import { useApp } from './store'
 import { notify, showForm, type MenuItem } from './ui'
+import { storage } from './storage'
 
 const PROFILES_KEY = 'gitdom.profiles'
 const blank: Identity = { name: null, email: null, scope: null }
@@ -14,7 +15,7 @@ export interface Profile {
 
 export function loadProfiles(): Profile[] {
   try {
-    const saved = JSON.parse(localStorage.getItem(PROFILES_KEY) ?? '[]')
+    const saved = JSON.parse(storage.getItem(PROFILES_KEY) ?? '[]')
     return Array.isArray(saved) ? saved.filter((p) => p?.name && p?.email) : []
   } catch {
     return []
@@ -22,7 +23,7 @@ export function loadProfiles(): Profile[] {
 }
 
 const storeProfiles = (profiles: Profile[]): void =>
-  localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles))
+  storage.setItem(PROFILES_KEY, JSON.stringify(profiles))
 
 const sameProfile = (a: Profile, b: Profile): boolean => a.name === b.name && a.email === b.email
 
