@@ -2,15 +2,7 @@ import { readFileSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { version } from '../package.json'
-import { cleanUp, launch, makeRepo, scratch } from './helpers'
-import type { Page } from 'playwright-core'
-
-/** Runs a command of the palette, found by the start of its title. */
-async function palette(win: Page, title: string): Promise<void> {
-  await win.keyboard.press('ControlOrMeta+Shift+P')
-  await win.locator('.palette input').fill(title)
-  await win.keyboard.press('Enter')
-}
+import { cleanUp, launch, makeRepo, palette, scratch } from './helpers'
 
 const settingsOf = (profile: string): Record<string, string> =>
   JSON.parse(readFileSync(join(profile, 'settings.json'), 'utf8'))

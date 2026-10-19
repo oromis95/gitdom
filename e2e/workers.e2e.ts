@@ -1,14 +1,6 @@
 import { execFileSync } from 'child_process'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { cleanUp, launch, makeRepo, scratch, type Running } from './helpers'
-import type { Page } from 'playwright-core'
-
-/** Runs a command of the palette, found by the start of its title. */
-async function palette(win: Page, title: string): Promise<void> {
-  await win.keyboard.press('ControlOrMeta+Shift+P')
-  await win.locator('.palette input').fill(title)
-  await win.keyboard.press('Enter')
-}
+import { cleanUp, launch, makeRepo, palette, scratch, type Running } from './helpers'
 
 /**
  * Adds `count` commits that each rewrite a tenth of the lines of big.txt, in one `git fast-import`:

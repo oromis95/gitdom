@@ -218,6 +218,15 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 - ✅ **Tag e segnalibro sulla barra**: i tag di release segnati sulla timeline; un segnalibro su un commit per tornarci (M per metterlo, ' per saltare avanti e indietro) e aprire il diff tool esterno tra il segnalibro e la versione mostrata
 - ✅ Le modifiche non ancora committate sono l'ultimo passo della timeline; il dettaglio del commit mostrato segue la timeline
 
+## Step 17 — v1.11: Qualità interna ✅
+
+> Completato, da pubblicare con la v1.11.0. Quattro dei cinque miglioramenti dell'analisi di ottobre 2026; la firma degli aggiornamenti (chiave propria o certificati Authenticode/Apple) è rimasta fuori per scelta.
+
+- ✅ **Impostazioni su file** (SET-05): `settings.json` nella cartella di GitDom al posto del localStorage dell'interfaccia; il preload le legge una volta all'avvio (in modo sincrono, così i moduli che le leggono subito non cambiano) e il main le scrive poco dopo ogni modifica, in modo atomico, e subito alla chiusura. Al primo avvio le impostazioni del localStorage passano nel file, che resta com'era per una versione precedente. **File → Export Settings… / Import Settings…** salvano e ripristinano tutto. Una regola di ESLint impedisce di tornare al localStorage
+- ✅ **Calcoli lunghi in un worker thread**: le righe del time-lapse (un diff per versione) e le somme delle statistiche girano in `out/main/worker.js`; git resta nel processo principale. Misurato su 400 versioni di un file di 4000 righe: il processo principale risponde in 170 ms al massimo invece di restare fermo per 5 secondi. Annullare le statistiche ferma anche il calcolo finale
+- ✅ **CSS in file per funzione**: `workflow.css` e `tips.css` (oltre 3000 righe ciascuno) diventano indici di `@import` di `assets/workflow/` e `assets/tips/`, nello stesso ordine: il CSS costruito è identico byte per byte
+- ✅ **Componenti più piccoli e test dei flussi**: `GraphView`, `FileInspector`, `StatisticsView` e `TipAnimation` divisi in `graph/`, `inspector/`, `statistics/` e `tips/` senza cambiare il comportamento; nuovi test end-to-end per stage di righe e hunk, stash di un file, cherry-pick, rebase interattivo, riordino dei commit trascinandoli, merge tool e merge trascinando un branch, oltre a impostazioni e worker
+
 ---
 
 ## Forse, un giorno
@@ -243,4 +252,3 @@ Funzioni che dipendono da servizi esterni o poco usate nel lavoro quotidiano: re
 
 - **Variante chiara del tema Studio**, per chi vuole il layout Studio ma con fondo chiaro
 - **Timeline animata** della storia del repository, in stile con il logo dell'autostrada
-- **Condivisione della configurazione** (temi, profili, scorciatoie) tramite un file esportabile (SET-05)

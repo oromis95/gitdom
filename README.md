@@ -122,6 +122,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Path of the git executable, external editor, merge tool and diff tool
 - **Git config**: see and edit your global git settings and those of the open repository, with a filter
 - Startup check for new versions
+- **Export Settings…** and **Import Settings…** in the **File** menu: every setting in one file, to keep or to take to another computer. GitDom keeps them in `settings.json`, in its folder (`%APPDATA%\GitDom` on Windows)
 
 **Updates**
 
@@ -211,11 +212,11 @@ npm run dev
 
 - **Electron** with **electron-vite**
 - **React** + **TypeScript** for the interface, with **Zustand** for state
-- Git runs as child processes of the main process. Its output is parsed and sent to the interface over IPC.
+- Git runs as child processes of the main process. Its output is parsed and sent to the interface over IPC; long computations (the time-lapse, the statistics) run in a worker thread, so the main process keeps answering.
 - **Canvas 2D** for the commit graph
 - **highlight.js** for diffs
 - **xterm.js** + **node-pty** for the integrated terminal
-- **Vitest** tests, run against real temporary repositories, and end-to-end tests that drive the built app with **Playwright**; GitHub Actions runs them at every push on Windows, Linux and macOS (with formatting, lint, types and a build; a release is published only when they pass); `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository
+- **Vitest** tests, run against real temporary repositories, and end-to-end tests that drive the built app with **Playwright**; GitHub Actions runs them at every push on Windows, Linux and macOS (with formatting, lint, types and a build; a release is published only when they pass); `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository (and with `GITDOM_BENCH_FILE=<file>`, its time-lapse)
 - The interface runs in Chromium's sandbox and reaches git only through the typed API of the preload script
 
 ```

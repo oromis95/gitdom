@@ -2,6 +2,18 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- **Export and import your settings** (**File → Export Settings…** and **Import Settings…**, or the command palette): themes, shortcuts, profiles, workspaces and preferences in one file, to keep or to take to another computer
+
+### Changed
+
+- Settings are saved in a file, `settings.json` in GitDom's folder (`%APPDATA%\GitDom` on Windows), instead of the browser storage of the interface; the first start of this version moves them over by itself, and an older GitDom still finds its own
+- The time-lapse and the statistics are computed in a thread of their own: while a long history is read, GitDom keeps answering, instead of freezing until it's done
+- Under the hood: smaller interface files (the graph, the file inspector, the statistics, the tips) and styles in one file per feature, without changing how anything looks; end-to-end tests for staging lines and hunks, stashing one file, cherry-picking, interactive rebase, reordering commits by dragging, the merge tool and merging by dragging a branch
+
 ## 1.10.0 — 2026-10-13
 
 ### Added
