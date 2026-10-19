@@ -91,10 +91,23 @@ export async function launch(
   const packaged = process.env.GITDOM_E2E_EXE
   const app = await _electron.launch({
     executablePath: packaged || (electronPath as unknown as string),
-    args: packaged ? [] : [ROOT],
+    // A window Windows thinks hidden behind others stops drawing frames, and Playwright then waits
+    // forever for the elements to be still before clicking them
+    args: [
+      ...(packaged ? [] : [ROOT]),
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--disable-background-timer-throttling'
+    ],
     env: { ...process.env, GITDOM_USER_DATA: userData, ...env } as Record<string, string>
   })
   const win = await app.firstWindow()
+  // The size of the CI runners' screens, whatever the screen here: the layout is the same everywhere
+  await app.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows()[0]
+    window?.setSize(1024, 768)
+    window?.focus()
+  })
   const errors: string[] = []
   win.on('pageerror', (e) => errors.push(e.message))
   if (repos.length > 0) await win.waitForSelector('.graph-row', { timeout: 60000 })

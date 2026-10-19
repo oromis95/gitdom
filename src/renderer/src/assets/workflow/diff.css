@@ -9,12 +9,16 @@
 .diff-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  /* In a narrow window the buttons go on a second line instead of under the detail panel */
+  flex-wrap: wrap;
+  gap: 6px 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-panel);
 }
 .diff-path {
+  flex-shrink: 0;
+  max-width: 100%;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
