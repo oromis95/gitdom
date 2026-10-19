@@ -5,6 +5,7 @@ import { confirm, notify, useUi, type CleanSession } from '../ui'
 import { run } from '../actions'
 import { formatBytes } from '../statistics'
 import { TRASH } from '../platform'
+import FilePath from './FilePath'
 
 const SCOPES: { scope: CleanScope; label: string; title: string }[] = [
   { scope: 'untracked', label: 'Untracked', title: 'New files git doesn’t know about yet' },
@@ -180,9 +181,7 @@ function Dialog({ session }: { session: CleanSession }): React.JSX.Element {
                   onChange={(ev) => tick([e.path], ev.target.checked)}
                 />
                 {e.path.endsWith('/') ? <Folder size={13} /> : <FileText size={13} />}
-                <span className="clean-up-path mono" title={e.path}>
-                  {e.path}
-                </span>
+                <FilePath className="clean-up-path" path={e.path} />
                 {scope === 'all' && e.ignored && <span className="clean-up-tag">ignored</span>}
                 <span className="clean-up-size">
                   {e.path.endsWith('/') && `${plural(e.files, 'file')}${e.partial ? '+' : ''} · `}

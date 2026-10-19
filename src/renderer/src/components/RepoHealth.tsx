@@ -4,6 +4,7 @@ import type { HeavyObject, Maintenance, RepoHealth as Health } from '../../../sh
 import { notify, openMenu, useUi, type HealthSession } from '../ui'
 import { copy, runValue } from '../actions'
 import { formatBytes } from '../statistics'
+import FilePath from './FilePath'
 
 /** Thresholds past which packing pays off, as `git gc --auto` sees them, a bit earlier */
 const MANY_LOOSE = 1000
@@ -218,7 +219,7 @@ function Dialog({ session }: { session: HealthSession }): React.JSX.Element {
                 {formatBytes(o.diskSize)}
               </span>
               <FileText size={13} />
-              <span className="repo-health-path mono">{o.path}</span>
+              <FilePath className="repo-health-path" path={o.path} />
               <span className={`repo-health-state ${o.state}`} title={STATES[o.state].title}>
                 {STATES[o.state].label}
               </span>

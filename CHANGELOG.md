@@ -7,6 +7,7 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 ### Changed
 
 - Statistics: in **Hot files** and **Files only one person knows**, each file shows its name in full, with its folder beneath, and both lists take the whole width
+- **Split commit**, **Repository Health**, **Ignored Files** and **Clean Up** show each file's name in full too, above its folder, instead of cutting long paths before the name
 - The commit panel lists the changed files under **Changed Files**, as a list or a folder tree, without the tabs above them
 
 ### Removed

@@ -4,6 +4,7 @@ import { isNegation, type IgnoreRule } from '../../../shared/ignore'
 import { useUi, type IgnoredSession } from '../ui'
 import { openInEditor, run, showCleanUp } from '../actions'
 import { TRASH } from '../platform'
+import FilePath from './FilePath'
 
 /** Typing settles before the path is checked */
 const SETTLE_MS = 250
@@ -168,7 +169,7 @@ function Dialog({ session }: { session: IgnoredSession }): React.JSX.Element {
                 onClick={() => setQuery(r.path)}
               >
                 {r.path.endsWith('/') ? <Folder size={13} /> : <FileText size={13} />}
-                <span className="ignored-path mono">{r.path}</span>
+                <FilePath className="ignored-path" path={r.path} />
                 <code className="ignored-pattern mono">{r.pattern}</code>
                 <RuleSource repo={repo} rule={r} />
               </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useUi, type SplitSession } from '../ui'
 import { runSplitCommit } from '../actions'
+import FilePath from './FilePath'
 
 function Editor({ session }: { session: SplitSession }): React.JSX.Element {
   const close = (): void => useUi.setState({ split: null })
@@ -62,9 +63,7 @@ function Editor({ session }: { session: SplitSession }): React.JSX.Element {
             <label key={f.path} className="split-file">
               <input type="checkbox" checked={chosen.has(f.path)} onChange={() => toggle(f.path)} />
               <span className={`file-status status-${f.status}`}>{f.status}</span>
-              <span className="split-path mono" title={f.path}>
-                {f.oldPath ? `${f.oldPath} → ${f.path}` : f.path}
-              </span>
+              <FilePath className="split-path" path={f.path} from={f.oldPath} />
               <span className="split-where">{chosen.has(f.path) ? 'first' : 'second'}</span>
             </label>
           ))}

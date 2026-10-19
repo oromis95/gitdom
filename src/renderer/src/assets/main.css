@@ -119,6 +119,31 @@ input {
   font-family: 'Cascadia Code', Consolas, 'SF Mono', Menlo, 'DejaVu Sans Mono', monospace;
 }
 
+/* A path as its file's name above its folder (components/FilePath.tsx) */
+.path-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 2px 0;
+  line-height: 1.3;
+}
+.path-name,
+.path-folder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.path-name {
+  font-weight: 600;
+}
+/* The end of a long folder is the part that tells it apart: it's the start that gives way */
+.path-folder {
+  direction: rtl;
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
 /* ---------- Tab bar ---------- */
 
 .tabbar {
