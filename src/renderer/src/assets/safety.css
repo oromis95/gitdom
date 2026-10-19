@@ -582,14 +582,29 @@
   white-space: nowrap;
 }
 .stats-path {
+  display: flex;
+  flex-direction: column;
   flex: 1;
-  min-width: 0;
+  min-width: 140px;
+  padding: 3px 0;
+  line-height: 1.3;
+}
+.stats-file,
+.stats-folder {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.stats-file {
+  font-size: 12px;
+  font-weight: 600;
+}
+/* The end of a long folder is the part that tells it apart: it's the start that gives way */
+.stats-folder {
   direction: rtl;
   text-align: left;
-  font-size: 12px;
+  font-size: 11px;
+  color: var(--text-dim);
 }
 .stats-bar-cell {
   flex: 1 1 120px;
@@ -600,7 +615,8 @@
   overflow: hidden;
 }
 .stats-path + .stats-bar-cell {
-  flex: 0 0 80px;
+  flex: 0 1 80px;
+  min-width: 24px;
 }
 .stats-share {
   display: block;
@@ -624,8 +640,11 @@
   color: var(--red);
 }
 .stats-dates {
-  flex: none;
+  /* A long range of dates gives way in a narrow window; it's in full in the tooltip */
+  flex: 0 1 auto;
   min-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11.5px;
   text-align: right;
   white-space: nowrap;

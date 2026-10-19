@@ -2,6 +2,12 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Changed
+
+- Statistics: in **Hot files** and **Files only one person knows**, each file shows its name in full, with its folder beneath, and both lists take the whole width
+
 ## 1.11.1 — 2026-10-19
 
 Version 1.11.0 was never published: this release also brings everything listed under it.

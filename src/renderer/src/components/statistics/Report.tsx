@@ -157,6 +157,21 @@ function Languages({ stats }: { stats: RepoStatistics }): React.JSX.Element {
   )
 }
 
+/** A file's name, always readable, above its folder, which gives way when the room runs out. */
+function FilePath({ path }: { path: string }): React.JSX.Element {
+  const slash = path.lastIndexOf('/')
+  return (
+    <span className="stats-path" title={path}>
+      <span className="stats-file mono">{path.slice(slash + 1)}</span>
+      {slash > 0 && (
+        <span className="stats-folder">
+          <bdi>{path.slice(0, slash)}</bdi>
+        </span>
+      )}
+    </span>
+  )
+}
+
 function HotFiles({ stats }: { stats: RepoStatistics }): React.JSX.Element {
   const inspectFile = useApp((s) => s.inspectFile)
   if (!stats.hotspots.length) return <div className="muted">No files changed</div>
@@ -170,9 +185,7 @@ function HotFiles({ stats }: { stats: RepoStatistics }): React.JSX.Element {
           title="Open the file's history"
           onClick={() => inspectFile({ path: f.path, mode: 'history', rev: null })}
         >
-          <span className="stats-path mono">
-            <bdi>{f.path}</bdi>
-          </span>
+          <FilePath path={f.path} />
           <span className="stats-bar-cell" title={`Heat ${f.heat}`}>
             <span className="stats-share hot" style={{ width: `${(f.heat / hottest) * 100}%` }} />
           </span>
@@ -212,9 +225,7 @@ function Knowledge({ stats }: { stats: RepoStatistics }): React.JSX.Element {
               title="Open the file's blame"
               onClick={() => inspectFile({ path: f.path, mode: 'blame', rev: null })}
             >
-              <span className="stats-path mono">
-                <bdi>{f.path}</bdi>
-              </span>
+              <FilePath path={f.path} />
               <span className="stats-name">{f.owner}</span>
               <span className="stats-number">{formatCount(f.changes)}×</span>
               <span className="stats-dates muted">{relativeTime(f.last)}</span>
@@ -255,12 +266,14 @@ export default function Report({ stats }: { stats: RepoStatistics }): React.JSX.
       </Card>
       <Card
         title="Hot files"
+        wide
         hint="Files changed most, and most recently: where bugs and conflicts tend to be. Click one to see its history."
       >
         <HotFiles stats={stats} />
       </Card>
       <Card
         title="Files only one person knows"
+        wide
         hint="Changed by a single author. Click one to see its blame."
       >
         <Knowledge stats={stats} />
