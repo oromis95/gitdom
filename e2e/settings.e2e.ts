@@ -90,7 +90,8 @@ describe('Settings', () => {
 
       writeFileSync(exported, JSON.stringify({ ...saved, 'gitdom.theme': 'light' }))
       await palette(gitdom.win, 'Import settings from a file')
-      await gitdom.win.waitForFunction(() => document.documentElement.dataset.theme === 'light')
+      // The window reloads: for a moment there is no document element to read
+      await gitdom.win.waitForFunction(() => document.documentElement?.dataset.theme === 'light')
       await gitdom.win.waitForSelector('.graph-row')
       expect(gitdom.errors).toEqual([])
     } finally {
