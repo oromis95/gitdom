@@ -146,6 +146,8 @@ describe('staging and commit', () => {
     write('build/out.js', 'x\n')
     write('debug.log', 'x\n')
     write('keep.log', 'x\n')
+    mkdirSync(join(repo, 'logs'))
+    write('logs/app.log', 'x\n')
     mkdirSync(join(repo, '.git', 'info'), { recursive: true })
     write('.git/info/exclude', 'notes.txt\n')
     write('notes.txt', 'x\n')
@@ -163,10 +165,11 @@ describe('staging and commit', () => {
     expect((await runOp(repo, 'ignoreRule', ['notes.txt'])).rule?.source).toBe('.git/info/exclude')
 
     const { rules, total } = await runOp(repo, 'ignoredFiles', [])
-    expect(total).toBe(3)
+    expect(total).toBe(4)
     expect(rules.map((r) => [r.path, r.pattern])).toEqual([
       ['build/', 'build/'],
       ['debug.log', '*.log'],
+      ['logs/app.log', '*.log'],
       ['notes.txt', 'notes.txt']
     ])
   })

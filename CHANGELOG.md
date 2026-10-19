@@ -10,6 +10,10 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 - **Split commit**, **Repository Health**, **Ignored Files** and **Clean Up** show each file's name in full too, above its folder, instead of cutting long paths before the name
 - The commit panel lists the changed files under **Changed Files**, as a list or a folder tree, without the tabs above them
 
+### Fixed
+
+- **Ignored Files** lists the files of a folder ignored by a rule like `*.log`: it counted them but showed nothing
+
 ### Removed
 
 - **All files** in the commit panel, and its tip: a file as it was at a commit is still in the file inspector (**File**, beside History and Blame), with **Save as…**

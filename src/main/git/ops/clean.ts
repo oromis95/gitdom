@@ -76,8 +76,10 @@ export const cleanOps: Pick<
   },
 
   async ignoredFiles(repo) {
-    // Folders ignored as a whole come once, with a trailing slash, rather than their contents
-    const status = await runGit(repo, ['status', '--porcelain=v1', '-z', '--ignored'])
+    // As the rules match: a folder a rule ignores comes once, with a trailing slash; a folder
+    // whose files are all ignored by a rule like *.log comes as those files, since no rule
+    // matches the folder itself
+    const status = await runGit(repo, ['status', '--porcelain=v1', '-z', '--ignored=matching'])
     const paths = status
       .split('\0')
       .filter((entry) => entry.startsWith('!! '))
