@@ -1,0 +1,12 @@
+/* --- Sidebar -------------------------------------------------------------------------- */
+.section-add {
+  display: flex;
+  margin-left: 6px;
+  padding: 1px;
+  border-radius: 3px;
+  color: var(--text-muted);
+}
+.section-add:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}

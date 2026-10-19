@@ -1,0 +1,87 @@
+/* --- Edit a hunk -------------------------------------------------------------------------- */
+
+.ta-he-head {
+  position: absolute;
+  top: 32px;
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 6px;
+  background: var(--bg-panel);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  font-size: 10.5px;
+}
+.ta-he-gap {
+  flex: 1;
+}
+.ta-he-head .ta-btn {
+  font-family: var(--font-ui);
+}
+.ta-hunkEdit .ta-code {
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 20px;
+}
+.ta-he-box {
+  position: absolute;
+  top: 57px;
+  right: 9px;
+  left: 9px;
+  height: 86px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  animation-name: ta-he-box;
+}
+@keyframes ta-he-box {
+  0%,
+  27%,
+  60%,
+  100% {
+    border-color: transparent;
+  }
+  30%,
+  57% {
+    border-color: var(--accent);
+  }
+}
+.ta-he-debug {
+  opacity: 0;
+  animation-name: ta-he-debug;
+}
+@keyframes ta-he-debug {
+  0%,
+  42% {
+    opacity: 1;
+    text-decoration: none;
+  }
+  44%,
+  48% {
+    opacity: 0.6;
+    text-decoration: line-through;
+  }
+  52%,
+  100% {
+    opacity: 0;
+    text-decoration: line-through;
+  }
+}
+.ta-he-stage {
+  animation-name: ta-he-stage;
+}
+@keyframes ta-he-stage {
+  0%,
+  56%,
+  62%,
+  100% {
+    background: var(--bg-elevated);
+  }
+  58%,
+  60% {
+    background: var(--success-bg);
+  }
+}

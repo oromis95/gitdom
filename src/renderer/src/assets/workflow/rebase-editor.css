@@ -1,0 +1,101 @@
+/* --- Interactive rebase editor -------------------------------------------------------- */
+.modal.rebase-editor {
+  width: 760px;
+  max-height: 75vh;
+}
+.rebase-rows {
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.rebase-row {
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  background: var(--bg);
+}
+.rebase-row:last-child {
+  border-bottom: none;
+}
+.rebase-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 4px;
+  cursor: grab;
+}
+.rebase-row.dragging {
+  opacity: 0.4;
+}
+.rebase-row.drop-before {
+  box-shadow: inset 0 2px var(--accent);
+}
+.rebase-row.drop-after {
+  box-shadow: inset 0 -2px var(--accent);
+}
+.rebase-row.action-reword {
+  border-left-color: var(--accent);
+}
+.rebase-row.action-squash,
+.rebase-row.action-fixup {
+  border-left-color: var(--purple);
+}
+.rebase-row.action-drop {
+  border-left-color: var(--red);
+}
+.rebase-row.action-drop .rebase-subject,
+.rebase-row.action-drop .rebase-hash {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+.rebase-grip {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.rebase-row select,
+.merge-toolbar select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  width: 84px;
+}
+.rebase-hash {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.rebase-subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rebase-author {
+  color: var(--text-muted);
+  font-size: 12px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rebase-message {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 0 8px 8px 32px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-panel);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 6px 8px;
+  resize: vertical;
+  outline: none;
+}
+.rebase-problem {
+  color: var(--orange);
+  font-size: 13px;
+}

@@ -1,0 +1,111 @@
+/* --- Move commits ------------------------------------------------------------------------- */
+
+.ta-moveCommits .ta-cursor {
+  animation-name: ta-move-cursor;
+}
+@keyframes ta-move-cursor {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translate(380px, 170px);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(380px, 170px);
+  }
+  24% {
+    transform: translate(170px, 56px);
+  }
+  28% {
+    transform: translate(170px, 56px) scale(0.85);
+  }
+  31% {
+    transform: translate(170px, 56px);
+  }
+  42% {
+    transform: translate(230px, 72px);
+  }
+  48% {
+    transform: translate(230px, 72px) scale(0.85);
+  }
+  51%,
+  64% {
+    opacity: 1;
+    transform: translate(230px, 72px);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: translate(230px, 72px);
+  }
+}
+.ta-menu-move {
+  top: 62px;
+  left: 172px;
+  animation-name: ta-move-menu;
+}
+@keyframes ta-move-menu {
+  0%,
+  28% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  31%,
+  49% {
+    opacity: 1;
+    transform: none;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-moveCommits .ta-hit {
+  animation-name: ta-move-hit;
+}
+@keyframes ta-move-hit {
+  0%,
+  40%,
+  53%,
+  100% {
+    background: transparent;
+  }
+  43%,
+  50% {
+    background: var(--bg-selected);
+  }
+}
+.ta-moveCommits .ta-main {
+  transform: translateY(60px);
+  animation-name: ta-move-main;
+}
+@keyframes ta-move-main {
+  0%,
+  54% {
+    transform: none;
+  }
+  62%,
+  100% {
+    transform: translateY(60px);
+  }
+}
+.ta-moveCommits .ta-new {
+  border-color: var(--purple);
+  background: transparent;
+  color: var(--purple);
+  animation-name: ta-pop-late;
+}
+.ta-moveCommits .ta-moved .ta-dot {
+  background: var(--purple);
+  animation-name: ta-move-dot;
+}
+@keyframes ta-move-dot {
+  0%,
+  58% {
+    background: var(--accent);
+  }
+  64%,
+  100% {
+    background: var(--purple);
+  }
+}

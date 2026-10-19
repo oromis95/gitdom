@@ -1,0 +1,99 @@
+/* --- Merge tool ----------------------------------------------------------------------- */
+.merge-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.merge-panes {
+  flex: 3;
+  min-height: 0;
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.merge-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.merge-pane + .merge-pane {
+  border-left: 1px solid var(--border);
+}
+.merge-pane-title {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.merge-pane-body {
+  flex: 1;
+  overflow: auto;
+  font-family: var(--font-code);
+  font-size: var(--code-size);
+}
+.merge-line {
+  display: flex;
+  min-width: max-content;
+  line-height: calc(var(--code-size) + 7px);
+  white-space: pre;
+  color: var(--text-muted);
+}
+.merge-gutter {
+  width: 26px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.merge-gutter input {
+  margin: 0;
+  cursor: pointer;
+}
+.merge-text {
+  padding-right: 16px;
+}
+.merge-line.conflict-ours {
+  background: rgba(31, 143, 255, 0.1);
+  color: var(--text);
+}
+.merge-line.conflict-theirs {
+  background: rgba(163, 110, 240, 0.1);
+  color: var(--text);
+}
+.merge-line.conflict-ours.taken {
+  background: rgba(31, 143, 255, 0.28);
+}
+.merge-line.conflict-theirs.taken {
+  background: rgba(163, 110, 240, 0.28);
+}
+.merge-line.unresolved .merge-gutter {
+  box-shadow: inset 3px 0 var(--orange);
+}
+.merge-output {
+  flex: 2;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.merge-output textarea {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 6px 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-code);
+  font-size: var(--code-size);
+  line-height: calc(var(--code-size) + 7px);
+  white-space: pre;
+  overflow: auto;
+}

@@ -1,0 +1,20 @@
+/* --- Compare ------------------------------------------------------------------------------ */
+
+.ta-compare .ta-row {
+  width: 170px;
+}
+.ta-menu-cmp {
+  top: 98px;
+  left: 30px;
+}
+.ta-side-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 150px;
+  padding: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  line-height: 19px;
+}

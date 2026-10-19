@@ -1,0 +1,126 @@
+/* --- Recovery ----------------------------------------------------------------------------- */
+
+.ta-list {
+  position: absolute;
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-family: var(--font-code);
+  font-size: 11px;
+}
+.ta-list .ta-label {
+  position: static;
+  font-family: var(--font-ui);
+}
+.ta-recovery .ta-target {
+  background: var(--bg-selected);
+  animation-name: ta-rec-target;
+}
+@keyframes ta-rec-target {
+  0%,
+  22% {
+    background: transparent;
+  }
+  26%,
+  100% {
+    background: var(--bg-selected);
+  }
+}
+.ta-recovery .ta-new {
+  animation-name: ta-pop-late;
+}
+@keyframes ta-pop-late {
+  0%,
+  60% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  64%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ta-menu-rec {
+  top: 79px;
+  left: 152px;
+  animation-name: ta-rec-menu;
+}
+@keyframes ta-rec-menu {
+  0%,
+  30% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  33%,
+  52% {
+    opacity: 1;
+    transform: none;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-recovery .ta-hit {
+  animation-name: ta-rec-hit;
+}
+@keyframes ta-rec-hit {
+  0%,
+  42%,
+  55%,
+  100% {
+    background: transparent;
+  }
+  45%,
+  52% {
+    background: var(--bg-selected);
+  }
+}
+.ta-recovery .ta-cursor {
+  animation-name: ta-rec-cursor;
+}
+@keyframes ta-rec-cursor {
+  0%,
+  10% {
+    opacity: 0;
+    transform: translate(330px, 160px);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(330px, 160px);
+  }
+  26% {
+    transform: translate(150px, 72px);
+  }
+  30% {
+    transform: translate(150px, 72px) scale(0.85);
+  }
+  33% {
+    transform: translate(150px, 72px);
+  }
+  44% {
+    transform: translate(200px, 88px);
+  }
+  50% {
+    transform: translate(200px, 88px) scale(0.85);
+  }
+  53%,
+  70% {
+    opacity: 1;
+    transform: translate(200px, 88px);
+  }
+  76%,
+  100% {
+    opacity: 0;
+    transform: translate(200px, 88px);
+  }
+}
+.ta-recovery .ta-toast {
+  animation-name: ta-toast-late;
+}

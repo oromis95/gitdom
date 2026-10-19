@@ -1,0 +1,19 @@
+/* Long repository or branch names are truncated instead of pushing the tools aside */
+.crumb {
+  min-width: 0;
+  flex-shrink: 1;
+}
+.crumb-value {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ref-more {
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+.ref-more:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}

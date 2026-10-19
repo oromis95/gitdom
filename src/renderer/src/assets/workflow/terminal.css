@@ -1,0 +1,47 @@
+/* --- Terminal ------------------------------------------------------------------------- */
+.tool.active {
+  background: var(--bg-selected);
+  color: var(--text);
+}
+.terminal-dock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.terminal-resize {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 1;
+}
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px 3px 12px;
+  background: var(--bg-panel);
+  font-size: 12px;
+}
+.terminal-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.terminal-header select {
+  padding: 1px 4px;
+  font-size: 12px;
+}
+.terminal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0 0 8px;
+}
+.terminal-host {
+  height: 100%;
+}

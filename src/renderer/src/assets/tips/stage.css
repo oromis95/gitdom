@@ -1,0 +1,194 @@
+/* --- The stage ---------------------------------------------------------------------------- */
+
+.ta-frame {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.ta-stage {
+  --ta-cycle: 7s;
+  position: relative;
+  width: 440px;
+  height: 180px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11.5px;
+  line-height: 1.3;
+  user-select: none;
+  animation: ta-scene var(--ta-cycle) linear infinite;
+}
+.ta-stage * {
+  animation-duration: var(--ta-cycle);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  animation-timing-function: ease-in-out;
+}
+@keyframes ta-scene {
+  0% {
+    opacity: 0;
+  }
+  3%,
+  95% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.ta-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 6;
+  opacity: 0;
+}
+.ta-cursor path {
+  fill: #fff;
+  stroke: #111;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.ta-row {
+  position: absolute;
+  left: 100px;
+  width: 300px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ta-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.ta-lane {
+  position: absolute;
+  left: 110px;
+  width: 2px;
+  background: var(--accent);
+}
+.ta-label {
+  position: absolute;
+  left: 16px;
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10.5px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+.ta-menu {
+  position: absolute;
+  z-index: 4;
+  padding: 3px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  transform-origin: top left;
+}
+.ta-menu > div {
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+.ta-toast {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 5px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--success-border);
+  border-left: 3px solid var(--green);
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-size: 11px;
+}
+.ta-btn {
+  padding: 1px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: normal;
+  line-height: 16px;
+}
+.ta-panel-title {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.ta-typed {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.ta-stage .ta-caret {
+  display: inline-block;
+  width: 1px;
+  height: 13px;
+  margin-left: 1px;
+  background: var(--text);
+  animation: ta-blink 1s steps(2, start) infinite;
+}
+@keyframes ta-blink {
+  to {
+    visibility: hidden;
+  }
+}
+.ta-swap {
+  display: inline-grid;
+}
+.ta-swap > span {
+  grid-area: 1 / 1;
+}
+.ta-swap-a {
+  opacity: 0;
+}
+.ta-code {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: var(--font-code);
+  font-size: 11px;
+  line-height: 20px;
+  white-space: pre;
+}
+.ta-num {
+  display: inline-block;
+  width: 18px;
+  margin-right: 10px;
+  color: var(--text-dim);
+  text-align: right;
+}

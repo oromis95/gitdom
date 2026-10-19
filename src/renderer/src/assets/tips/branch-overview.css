@@ -1,0 +1,93 @@
+/* --- Branches overview -------------------------------------------------------------------- */
+
+.ta-bo-row {
+  position: absolute;
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+.ta-bo-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  margin-right: 10px;
+  border: 1px solid var(--text-dim);
+  border-radius: 3px;
+  font-size: 10px;
+  font-style: normal;
+}
+.ta-bo-check i {
+  font-style: normal;
+  color: var(--accent);
+}
+.ta-bo-name {
+  width: 150px;
+}
+.ta-bo-age {
+  width: 90px;
+  color: var(--text-muted);
+}
+.ta-bo-merged {
+  color: var(--purple);
+}
+.ta-bo-ahead {
+  color: var(--green);
+}
+.ta-bo-gone {
+  opacity: 0;
+  animation-name: ta-bo-gone;
+}
+@keyframes ta-bo-gone {
+  0%,
+  46% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-bo-stays {
+  transform: translateY(-48px);
+  animation-name: ta-bo-stays;
+}
+@keyframes ta-bo-stays {
+  0%,
+  52% {
+    transform: none;
+  }
+  58%,
+  100% {
+    transform: translateY(-48px);
+  }
+}
+.ta-bo-choose,
+.ta-bo-delete {
+  position: absolute;
+  bottom: 10px;
+}
+.ta-bo-choose {
+  left: 12px;
+}
+.ta-bo-delete {
+  right: 12px;
+  border-color: var(--red);
+  color: var(--danger-text);
+  animation-name: ta-bo-delete;
+}
+@keyframes ta-bo-delete {
+  0%,
+  27% {
+    opacity: 0.45;
+  }
+  30%,
+  100% {
+    opacity: 1;
+  }
+}

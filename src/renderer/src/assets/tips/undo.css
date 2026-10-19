@@ -1,0 +1,135 @@
+/* --- Undo --------------------------------------------------------------------------------- */
+
+.ta-toolbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+.ta-undo-btn {
+  animation-name: ta-undo-press;
+}
+@keyframes ta-undo-press {
+  0%,
+  54%,
+  66%,
+  100% {
+    background: var(--bg-elevated);
+    border-color: var(--border);
+  }
+  57%,
+  62% {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+}
+.ta-undo .ta-label {
+  animation-name: ta-undo-label;
+}
+@keyframes ta-undo-label {
+  0%,
+  18%,
+  66%,
+  100% {
+    transform: none;
+  }
+  24%,
+  60% {
+    transform: translateY(60px);
+  }
+}
+.ta-undo .ta-gone {
+  animation-name: ta-undo-gone;
+}
+@keyframes ta-undo-gone {
+  0%,
+  18%,
+  66%,
+  100% {
+    opacity: 1;
+  }
+  24%,
+  60% {
+    opacity: 0.2;
+  }
+}
+.ta-badge {
+  position: absolute;
+  top: 52px;
+  right: 20px;
+  padding: 2px 8px;
+  background: var(--danger-bg);
+  border-radius: 4px;
+  color: var(--danger-text);
+  font-family: var(--font-code);
+  font-size: 11px;
+  opacity: 0;
+  animation-name: ta-undo-badge;
+}
+@keyframes ta-undo-badge {
+  0%,
+  10% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  14%,
+  44% {
+    opacity: 1;
+    transform: none;
+  }
+  48%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-undo .ta-cursor {
+  animation-name: ta-undo-cursor;
+}
+@keyframes ta-undo-cursor {
+  0%,
+  30% {
+    opacity: 0;
+    transform: translate(300px, 160px);
+  }
+  34% {
+    opacity: 1;
+    transform: translate(300px, 160px);
+  }
+  50% {
+    transform: translate(342px, 14px);
+  }
+  55% {
+    transform: translate(342px, 14px) scale(0.85);
+  }
+  58%,
+  70% {
+    opacity: 1;
+    transform: translate(342px, 14px);
+  }
+  76%,
+  100% {
+    opacity: 0;
+    transform: translate(342px, 14px);
+  }
+}
+.ta-undo .ta-toast {
+  animation-name: ta-toast-late;
+}
+@keyframes ta-toast-late {
+  0%,
+  63% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  67%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -1,0 +1,17 @@
+/* --- Toolbar -------------------------------------------------------------------------- */
+.tool-split {
+  display: flex;
+  align-items: stretch;
+}
+.tool-arrow {
+  padding: 0 2px;
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+.tool-arrow:not(:disabled):hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.status-busy {
+  color: var(--accent);
+}

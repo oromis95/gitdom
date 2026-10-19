@@ -1,0 +1,324 @@
+/* --- File history and blame ----------------------------------------------------------- */
+.diff-header .btn svg,
+.segmented svg {
+  vertical-align: -2px;
+}
+.segmented {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.segmented button {
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.segmented button + button {
+  border-left: 1px solid var(--border);
+}
+.segmented button.active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.history-list {
+  flex: 1;
+  overflow: auto;
+}
+.history-list.split {
+  flex: 0 0 auto;
+  max-height: 38%;
+  border-bottom: 1px solid var(--border);
+}
+.inspector .diff-view {
+  flex: 1;
+  min-height: 0;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+.history-row:hover {
+  background: var(--bg-hover);
+}
+.history-row.selected {
+  background: var(--bg-selected);
+}
+.history-row:hover .row-action {
+  display: block;
+}
+.history-row .row-action {
+  margin-left: 0;
+}
+.history-hash {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.history-subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blame-lines {
+  min-width: max-content;
+  padding-bottom: 12px;
+}
+.blame-line {
+  display: flex;
+  line-height: calc(var(--code-size) + 7px);
+  white-space: pre;
+}
+.blame-line.first {
+  border-top: 1px solid var(--border);
+}
+.blame-line.active {
+  background: var(--bg-selected);
+}
+.blame-gutter {
+  position: sticky;
+  left: 0;
+  display: flex;
+  gap: 8px;
+  width: 300px;
+  flex-shrink: 0;
+  padding: 0 8px;
+  border-left: 3px solid transparent;
+  background: var(--bg-panel);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.blame-line.active .blame-gutter {
+  background: var(--bg-selected);
+}
+.blame-gutter:hover {
+  background: var(--bg-hover);
+}
+.blame-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.blame-meta {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.blame-before {
+  order: 1;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 2px;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: pointer;
+}
+.blame-gutter:hover .blame-before {
+  opacity: 1;
+}
+.blame-before:hover {
+  background: var(--bg-selected);
+  color: var(--text);
+}
+/* The line the blame came to, going back in time */
+.blame-line.target .diff-code,
+.blame-line.target .blame-no {
+  background: var(--accent-soft);
+}
+.blame-no {
+  cursor: pointer;
+}
+.blame-no:hover {
+  color: var(--text);
+}
+.blame-no.picked {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.blame-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+/* Time-lapse of a file: the version shown, then the timeline to drag */
+.timelapse {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.timelapse-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.timelapse-bar .graph-search {
+  flex: 1 1 240px;
+  max-width: 420px;
+}
+.timelapse-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.timelapse-bar .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.timelapse-bar .btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.tl-body {
+  position: relative;
+}
+.tl-line .diff-code {
+  flex: 1;
+}
+/* Recent changes stand out, fading as the timeline moves on */
+.tl-line .diff-code {
+  background: color-mix(in srgb, var(--accent) calc(var(--recency, 0) * 24%), transparent);
+}
+.tl-line.ghost {
+  background: color-mix(in srgb, var(--red) 13%, transparent);
+}
+.tl-line.ghost .diff-code {
+  background: none;
+  opacity: 0.75;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--red) 60%, transparent);
+}
+.tl-line.ghost .blame-gutter {
+  background: color-mix(in srgb, var(--red) 10%, var(--bg-panel));
+  cursor: default;
+}
+.tl-line.hit .blame-no {
+  box-shadow: inset 3px 0 0 var(--warning-border);
+}
+.tl-line.hit-here .diff-code {
+  background: color-mix(in srgb, var(--warning-border) 30%, transparent);
+}
+.tl-line.anchored .blame-no,
+.tl-line.anchored .diff-code {
+  background: color-mix(in srgb, var(--purple) 20%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--purple),
+    inset 0 -1px 0 var(--purple);
+}
+.timelapse-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.timelapse-position {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.timelapse-subject {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.timelapse-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--orange);
+}
+.timelapse-note {
+  color: var(--purple);
+}
+.timelapse-track {
+  display: block;
+  width: 100%;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  cursor: pointer;
+  touch-action: none;
+}
+.timelapse-keys {
+  border-top: 1px solid var(--border);
+  border-bottom: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* History of some lines: each commit, then how it changed them */
+.line-revision {
+  border-bottom: 1px solid var(--border);
+}
+.line-revision .history-row {
+  position: sticky;
+  left: 0;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  background: var(--bg-panel);
+}
+.line-revision .history-row:hover {
+  background: var(--bg-hover);
+}
+.line-revision .history-row.selected {
+  background: var(--bg-selected);
+}
+.line-revision .hunk {
+  margin-bottom: 8px;
+}
+.diff-line.line-fold {
+  position: sticky;
+  left: 0;
+  width: max-content;
+  align-items: center;
+  gap: 6px;
+  padding-left: 64px;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.diff-line.line-fold:hover {
+  color: var(--accent);
+}
+
+/* A file at a commit */
+.file-unshown {
+  flex-direction: column;
+  gap: 10px;
+}
+.file-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px;
+}
+.file-image img {
+  max-width: 100%;
+  object-fit: contain;
+}
+.file-image + .blame-lines {
+  border-top: 1px solid var(--border);
+}

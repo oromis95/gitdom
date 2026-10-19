@@ -1,0 +1,43 @@
+/* --- Buttons -------------------------------------------------------------------------- */
+.btn {
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  white-space: nowrap;
+}
+.btn:not(:disabled):hover {
+  filter: brightness(1.2);
+}
+.btn-small {
+  padding: 1px 8px;
+  font-size: 12px;
+}
+.btn-primary {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.btn-danger {
+  background: var(--danger-bg);
+  border-color: var(--red);
+}
+.btn-danger-outline {
+  color: var(--danger-text);
+  border-color: var(--danger-bg);
+}
+.btn-stage {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+}
+.btn-unstage {
+  background: var(--unstage-bg);
+  border-color: var(--unstage-border);
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

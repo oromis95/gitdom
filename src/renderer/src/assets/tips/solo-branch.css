@@ -1,0 +1,17 @@
+/* --- Show only this branch ---------------------------------------------------------------- */
+
+.ta-menu-solo {
+  top: 34px;
+  left: 34px;
+}
+.ta-banner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  color: var(--accent);
+  font-size: 11px;
+}

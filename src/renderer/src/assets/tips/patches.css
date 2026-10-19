@@ -1,0 +1,62 @@
+/* --- Patches ------------------------------------------------------------------------------ */
+
+.ta-patches .ta-row {
+  width: 180px;
+}
+.ta-menu-patch {
+  top: 72px;
+  left: 150px;
+}
+.ta-patch-repo {
+  position: absolute;
+  top: 104px;
+  right: 12px;
+  width: 130px;
+  height: 64px;
+  padding: 6px 8px;
+  background: var(--bg-panel);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
+.ta-patch-new {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ta-patch-file {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  padding: 6px 10px 6px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-family: var(--font-code);
+  font-size: 10.5px;
+  opacity: 0;
+  animation-name: ta-patch-file;
+}
+@keyframes ta-patch-file {
+  0%,
+  44% {
+    opacity: 0;
+    transform: translate(300px, 30px) scale(0.9);
+  }
+  48%,
+  56% {
+    opacity: 1;
+    transform: translate(300px, 30px);
+  }
+  66% {
+    opacity: 1;
+    transform: translate(312px, 112px) scale(0.9);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: translate(312px, 112px) scale(0.6);
+  }
+}

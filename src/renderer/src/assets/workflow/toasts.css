@@ -1,0 +1,51 @@
+/* --- Toasts --------------------------------------------------------------------------- */
+.toasts {
+  position: fixed;
+  /* Left of the detail panel, so toasts never cover the commit button */
+  right: 476px;
+  bottom: calc(var(--statusbar-h) + 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 300;
+  width: 420px;
+}
+.toast {
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+.toast-success {
+  border-left-color: var(--green);
+}
+.toast-error {
+  border-left-color: var(--red);
+}
+.toast-warning {
+  border-left-color: var(--orange);
+}
+.toast-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.toast-message {
+  flex: 1;
+  word-break: break-word;
+}
+.toast-toggle {
+  font-size: 12px;
+}
+.toast-details {
+  margin: 8px 0 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: pre-wrap;
+}

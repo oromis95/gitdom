@@ -1,0 +1,61 @@
+/* --- What I did --------------------------------------------------------------------------- */
+
+.ta-mw-tabs {
+  position: absolute;
+  top: 32px;
+  left: 12px;
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 10.5px;
+}
+.ta-mw-tabs span {
+  padding: 1px 8px;
+}
+.ta-mw-tabs .ta-mw-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ta-mw-line {
+  position: absolute;
+  left: 24px;
+  white-space: nowrap;
+}
+.ta-mw-day {
+  left: 12px;
+  font-weight: 600;
+}
+.ta-mw-repo {
+  display: inline-block;
+  width: 44px;
+  color: var(--text-muted);
+}
+.ta-mw-copy {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  animation-name: ta-mw-copy;
+}
+@keyframes ta-mw-copy {
+  0%,
+  40%,
+  46%,
+  100% {
+    background: var(--bg-elevated);
+  }
+  42%,
+  44% {
+    background: var(--accent-soft);
+  }
+}
+.ta-myWeek .ta-toast,
+.ta-branchOverview .ta-toast {
+  bottom: 40px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ta-stage,
+  .ta-stage * {
+    animation: none !important;
+  }
+}

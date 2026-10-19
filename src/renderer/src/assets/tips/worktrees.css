@@ -1,0 +1,61 @@
+/* --- Worktrees ---------------------------------------------------------------------------- */
+
+.ta-wt-tabs {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 24px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+.ta-wt-tab {
+  padding: 4px 12px;
+  border-bottom: 2px solid transparent;
+}
+.ta-wt-old {
+  animation-name: ta-wt-old;
+}
+@keyframes ta-wt-old {
+  0%,
+  50% {
+    border-bottom-color: var(--accent);
+  }
+  53%,
+  100% {
+    border-bottom-color: transparent;
+  }
+}
+.ta-wt-new {
+  border-bottom-color: var(--accent);
+}
+.ta-wt-side {
+  position: absolute;
+  top: 32px;
+  left: 10px;
+  width: 130px;
+  line-height: 20px;
+}
+.ta-wt-side > div {
+  padding: 0 6px;
+}
+.ta-wt-card {
+  position: absolute;
+  top: 36px;
+  right: 12px;
+  left: 160px;
+  padding: 8px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.ta-wt-files {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+.ta-menu-wt {
+  top: 92px;
+  left: 44px;
+}

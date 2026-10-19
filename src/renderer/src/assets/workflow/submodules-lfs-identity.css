@@ -1,0 +1,58 @@
+/* ---------- Submodules, LFS, identity ---------- */
+
+.tree-badge.submodule-uninitialized {
+  font-style: italic;
+}
+
+.tree-badge.submodule-moved {
+  color: var(--warning-text);
+}
+
+.tree-badge.submodule-conflict {
+  color: var(--danger-text);
+}
+
+.sidebar-warning {
+  color: var(--warning-text);
+}
+
+.lfs-badge {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  border-radius: 3px;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.status-identity {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 6px;
+  font: inherit;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.status-identity:hover {
+  background: var(--bg-hover);
+}
+
+.status-identity.missing {
+  color: var(--warning-text);
+}
+
+.identity-scope {
+  padding: 0 5px;
+  font-size: 11px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}

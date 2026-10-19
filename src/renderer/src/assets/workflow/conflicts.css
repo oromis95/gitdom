@@ -1,0 +1,18 @@
+/* --- Conflicts ------------------------------------------------------------------------ */
+.operation-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: 1.4;
+}
+.operation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.conflict-title {
+  color: var(--warning-text);
+}
+.conflict-hint {
+  color: var(--warning-text);
+}

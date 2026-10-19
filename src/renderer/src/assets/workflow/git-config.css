@@ -1,0 +1,55 @@
+/* --- Preferences > Git config ---------------------------------------------------------- */
+.config-scope {
+  display: flex;
+  gap: 4px;
+}
+.config-scope .btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.config-add {
+  display: flex;
+  gap: 6px;
+}
+.config-add input,
+.config-filter,
+.config-value {
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  outline: none;
+}
+.config-add input:focus,
+.config-filter:focus,
+.config-value:focus {
+  border-color: var(--accent);
+}
+.config-add input {
+  flex: 1;
+}
+.config-key {
+  flex: 0 0 42%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+.config-value {
+  flex: 1;
+  padding: 3px 6px;
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+.config-value:not(:focus) {
+  background: transparent;
+  border-color: transparent;
+}
+.config-row:hover .config-value:not(:focus) {
+  border-color: var(--border);
+}

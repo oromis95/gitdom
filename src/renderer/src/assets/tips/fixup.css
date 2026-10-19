@@ -1,0 +1,161 @@
+/* --- Fixup -------------------------------------------------------------------------------- */
+
+.ta-fixup .ta-row {
+  width: 190px;
+}
+.ta-staged {
+  position: absolute;
+  top: 16px;
+  right: 12px;
+  width: 110px;
+  height: 52px;
+  padding: 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.ta-staged-title {
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+.ta-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  border-radius: 10px;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.ta-chip-home {
+  opacity: 0;
+  animation-name: ta-fix-home;
+}
+@keyframes ta-fix-home {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-chip-fly {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  opacity: 0;
+  animation-name: ta-fix-fly;
+}
+@keyframes ta-fix-fly {
+  0%,
+  50% {
+    opacity: 0;
+    transform: translate(324px, 39px);
+  }
+  52% {
+    opacity: 1;
+    transform: translate(324px, 39px);
+  }
+  64% {
+    opacity: 1;
+    transform: translate(175px, 58px) scale(0.9);
+  }
+  68%,
+  100% {
+    opacity: 0;
+    transform: translate(175px, 58px) scale(0.6);
+  }
+}
+.ta-fixed {
+  background: var(--success-bg);
+  animation-name: ta-fix-row;
+}
+@keyframes ta-fix-row {
+  0%,
+  64% {
+    background: transparent;
+  }
+  68%,
+  100% {
+    background: var(--success-bg);
+  }
+}
+.ta-menu-fix {
+  top: 62px;
+  left: 162px;
+  animation-name: ta-fix-menu;
+}
+@keyframes ta-fix-menu {
+  0%,
+  28% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  31%,
+  47% {
+    opacity: 1;
+    transform: none;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-fixup .ta-hit {
+  animation-name: ta-fix-hit;
+}
+@keyframes ta-fix-hit {
+  0%,
+  37%,
+  50%,
+  100% {
+    background: transparent;
+  }
+  40%,
+  47% {
+    background: var(--bg-selected);
+  }
+}
+.ta-fixup .ta-cursor {
+  animation-name: ta-fix-cursor;
+}
+@keyframes ta-fix-cursor {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translate(380px, 170px);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(380px, 170px);
+  }
+  24% {
+    transform: translate(160px, 56px);
+  }
+  28% {
+    transform: translate(160px, 56px) scale(0.85);
+  }
+  31% {
+    transform: translate(160px, 56px);
+  }
+  40% {
+    transform: translate(210px, 72px);
+  }
+  45% {
+    transform: translate(210px, 72px) scale(0.85);
+  }
+  48%,
+  60% {
+    opacity: 1;
+    transform: translate(210px, 72px);
+  }
+  66%,
+  100% {
+    opacity: 0;
+    transform: translate(210px, 72px);
+  }
+}

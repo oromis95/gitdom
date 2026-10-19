@@ -1,0 +1,125 @@
+/* --- Drag a branch ------------------------------------------------------------------------ */
+
+.ta-ghost {
+  top: 0;
+  z-index: 3;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  animation-name: ta-drag-ghost;
+}
+@keyframes ta-drag-ghost {
+  0%,
+  22% {
+    opacity: 0;
+    transform: translate(0, 23px);
+  }
+  24% {
+    opacity: 0.85;
+    transform: translate(0, 23px);
+  }
+  40% {
+    opacity: 0.85;
+    transform: translate(4px, 53px);
+  }
+  44%,
+  100% {
+    opacity: 0;
+    transform: translate(4px, 53px);
+  }
+}
+.ta-drop {
+  animation-name: ta-drag-drop;
+}
+@keyframes ta-drag-drop {
+  0%,
+  30%,
+  48%,
+  100% {
+    box-shadow: none;
+  }
+  34%,
+  44% {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+}
+.ta-menu-drag {
+  top: 70px;
+  left: 44px;
+  animation-name: ta-drag-menu;
+}
+@keyframes ta-drag-menu {
+  0%,
+  44% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  47%,
+  59% {
+    opacity: 1;
+    transform: none;
+  }
+  62%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-dragBranch .ta-hit {
+  animation-name: ta-drag-hit;
+}
+@keyframes ta-drag-hit {
+  0%,
+  51%,
+  62%,
+  100% {
+    background: transparent;
+  }
+  53%,
+  59% {
+    background: var(--bg-selected);
+  }
+}
+.ta-dragBranch .ta-cursor {
+  animation-name: ta-drag-cursor;
+}
+@keyframes ta-drag-cursor {
+  0%,
+  6% {
+    opacity: 0;
+    transform: translate(300px, 160px);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(300px, 160px);
+  }
+  20% {
+    transform: translate(40px, 28px);
+  }
+  24% {
+    transform: translate(40px, 28px) scale(0.9);
+  }
+  40% {
+    transform: translate(44px, 58px) scale(0.9);
+  }
+  44% {
+    transform: translate(44px, 58px);
+  }
+  52% {
+    transform: translate(110px, 80px);
+  }
+  56% {
+    transform: translate(110px, 80px) scale(0.85);
+  }
+  58%,
+  68% {
+    opacity: 1;
+    transform: translate(110px, 80px);
+  }
+  74%,
+  100% {
+    opacity: 0;
+    transform: translate(110px, 80px);
+  }
+}
+.ta-dragBranch .ta-toast {
+  animation-name: ta-toast-late;
+}

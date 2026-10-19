@@ -1,0 +1,62 @@
+/* --- Conflicts with main ------------------------------------------------------------------ */
+
+.ta-cw-branch {
+  margin-right: auto;
+  font-weight: 600;
+}
+.ta-cw-badge {
+  padding: 1px 8px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 4px;
+  color: var(--warning-text);
+  font-size: 11px;
+  line-height: 16px;
+}
+.ta-cw-menu {
+  position: absolute;
+  top: 30px;
+  right: 50px;
+  z-index: 4;
+  width: 180px;
+  padding: 3px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  opacity: 0;
+  animation-name: ta-cw-menu;
+}
+.ta-cw-menu > div {
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+.ta-cw-menu .ta-cw-file {
+  color: var(--text-dim);
+}
+.ta-cw-menu .ta-cw-sep {
+  height: 1px;
+  margin: 3px 0;
+  padding: 0;
+  background: var(--border);
+}
+@keyframes ta-cw-menu {
+  0%,
+  26% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  29%,
+  46% {
+    opacity: 1;
+    transform: none;
+  }
+  49%,
+  100% {
+    opacity: 0;
+  }
+}
+.ta-cw-hit {
+  animation-name: ta-hit2;
+}

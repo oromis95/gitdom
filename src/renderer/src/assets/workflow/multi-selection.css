@@ -1,0 +1,5 @@
+/* --- Commit multi-selection ----------------------------------------------------------- */
+.graph-row.picked {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 var(--accent);
+}

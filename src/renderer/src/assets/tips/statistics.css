@@ -1,0 +1,82 @@
+/* --- Statistics --------------------------------------------------------------------------- */
+
+.ta-bars {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 100px;
+}
+.ta-bars span {
+  width: 10px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  transform-origin: bottom;
+  animation-name: ta-grow-y;
+}
+@keyframes ta-grow-y {
+  0%,
+  6% {
+    transform: scaleY(0);
+  }
+  30%,
+  100% {
+    transform: none;
+  }
+}
+.ta-calendar {
+  position: absolute;
+  top: 44px;
+  left: 204px;
+  display: grid;
+  grid-template-columns: repeat(14, 9px);
+  gap: 2px;
+}
+.ta-calendar span {
+  height: 9px;
+  background: var(--green);
+  border-radius: 2px;
+  animation-name: ta-grow;
+}
+@keyframes ta-grow {
+  0%,
+  20% {
+    transform: scale(0);
+  }
+  40%,
+  100% {
+    transform: none;
+  }
+}
+.ta-hot {
+  position: absolute;
+  top: 112px;
+  left: 204px;
+  width: 220px;
+  font-size: 10.5px;
+  line-height: 17px;
+}
+.ta-hot div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ta-hot i {
+  height: 6px;
+  background: var(--orange);
+  border-radius: 3px;
+  transform-origin: left;
+  animation-name: ta-grow-x;
+}
+@keyframes ta-grow-x {
+  0%,
+  45% {
+    transform: scaleX(0);
+  }
+  65%,
+  100% {
+    transform: none;
+  }
+}
