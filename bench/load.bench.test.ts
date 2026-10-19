@@ -1,12 +1,16 @@
 // Load benchmark on a big repository (NFR-02): GITDOM_BENCH=<repository path> npx vitest run bench
+// GITDOM_BENCH_FILE=<path in it> also times the time-lapse of that file, which GitDom computes in a
+// worker thread: its time is how long the main process would otherwise be stuck.
 import { describe, expect, it } from 'vitest'
 import { loadSnapshot } from '../src/main/git/repository'
 import { runGit } from '../src/main/git/exec'
 import { LOG_FORMAT, parseLog } from '../src/main/git/parsers'
+import { runOp } from '../src/main/git/operations'
 import { computeLayout } from '../src/renderer/src/graph/layout'
 import { buildRows } from '../src/renderer/src/graph/rows'
 
 const repo = process.env.GITDOM_BENCH
+const file = process.env.GITDOM_BENCH_FILE
 
 const time = async <T>(label: string, run: () => Promise<T> | T): Promise<T> => {
   const start = performance.now()
@@ -33,5 +37,11 @@ describe.runIf(!!repo)('big repository', () => {
       expect(commits.length).toBeGreaterThan(0)
     }
     console.log(`heap used: ${Math.round(process.memoryUsage().heapUsed / 1e6)} MB`)
+  })
+
+  it.runIf(!!file)('computes the time-lapse of a file', { timeout: 600_000 }, async () => {
+    const lapse = await time(`timelapse ${file}`, () => runOp(repo!, 'timelapse', [file!]))
+    console.log(`versions: ${lapse.revisions.length}, distinct lines: ${lapse.text.length}`)
+    expect(lapse.revisions.length).toBeGreaterThan(0)
   })
 })

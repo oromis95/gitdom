@@ -9,9 +9,9 @@ import {
   languageOf,
   languagesOf,
   parseTree,
-  repoStatistics,
   zoneOffset
-} from './statistics'
+} from './statsCollector'
+import { repoStatistics } from './statistics'
 
 vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })
 

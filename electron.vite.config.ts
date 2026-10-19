@@ -4,7 +4,17 @@ import react from '@vitejs/plugin-react'
 import { version } from './package.json'
 
 export default defineConfig({
-  main: {},
+  main: {
+    // The worker thread of long computations, beside index.js (main/workers/run.ts)
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/main/index.ts'),
+          worker: resolve('src/main/workers/worker.ts')
+        }
+      }
+    }
+  },
   preload: {},
   renderer: {
     define: {
