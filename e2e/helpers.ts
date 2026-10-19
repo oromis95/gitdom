@@ -102,10 +102,11 @@ export async function launch(
     env: { ...process.env, GITDOM_USER_DATA: userData, ...env } as Record<string, string>
   })
   const win = await app.firstWindow()
-  // The size of the CI runners' screens, whatever the screen here: the layout is the same everywhere
+  // GitDom's smallest window, narrower than the CI runners' screens (1024×768, with wider fonts
+  // on Linux): what fits here fits there
   await app.evaluate(({ BrowserWindow }) => {
     const window = BrowserWindow.getAllWindows()[0]
-    window?.setSize(1024, 768)
+    window?.setSize(1000, 700)
     window?.focus()
   })
   const errors: string[] = []
