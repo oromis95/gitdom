@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.11.0 pubblicata il 2026-10-19 (Step 1–17 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.11.1 pubblicata il 2026-10-19 (Step 1–17 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -220,7 +220,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Step 17 — v1.11: Qualità interna ✅
 
-> Completato con la v1.11.0. Quattro dei cinque miglioramenti dell'analisi di ottobre 2026; la firma degli aggiornamenti (chiave propria o certificati Authenticode/Apple) è rimasta fuori per scelta.
+> Completato con la v1.11.1 (la v1.11.0 non è mai stata pubblicata: i nuovi test end-to-end, sugli schermi più piccoli della CI, hanno trovato barre che in una finestra stretta finivano sotto il pannello di dettaglio, ora corrette). Quattro dei cinque miglioramenti dell'analisi di ottobre 2026; la firma degli aggiornamenti (chiave propria o certificati Authenticode/Apple) è rimasta fuori per scelta.
 
 - ✅ **Impostazioni su file** (SET-05): `settings.json` nella cartella di GitDom al posto del localStorage dell'interfaccia; il preload le legge una volta all'avvio (in modo sincrono, così i moduli che le leggono subito non cambiano) e il main le scrive poco dopo ogni modifica, in modo atomico, e subito alla chiusura. Al primo avvio le impostazioni del localStorage passano nel file, che resta com'era per una versione precedente. **File → Export Settings… / Import Settings…** salvano e ripristinano tutto. Una regola di ESLint impedisce di tornare al localStorage
 - ✅ **Calcoli lunghi in un worker thread**: le righe del time-lapse (un diff per versione) e le somme delle statistiche girano in `out/main/worker.js`; git resta nel processo principale. Misurato su 400 versioni di un file di 4000 righe: il processo principale risponde in 170 ms al massimo invece di restare fermo per 5 secondi. Annullare le statistiche ferma anche il calcolo finale

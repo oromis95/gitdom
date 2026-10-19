@@ -2,6 +2,14 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## 1.11.1 — 2026-10-19
+
+Version 1.11.0 was never published: this release also brings everything listed under it.
+
+### Fixed
+
+- In a narrow window, the bars above a diff, the merge tool and the time-lapse go on two lines instead of hiding their last buttons, such as Close, under the detail panel
+
 ## 1.11.0 — 2026-10-19
 
 ### Added
