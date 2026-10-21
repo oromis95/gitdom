@@ -94,11 +94,11 @@ describe('Flows', () => {
     await contextMenu(win, row('Change the readme'), 'Interactive rebase main from here')
     await win.locator('.rebase-row:has-text("Fourth") select').selectOption('fixup')
     await win.locator('.rebase-editor button:has-text("Start rebase")').click()
-    await eventually(() => subjects(2)).toEqual(['Third', 'Other change'])
-    expect(git(repo, 'show', '--name-only', '--format=', 'HEAD').split('\n').sort()).toEqual([
-      'fourth.txt',
-      'third.txt'
-    ])
+    // Halfway through, HEAD is already a "Third" with only third.txt: wait for the fixup
+    await eventually(() =>
+      git(repo, 'show', '--name-only', '--format=', 'HEAD').split('\n').sort()
+    ).toEqual(['fourth.txt', 'third.txt'])
+    expect(subjects(2)).toEqual(['Third', 'Other change'])
     // The graph follows once the rebase is over
     await win.locator(row('Fourth')).waitFor({ state: 'detached' })
     await win.locator('.wip-message').waitFor({ state: 'detached' })
