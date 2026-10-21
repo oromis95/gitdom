@@ -3,20 +3,59 @@
 **A desktop Git client with an interactive commit graph.**
 Many authors, one flow.
 
+[![CI](https://github.com/oromis95/gitdom/actions/workflows/ci.yml/badge.svg)](https://github.com/oromis95/gitdom/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/oromis95/gitdom)](https://github.com/oromis95/gitdom/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 GitDom is a graphical client for everyday Git work: you can browse history, stage lines, merge, rebase and resolve conflicts from one window. It runs your installed `git` command line, so your hooks, config, credential manager, SSH keys and LFS work the same way they do in the terminal.
 
 ![GitDom, dark theme](docs/screenshots/dark.png)
 
+## Highlights
+
+- A [commit graph](#commit-graph) that stays smooth on histories of a million commits, with search, a minimap and drag and drop between branches
+- [Staging](#staging-and-committing) of files, hunks or single lines, with checks for secrets and big files before you commit
+- [Interactive rebase, fixup, split and reorder](#rewriting-history), with an automatic [backup and undo](#safety-net) for every risky operation
+- A [time-lapse](#history-and-code-archaeology) of any file, blame back in time, the history of a function, and bisect
+- [Statistics](#statistics-and-maintenance), a [dashboard of all your repositories](#several-repositories) and a weekly summary of what you did
+- [Themes](#themes) from Nord to Retro 2000, four that rearrange the whole window, and your own
+- Windows, macOS and Linux, with [updates](#updates-and-help) that install themselves
+
+## Contents
+
+- [Download](#download)
+- [Features](#features)
+- [Privacy](#privacy)
+- [Building from source](#building-from-source)
+- [How it's built](#how-its-built)
+- [Status](#status)
+- [License](#license)
+
+## Download
+
+The [Releases](https://github.com/oromis95/gitdom/releases) page has a version for each system. All need [Git](https://git-scm.com/) on the `PATH`.
+
+**Windows** 10 or 11: two versions, which update themselves and share settings, tabs and themes.
+
+- **Installer** (`GitDom-<version>-setup.exe`, recommended): installs GitDom for your user only, in `%LOCALAPPDATA%\Programs\GitDom`, with no administrator rights, and adds it to the Start menu and the desktop. It starts quickest, because nothing is unpacked at each start.
+- **Portable** (`GitDom-<version>-portable.exe`): a single exe that you start with a double-click, with nothing to install. At each start it unpacks itself to a temporary folder, so it takes a few seconds longer to open.
+
+**macOS** 12 or later: `GitDom-<version>-arm64.dmg` for Apple Silicon, `GitDom-<version>-x64.dmg` for Intel Macs. Drag GitDom to Applications. It isn't signed by a registered Apple developer, so the first time right-click it and choose **Open** (or run `xattr -cr /Applications/GitDom.app`).
+
+**Linux** (64-bit): `GitDom-<version>-x86_64.AppImage` runs without installing (make it executable first); `GitDom-<version>-amd64.deb` installs on Debian and Ubuntu. On Ubuntu 24.04 and later the AppImage may need `--no-sandbox`, as AppArmor restricts the sandbox of apps not installed as packages; the deb doesn't.
+
+Windows is used every day; macOS and Linux run the automated tests, including the end-to-end ones, at every push.
+
 ## Features
 
-**Getting started with a repository**
+### Opening a repository
 
 - Open a local repository, clone one from an HTTPS or SSH URL, or create a new one (**File** menu)
 - Clone with a progress bar and a Cancel button; you can pick a branch, a shallow depth, and whether to clone submodules
 - New repositories can start with a `.gitignore` template, a README and a license, in a first commit
 - Recent repositories on the start screen, with favorites pinned at the top
 
-**Commit graph**
+### Commit graph
 
 - Virtualized canvas graph with colored lanes and branch/tag labels, smooth at 60fps
 - Histories of any size: the latest 10,000 commits load at once, older ones as you scroll (tested on a million commits)
@@ -29,7 +68,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Hover a branch label to highlight its line; a minimap beside the graph marks HEAD, the selection and the search matches
 - Commit details, changed files as a list or a folder tree, and diffs with syntax highlighting
 
-**Diffs**
+### Diffs
 
 - Unified or split (side by side) view, with the changed words highlighted inside each line
 - Show the whole file with its changes, choose the context lines, ignore whitespace, wrap long lines
@@ -39,7 +78,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 
 ![A diff in the Solarized Light theme](docs/screenshots/diff.png)
 
-**Everyday workflow**
+### Staging and committing
 
 - Stage and unstage whole files, single hunks or single lines; discard all the changes at once
 - Edit a hunk before staging it: stage the lines as they should be, while the file on disk keeps its changes
@@ -51,38 +90,46 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Sign commits and tags with GPG, SSH or X.509 keys, and see whether each signature is verified
 - Add a file, its extension or its folder to `.gitignore` from the file's menu, and see which rule ignores a file, and from which file and line
 - Clean up untracked and ignored files: a preview with sizes, then to the Recycle Bin or deleted for good
-- Stash everything, only the staged changes, or a single file; optionally stash automatically on checkout
+
+### Branches, tags and stashes
+
 - Branches, checkout, tags and stashes from the sidebar, shown as folders (`feature/…`) or as a flat list; check out a tag to look at that version
+- Stash everything, only the staged changes, or a single file; optionally stash automatically on checkout
 - Branches overview (**View → Branches Overview**, or the list button on the Local section): each branch with its age, how far ahead and behind main it is, and whether it is merged, squash-merged or its upstream is gone; tick the old ones and delete them at once, with a backup and Undo
+- Worktrees: check out a branch in its own folder, listed in the sidebar, to work on two branches at once
 - Release notes: the commits between two tags (or since the last one), grouped by type into Markdown ready to copy
+
+### Remotes and credentials
+
 - Pull (merge, fast-forward only or rebase), push, and a periodic background fetch
 - Credentials when git needs them: a username with a password or token, an SSH key's passphrase, or whether to trust a server seen for the first time, asked in a GitDom dialog. Your credential helper keeps them, if you have one; GitDom stores nothing. The periodic fetch never asks: if it needs credentials it says so once, and **Fetch** asks
 
-**Advanced operations**
+### Merging and conflicts
 
-- Merge, rebase and interactive rebase
+- Merge and rebase, or drag a branch onto another to fast-forward, merge or rebase
 - Conflict preview: the merge and rebase dialogs say which files will conflict, and a warning beside the branch shows when it and main changed the same lines
-- Conflict resolution view
+- A conflict resolution view, or your own merge tool on a conflicted file
 - Cherry-pick, revert and reset (soft, mixed, hard)
-- Commits made on the wrong branch: move them to a new branch or onto another one, and the current branch goes back to before them
+
+### Rewriting history
+
+- Interactive rebase
+- Reorder the commits of the current branch by dragging them in the graph
 - Fixup: add the staged changes to an older commit of the current branch, keeping its message
 - Split a commit in two, file by file, each with its own message
-- Reorder the commits of the current branch by dragging them in the graph
-- Drag a branch onto another to fast-forward, merge or rebase
+- Commits made on the wrong branch: move them to a new branch or onto another one, and the current branch goes back to before them
 - Patches: save a commit, several commits picked with `Ctrl`+click, or the uncommitted changes as a `.patch` file, or copy them; apply one with **File → Apply Patch…** or by dropping it on the window. GitDom shows its commits and files and whether it applies first, then applies it as commits with their author and message (`git am`), to the working tree, or staged
+
+### Safety net
+
 - Undo / redo of the last operations
-
-**Safety net**
-
-- Activity log (**View → Activity Log**, `Ctrl+Shift+L`): every git command GitDom runs, grouped by action, with its duration, result and output
 - Automatic backup of the branch before a reset, a rebase or a force push; restore it with one click or create a branch from it (**View → Backups**)
 - Reflog of HEAD and of each branch, to find commits lost after a reset or a rebase (**View → Reflog**)
+- Activity log (**View → Activity Log**, `Ctrl+Shift+L`): every git command GitDom runs, grouped by action, with its duration, result and output
 
-**Understanding the repository**
+### History and code archaeology
 
-- Statistics (**View → Statistics**): commits, authors and their share, an activity calendar, commits per month with the growth of the code, the hours commits are made, and the languages of the project
-- Hot files, changed most and most recently, and the files only one person knows, with the bus factor
-- For the current branch or all of them, over any period; reading a big history can be stopped
+- Blame and file history
 - History of some lines or of a function: pick the lines in the blame, or type the function's name, and see every commit that changed them
 - Search the code (**Code** beside the graph search): the commits where some text appeared or went away, or whose changed lines match a regular expression
 - A file as it was at a commit (**File** in the file inspector): with highlighting or as an image, and **Save as…** to keep a copy
@@ -93,27 +140,46 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
   - Tags on the timeline, and a bookmark (M, then ' to jump back and forth) to open two versions in your diff tool
   - Keys: ← → step one commit (Shift for ten), Home and End, R recency, G removed lines, X tags, / search
 - Find where a problem started (bisect): right-click a commit that has it, then one that didn't; GitDom checks out commits halfway between and you answer **Good** or **Bad** until it names the commit that brought the problem in. **Skip** the ones that can't be tested, or let a command such as `npm test` answer for you
+
+### Statistics and maintenance
+
+- Statistics (**View → Statistics**): commits, authors and their share, an activity calendar, commits per month with the growth of the code, the hours commits are made, and the languages of the project
+- Hot files, changed most and most recently, and the files only one person knows, with the bus factor
+- For the current branch or all of them, over any period; reading a big history can be stopped
 - Repository health (**View → Repository Health**): what the history takes on disk, packed and loose, the heaviest files ever committed (even deleted ones), and one-click `git gc`, `git prune` and `git fsck`
 - Hooks (**View → Hooks**): every git hook with when it runs; edit the scripts, start from git's examples, turn them off and on without losing them, and run pre-commit to try it. GitDom warns when Husky, Lefthook or `core.hooksPath` manage them
 
-**Productivity**
+### Several repositories
 
-- Command palette (`Ctrl+Shift+P` or `Ctrl+P`) for every action
-- Integrated terminal (`` Ctrl+` ``) that opens in the repository
-- Blame and file history
 - Several repositories open side by side in tabs
 - Quick switcher on the repository name in the toolbar: open tabs, favorites and recent repositories, with search
 - Workspaces: save the open tabs under a name and reopen them together
-- What I did (**View → What I Did**): your commits this week, last week or in the last 7 or 30 days, in every repository GitDom knows, by day and repository, on any branch; copy them as text or Markdown for a standup or a report, or click one to open it. Yours are those with the repository's author email or one of your identity profiles
 - Workspace dashboard (**View → Workspace Dashboard**, or **Dashboard** on the welcome screen): every repository you have open, saved in a workspace, favorite or recent, with its branch, commits to push and to pull, changes, stashes, and anything stuck such as a merge in progress. **Fetch all** fetches them a few at a time, **Pull** fast-forwards those that are only behind, and a click opens one
-- Worktrees: check out a branch in its own folder, listed in the sidebar, to work on two branches at once
+- What I did (**View → What I Did**): your commits this week, last week or in the last 7 or 30 days, in every repository GitDom knows, by day and repository, on any branch; copy them as text or Markdown for a standup or a report, or click one to open it. Yours are those with the repository's author email or one of your identity profiles
+
+### Tools and integrations
+
+- Integrated terminal (`` Ctrl+` ``) that opens in the repository
 - Submodules: status, add, initialize, update and sync their URLs
 - Git LFS: tracked patterns, LFS badges on files, track or untrack from the file list, download and upload the LFS files
 - Author identity per repository or global, with saved profiles to switch between
 - Open a file in your editor (VS Code or any command you choose) or show it in Explorer (Finder on macOS)
-- Launch your merge tool on a conflicted file, or your diff tool on any change
 
-**Preferences** (**File → Preferences**, `Ctrl+,`)
+### Keyboard and command palette
+
+- Command palette (`Ctrl+Shift+P` or `Ctrl+P`) for every action
+- Every shortcut is listed in **Preferences → Keyboard**, where you can give it other keys or remove them
+- Move between the panels with `Ctrl+1` (sidebar), `Ctrl+2` (graph) and `Ctrl+3` (details); `Ctrl+Alt+F` filters the sidebar
+- In the graph, the arrow keys, Page Up/Down, Home and End move the selection, and Enter goes to the details
+- In the sidebar and the file lists, the arrow keys move between the items; Enter checks out a branch or opens a file's diff, and `Space` stages or unstages the file
+- `Alt+Down` / `Alt+Up` (or `F7` / `Shift+F7`) jump to the next or previous change in a diff
+- The menu key or `Shift+F10` opens the right-click menu of the selected item, and the arrow keys move through it
+
+On macOS the shortcuts use ⌘ in place of `Ctrl`.
+
+### Preferences
+
+Open them with **File → Preferences** or `Ctrl+,`.
 
 - Interface and code fonts, code text size
 - Zoom the whole interface with `Ctrl+=` / `Ctrl+-` / `Ctrl+0` or `Ctrl`+mouse wheel; the status bar shows the level
@@ -124,26 +190,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - Startup check for new versions
 - **Export Settings…** and **Import Settings…** in the **File** menu: every setting in one file, to keep or to take to another computer. GitDom keeps them in `settings.json`, in its folder (`%APPDATA%\GitDom` on Windows)
 
-**Updates**
-
-- At startup GitDom tells you when a newer version is out on GitHub
-- **Update** downloads it in the background and checks it against the release's SHA-256; it's installed when you close GitDom, or right away with **Restart now**
-  - Installed GitDom: the new installer runs silently, and **Restart now** opens the new version when it's done
-  - Portable exe: the new exe takes the old one's place, keeping its name and folder, so your shortcuts keep working
-- If the download is blocked, or GitDom's folder isn't writable, **Download** opens the release page instead
-- **Help → What's New** lists what each version added; the full list is in [CHANGELOG.md](CHANGELOG.md)
-- **Tips** explain a feature at a time with a small animation: one at startup, and one now and then right after doing something it builds on. **Help → Tips** lists them all; they can be turned off from the dialog or in Preferences
-
-**Keyboard**
-
-- Every shortcut is listed in **Preferences → Keyboard**, where you can give it other keys or remove them
-- Move between the panels with `Ctrl+1` (sidebar), `Ctrl+2` (graph) and `Ctrl+3` (details); `Ctrl+Alt+F` filters the sidebar
-- In the graph, the arrow keys, Page Up/Down, Home and End move the selection, and Enter goes to the details
-- In the sidebar and the file lists, the arrow keys move between the items; Enter checks out a branch or opens a file's diff, and `Space` stages or unstages the file
-- `Alt+Down` / `Alt+Up` (or `F7` / `Shift+F7`) jump to the next or previous change in a diff
-- The menu key or `Shift+F10` opens the right-click menu of the selected item, and the arrow keys move through it
-
-**Themes**
+### Themes
 
 - Dark, Light, or follow the system setting
 - **Retro 2000**: the grey raised and sunken bevels of the desktops of 2000, with navy title bars, Tahoma and dotted scroll bars
@@ -165,28 +212,27 @@ At startup GitDom shows its logo: cars on a six-lane highway change lanes withou
 
 <p align="center"><img src="docs/screenshots/splash.png" alt="GitDom startup logo" width="600"></p>
 
-## Download
+### Updates and help
 
-The [Releases](https://github.com/oromis95/gitdom/releases) page has a version for each system. All need [Git](https://git-scm.com/) on the `PATH`.
+- At startup GitDom tells you when a newer version is out on GitHub
+- **Update** downloads it in the background and checks it against the release's SHA-256; it's installed when you close GitDom, or right away with **Restart now**
+  - Installed GitDom: the new installer runs silently, and **Restart now** opens the new version when it's done
+  - Portable exe: the new exe takes the old one's place, keeping its name and folder, so your shortcuts keep working
+- If the download is blocked, or GitDom's folder isn't writable, **Download** opens the release page instead
+- On macOS and Linux GitDom tells you when a new version is out, and **Download** gets the file for your system
+- **Help → What's New** lists what each version added; the full list is in [CHANGELOG.md](CHANGELOG.md)
+- **Tips** explain a feature at a time with a small animation: one at startup, and one now and then right after doing something it builds on. **Help → Tips** lists them all; they can be turned off from the dialog or in Preferences
 
-**Windows**: two versions, which update themselves and share settings, tabs and themes.
+## Privacy
 
-- **Installer** (`GitDom-<version>-setup.exe`, recommended): installs GitDom for your user only, in `%LOCALAPPDATA%\Programs\GitDom`, with no administrator rights, and adds it to the Start menu and the desktop. It starts quickest, because nothing is unpacked at each start.
-- **Portable** (`GitDom-<version>-portable.exe`): a single exe that you start with a double-click, with nothing to install. At each start it unpacks itself to a temporary folder, so it takes a few seconds longer to open.
+GitDom has no account, no telemetry and no server of its own. Besides the git commands you run, it goes online only for:
 
-**macOS**: `GitDom-<version>-arm64.dmg` for Apple Silicon, `GitDom-<version>-x64.dmg` for Intel Macs. Drag GitDom to Applications. It isn't signed by a registered Apple developer, so the first time right-click it and choose **Open** (or run `xattr -cr /Applications/GitDom.app`).
+- **Author pictures**: looked up on Gravatar (or GitHub, for its noreply addresses) from a hash of the author's email. Turn them off in **Preferences → Author pictures**
+- **Updates**: the startup check reads the latest version from GitHub. Turn it off in Preferences
 
-**Linux**: `GitDom-<version>-x86_64.AppImage` runs without installing (make it executable first); `GitDom-<version>-amd64.deb` installs on Debian and Ubuntu. On Ubuntu 24.04 and later the AppImage may need `--no-sandbox`, as AppArmor restricts the sandbox of apps not installed as packages; the deb doesn't.
+## Building from source
 
-On macOS and Linux GitDom tells you when a new version is out, and **Download** gets the file for your system.
-
-## Requirements
-
-- [Git](https://git-scm.com/) on the `PATH`
-- [Node.js](https://nodejs.org/) 22 or later, to build from source
-- Windows 10/11, macOS 12 or later, or a 64-bit Linux. Windows is used every day; macOS and Linux run the automated tests, including the end-to-end ones, at every push.
-
-## Getting started
+You need [Git](https://git-scm.com/) on the `PATH` and [Node.js](https://nodejs.org/) 22 or later.
 
 ```bash
 git clone https://github.com/oromis95/gitdom.git
@@ -208,15 +254,12 @@ npm run dev
 | `npm run build:release`              | Builds both, as the release workflow does           |
 | `npm run build:mac` / `build:linux`  | Builds the macOS disk images / Linux packages       |
 
-## Tech stack
+## How it's built
 
 - **Electron** with **electron-vite**
 - **React** + **TypeScript** for the interface, with **Zustand** for state
-- Git runs as child processes of the main process. Its output is parsed and sent to the interface over IPC; long computations (the time-lapse, the statistics) run in a worker thread, so the main process keeps answering.
-- **Canvas 2D** for the commit graph
-- **highlight.js** for diffs
-- **xterm.js** + **node-pty** for the integrated terminal
-- **Vitest** tests, run against real temporary repositories, and end-to-end tests that drive the built app with **Playwright**; GitHub Actions runs them at every push on Windows, Linux and macOS (with formatting, lint, types and a build; a release is published only when they pass); `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository (and with `GITDOM_BENCH_FILE=<file>`, its time-lapse)
+- **Canvas 2D** for the commit graph, **highlight.js** for diffs, **xterm.js** + **node-pty** for the integrated terminal
+- Git runs as child processes of the main process. Its output is parsed and sent to the interface over IPC; long computations (the time-lapse, the statistics) run in a worker thread, so the main process keeps answering
 - The interface runs in Chromium's sandbox and reaches git only through the typed API of the preload script
 
 ```
@@ -226,13 +269,21 @@ src/
   renderer/   React interface: graph, panels, diff, dialogs, themes
   shared/     Types and helpers shared by both sides
 e2e/          End-to-end tests of the built app
+bench/        Timing of big repositories
 resources/    The askpass helper git and ssh call for credentials
-docs/         Requirements (Italian) and screenshots
+docs/         Requirements and roadmap (Italian), screenshots
 ```
+
+### Tests
+
+- **Vitest** unit and integration tests, run against real temporary repositories
+- End-to-end tests that drive the built app with **Playwright**
+- GitHub Actions runs them at every push on Windows, Linux and macOS, together with formatting, lint, types and a build; a release is published only when they pass
+- `GITDOM_BENCH=<path> npx vitest run bench` times the loading of a big repository (and with `GITDOM_BENCH_FILE=<file>`, its time-lapse)
 
 ## Status
 
-GitDom is a personal project under active development (version 1.11.1).
+GitDom is a personal project under active development. The latest version is on the [Releases](https://github.com/oromis95/gitdom/releases/latest) page, and what each version changed is in [CHANGELOG.md](CHANGELOG.md).
 The full list of requirements is in [docs/REQUISITI.md](docs/REQUISITI.md), and the plan for the next versions is in [docs/ROADMAP.md](docs/ROADMAP.md) (both in Italian).
 
 ## License
