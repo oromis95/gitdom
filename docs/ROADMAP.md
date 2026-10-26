@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.11.1 pubblicata il 2026-10-19 (Step 1–17 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.12.0 pubblicata il 2026-10-26 (Step 1–18 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -227,9 +227,9 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 - ✅ **CSS in file per funzione**: `workflow.css` e `tips.css` (oltre 3000 righe ciascuno) diventano indici di `@import` di `assets/workflow/` e `assets/tips/`, nello stesso ordine: il CSS costruito è identico byte per byte
 - ✅ **Componenti più piccoli e test dei flussi**: `GraphView`, `FileInspector`, `StatisticsView` e `TipAnimation` divisi in `graph/`, `inspector/`, `statistics/` e `tips/` senza cambiare il comportamento; nuovi test end-to-end per stage di righe e hunk, stash di un file, cherry-pick, rebase interattivo, riordino dei commit trascinandoli, merge tool e merge trascinando un branch, oltre a impostazioni e worker
 
-## Step 18 — Schede e attese ✅
+## Step 18 — v1.12: Schede e attese ✅
 
-> Richiesto dall'utente il 2026-10-26: le schede si chiudevano solo una alla volta, e aprire una repository o fare un push sembrava bloccare l'app.
+> Completato con la v1.12.0. Richiesto dall'utente il 2026-10-26: le schede si chiudevano solo una alla volta, e aprire una repository o fare un push sembrava bloccare l'app.
 
 - ✅ **Menu delle schede**: il tasto destro su una scheda chiude quella, le altre, quelle a destra o a sinistra, oppure tutte; copia il percorso o mostra la cartella. **Close other tabs** e **Close all tabs** anche nella palette dei comandi. Il tasto destro non cambia più la scheda attiva
 - ✅ **Apertura immediata**: la scheda compare subito, in caricamento, prima che git abbia letto la storia; se la cartella era una sottocartella di una repository già aperta, resta la scheda esistente, e una cartella che non è una repository toglie la scheda e mostra l'errore. Al posto di "Loading repository…" il logo con le auto che continuano a cambiare corsia e alcune righe segnaposto del grafo; l'icona della scheda ora gira davvero
