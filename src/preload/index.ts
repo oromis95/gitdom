@@ -6,6 +6,7 @@ import {
   type CloneProgress,
   type GitDomApi,
   type MenuCommand,
+  type OpProgress,
   type ThemeChoice,
   type UpdateProgress
 } from '../shared/api'
@@ -29,6 +30,12 @@ const api: GitDomApi = {
       listener(repoPath, scope)
     ipcRenderer.on(IPC.changed, handler)
     return () => ipcRenderer.removeListener(IPC.changed, handler)
+  },
+  onOpProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, repoPath: string, progress: OpProgress): void =>
+      listener(repoPath, progress)
+    ipcRenderer.on(IPC.opProgress, handler)
+    return () => ipcRenderer.removeListener(IPC.opProgress, handler)
   },
   repos: {
     pickFolder: (title) => ipcRenderer.invoke(IPC.pickFolder, title),

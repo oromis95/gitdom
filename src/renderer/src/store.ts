@@ -2,7 +2,9 @@ import { create } from 'zustand'
 import { notify } from './ui'
 import { tipAfter } from './tips'
 import type { DiffSource, GraphFilter, RepoSnapshot } from '../../shared/types'
+import type { OpProgress } from '../../shared/api'
 import { storage } from './storage'
+import { samePath } from './worktrees'
 
 export const WIP_HASH = 'WIP'
 
@@ -11,6 +13,11 @@ export interface RepoTab {
   name: string
   snapshot?: RepoSnapshot
   loading: boolean
+  /**
+   * Shown while a repository is being opened, before its root is known: its path is the folder
+   * picked, which may be a subfolder or another repository's already open tab
+   */
+  opening?: boolean
   error?: string
   /** Selected commit hash, or WIP_HASH for the working tree */
   selected: string | null
@@ -26,6 +33,8 @@ export interface RepoTab {
   statistics?: boolean
   /** Label of the long-running operation in progress (fetch, push…) */
   busy?: string
+  /** What git reported of that operation's progress, when it reports any (push) */
+  progress?: OpProgress
   /** The next page of commits is being loaded (GRAPH-08) */
   loadingMore?: boolean
   draft: CommitDraft
@@ -115,6 +124,8 @@ interface AppState {
   pickAndOpen(): Promise<void>
   openRepo(path: string): Promise<void>
   closeTab(index: number): void
+  /** Closes the tabs of these repositories, keeping the active one if it stays open */
+  closeTabs(paths: string[]): void
   /** Opens several repositories at once, e.g. a workspace; `replace` closes the other tabs. */
   openTabs(paths: string[], replace: boolean): void
   toggleFavorite(path: string): void
@@ -140,6 +151,8 @@ interface AppState {
   openStatistics(open: boolean): void
   setDraft(path: string, draft: Partial<CommitDraft>): void
   setBusy(path: string, busy: string | undefined): void
+  /** Progress of the running operation, ignored once it has finished */
+  setProgress(path: string, progress: OpProgress): void
   /** Changes the branches the graph shows and reloads it. */
   setGraphFilter(path: string, filter: GraphFilter): void
 }
@@ -160,7 +173,10 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function persist(tabs: RepoTab[], active: number): void {
-  storage.setItem(TABS_KEY, JSON.stringify({ paths: tabs.map((t) => t.path), active }))
+  // A tab still opening may not be a repository at all: it is saved once it is
+  const kept = tabs.filter((t) => !t.opening)
+  const index = Math.max(0, kept.indexOf(tabs[active]))
+  storage.setItem(TABS_KEY, JSON.stringify({ paths: kept.map((t) => t.path), active: index }))
 }
 
 function baseName(path: string): string {
@@ -178,6 +194,8 @@ export const useApp = create<AppState>((set, get) => {
   const limits = new Map<string, number>()
 
   const load = async (path: string): Promise<void> => {
+    // openRepo loads it, and replaces it with the repository's real tab
+    if (get().tabs.find((t) => t.path === path)?.opening) return
     if (loading.has(path)) {
       pending.add(path)
       return
@@ -217,23 +235,46 @@ export const useApp = create<AppState>((set, get) => {
     },
 
     async openRepo(requested) {
-      // Resolve to the repository root first so the same repo is never opened twice
-      const result = await window.api.openRepository(requested, get().graphFilters[requested])
-      if (!result.ok) {
-        notify('error', result.error)
+      const open = get().tabs.findIndex((t) => samePath(t.path, requested))
+      if (open >= 0) {
+        get().setActive(open)
+        if (!get().tabs[open].opening) await load(get().tabs[open].path)
         return
       }
+      // A tab right away, loading: big histories take seconds to read
+      const previous = get().tabs[get().active]
+      const placeholder: RepoTab = {
+        path: requested,
+        name: baseName(requested),
+        loading: true,
+        opening: true,
+        selected: null,
+        draft: EMPTY_DRAFT
+      }
+      set((s) => ({ tabs: [...s.tabs, placeholder], active: s.tabs.length }))
+
+      // Resolve to the repository root first so the same repo is never opened twice
+      const result = await window.api.openRepository(requested, get().graphFilters[requested])
+      const withoutPlaceholder = get().tabs.filter((t) => t !== placeholder)
+      const focused = get().tabs[get().active]
+      if (!result.ok) {
+        notify('error', result.error)
+        const back = focused === placeholder ? previous : focused
+        set({ tabs: withoutPlaceholder, active: Math.max(0, withoutPlaceholder.indexOf(back!)) })
+        return
+      }
+      if (!get().tabs.includes(placeholder)) return // closed while it was opening
       const snapshot = result.value
-      const { tabs } = get()
-      const existing = tabs.findIndex((t) => t.path === snapshot.path)
       const recent = [snapshot.path, ...get().recent.filter((p) => p !== snapshot.path)].slice(
         0,
         MAX_RECENT
       )
       storage.setItem(RECENT_KEY, JSON.stringify(recent))
 
-      if (existing >= 0) {
-        set({ active: existing, recent })
+      const existing = withoutPlaceholder.find((t) => t.path === snapshot.path)
+      if (existing) {
+        // A subfolder of a repository already open: its tab, refreshed
+        set({ tabs: withoutPlaceholder, active: withoutPlaceholder.indexOf(existing), recent })
         updateTab(snapshot.path, { snapshot, error: undefined })
       } else {
         const tab: RepoTab = {
@@ -244,7 +285,8 @@ export const useApp = create<AppState>((set, get) => {
           selected: null,
           draft: EMPTY_DRAFT
         }
-        set({ tabs: [...tabs, tab], active: tabs.length, recent })
+        const tabs = get().tabs.map((t) => (t === placeholder ? tab : t))
+        set({ tabs, active: tabs.indexOf(focused === placeholder ? tab : focused), recent })
       }
       persist(get().tabs, get().active)
     },
@@ -287,12 +329,21 @@ export const useApp = create<AppState>((set, get) => {
 
     closeTab(index) {
       const closed = get().tabs[index]
-      if (closed) limits.delete(closed.path)
-      const tabs = get().tabs.filter((_, i) => i !== index)
-      const active = Math.max(
-        0,
-        Math.min(get().active > index ? get().active - 1 : get().active, tabs.length - 1)
-      )
+      if (closed) get().closeTabs([closed.path])
+    },
+
+    closeTabs(paths) {
+      const before = get().tabs
+      const current = get().active
+      paths.forEach((p) => limits.delete(p))
+      const tabs = before.filter((t) => !paths.includes(t.path))
+      // The active tab if it stays, else the nearest one still open after it, else before it
+      const after = before.slice(current).find((t) => tabs.includes(t))
+      const prior = before
+        .slice(0, current)
+        .reverse()
+        .find((t) => tabs.includes(t))
+      const active = Math.max(0, tabs.indexOf((after ?? prior)!))
       set({ tabs, active })
       persist(tabs, active)
     },
@@ -412,7 +463,11 @@ export const useApp = create<AppState>((set, get) => {
     },
 
     setBusy(path, busy) {
-      updateTab(path, { busy })
+      updateTab(path, { busy, progress: undefined })
+    },
+
+    setProgress(path, progress) {
+      if (get().tabs.find((t) => t.path === path)?.busy) updateTab(path, { progress })
     },
 
     setGraphFilter(path, filter) {

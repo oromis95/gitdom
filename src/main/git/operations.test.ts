@@ -13,6 +13,8 @@ import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setToolSettings } from '../settings'
 import { runOp, setTrash } from './operations'
+import { withProgress } from './progress'
+import type { OpProgress } from '../../shared/api'
 import { ensureCommitGraph, loadCommits, loadIdentity, loadSnapshot } from './repository'
 
 // Git on Windows is slow to spawn: remote scenarios run dozens of commands
@@ -533,6 +535,17 @@ describe('remotes', () => {
     git(clone, 'push', '-q', 'origin', 'HEAD:refs/heads/fetched')
     await runOp(repo, 'fetch', [])
     expect(git(repo, 'branch', '-r')).toContain('origin/fetched')
+  })
+
+  it('reports the progress of a push, and returns its output without the rewritten lines', async () => {
+    const seen: OpProgress[] = []
+    const output = await withProgress(
+      (p) => seen.push(p),
+      () => runOp(repo, 'push', [false])
+    )
+    expect(seen.some((p) => p.phase === 'Writing objects' && p.percent === 90)).toBe(true)
+    expect(output).not.toContain('\r')
+    expect(output).toContain('main -> main')
   })
 
   it('rejects a diverged push unless forced with lease', async () => {

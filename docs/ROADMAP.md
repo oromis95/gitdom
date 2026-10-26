@@ -227,6 +227,14 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 - ✅ **CSS in file per funzione**: `workflow.css` e `tips.css` (oltre 3000 righe ciascuno) diventano indici di `@import` di `assets/workflow/` e `assets/tips/`, nello stesso ordine: il CSS costruito è identico byte per byte
 - ✅ **Componenti più piccoli e test dei flussi**: `GraphView`, `FileInspector`, `StatisticsView` e `TipAnimation` divisi in `graph/`, `inspector/`, `statistics/` e `tips/` senza cambiare il comportamento; nuovi test end-to-end per stage di righe e hunk, stash di un file, cherry-pick, rebase interattivo, riordino dei commit trascinandoli, merge tool e merge trascinando un branch, oltre a impostazioni e worker
 
+## Step 18 — Schede e attese ✅
+
+> Richiesto dall'utente il 2026-10-26: le schede si chiudevano solo una alla volta, e aprire una repository o fare un push sembrava bloccare l'app.
+
+- ✅ **Menu delle schede**: il tasto destro su una scheda chiude quella, le altre, quelle a destra o a sinistra, oppure tutte; copia il percorso o mostra la cartella. **Close other tabs** e **Close all tabs** anche nella palette dei comandi. Il tasto destro non cambia più la scheda attiva
+- ✅ **Apertura immediata**: la scheda compare subito, in caricamento, prima che git abbia letto la storia; se la cartella era una sottocartella di una repository già aperta, resta la scheda esistente, e una cartella che non è una repository toglie la scheda e mostra l'errore. Al posto di "Loading repository…" il logo con le auto che continuano a cambiare corsia e alcune righe segnaposto del grafo; l'icona della scheda ora gira davvero
+- ✅ **Progresso del push**: `git push --progress`, letto da `src/main/git/progress.ts` (lo stesso parser del clone, con una tabella di fasi per operazione: Counting 0–5, Compressing 5–30, Writing 30–90, Resolving deltas sul remoto 90–100) e inviato all'interfaccia tramite uno scope `AsyncLocalStorage` attorno a ogni operazione. Una barra sottile sotto la toolbar si riempie, la barra di stato mostra fase, quantità inviata e velocità, il pulsante Push la percentuale; finito l'invio la barra pulsa ("waiting for the remote"). Le operazioni che non riportano progresso (fetch, pull, merge…) mostrano una barra che scorre. Le righe che git riscrive con `\r` non finiscono più nei dettagli delle notifiche né nell'Activity log
+
 ---
 
 ## Forse, un giorno

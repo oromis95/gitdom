@@ -141,8 +141,15 @@ button,
   animation: fade-in var(--medium) ease;
 }
 
+/* A tab opened rises out of the tab bar */
+@keyframes tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
 .tab {
-  animation: fade-in var(--medium) ease;
+  animation: tab-in 260ms var(--ease-out);
 }
 
 /* --- Startup logo ----------------------------------------------------------------------- */
@@ -210,6 +217,90 @@ button,
   transform-box: fill-box;
   transform-origin: center;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+
+/* --- Waiting ---------------------------------------------------------------------------- */
+
+/* A repository read for the first time: the logo's cars keep driving over placeholder commits */
+.repo-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(420px, 80%);
+  animation: fade-in 300ms ease;
+}
+.repo-loading-title {
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 0.3px;
+}
+.repo-loading-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation:
+    rise-in 400ms var(--ease-out) backwards,
+    skeleton-pulse 1.4s ease-in-out infinite;
+}
+.skeleton-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.6;
+}
+.skeleton-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+}
+
+/* A long operation (push, fetch, pull…): the bar overlays the top of the view, without moving it */
+.busy-bar {
+  position: relative;
+  z-index: 5;
+  height: 0;
+}
+.busy-bar > div {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+.busy-bar-fill {
+  transition: width 250ms ease-out;
+}
+/* Everything sent: the remote is working on it */
+.busy-bar-fill.settling {
+  animation: update-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes busy-sweep {
+  from {
+    left: -30%;
+  }
+  to {
+    left: 100%;
+  }
+}
+.busy-bar-sweep {
+  width: 30%;
+  animation: busy-sweep 1.1s ease-in-out infinite;
 }
 
 /* --- Reduced motion --------------------------------------------------------------------- */

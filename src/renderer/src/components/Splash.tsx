@@ -60,21 +60,29 @@ function carKeyframes(car: number): Keyframe[] {
 
 export function HighwayLogo({
   size,
-  animated = false
+  animated = false,
+  loop = false
 }: {
   /** Width in pixels */
   size: number
   animated?: boolean
+  /** The cars keep changing lanes, back and forth, instead of settling into the logo */
+  loop?: boolean
 }): React.JSX.Element {
   const carsRef = useRef<(SVGGElement | null)[]>([])
 
   useEffect(() => {
     if (!animated) return
     const animations = carsRef.current.map((car, i) =>
-      car?.animate(carKeyframes(i), { duration: DURATION, fill: 'forwards' })
+      car?.animate(carKeyframes(i), {
+        duration: DURATION,
+        fill: 'forwards',
+        iterations: loop ? Infinity : 1,
+        direction: loop ? 'alternate' : 'normal'
+      })
     )
     return () => animations.forEach((a) => a?.cancel())
-  }, [animated])
+  }, [animated, loop])
 
   const last = STEPS[STEPS.length - 1]
   return (

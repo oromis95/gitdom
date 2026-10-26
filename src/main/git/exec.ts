@@ -54,6 +54,17 @@ const BASE_ARGS = [
 ]
 
 /**
+ * Keeps the last state of each line git rewrote in place with \r (progress output),
+ * as a terminal would show it.
+ */
+export function collapseProgress(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => line.split('\r').filter(Boolean).pop() ?? '')
+    .join('\n')
+}
+
+/**
  * Runs `git <args>` in `cwd` and resolves with stdout.
  * Rejects with GitError on a non-zero exit code.
  */
@@ -104,7 +115,7 @@ export function runGit(cwd: string, args: string[], options: RunOptions = {}): P
         return reject(new GitError('Cancelled', args, null, ''))
       }
       const stdout = Buffer.concat(out).toString(options.encoding ?? 'utf8')
-      const stderr = Buffer.concat(err).toString('utf8')
+      const stderr = collapseProgress(Buffer.concat(err).toString('utf8'))
       const ok = code === 0 || (code !== null && !!options.okExitCodes?.includes(code))
       const shown = options.onStdout
         ? `(output read as it arrived, ${streamed} bytes)`

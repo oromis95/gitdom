@@ -102,6 +102,7 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 ### Remotes and credentials
 
 - Pull (merge, fast-forward only or rebase), push, and a periodic background fetch
+- Push with a progress bar under the toolbar: it fills as git counts, compresses and sends the objects, with the amount sent and the speed in the status bar and the percentage on the Push button. Fetch, pull and the other long operations show a moving bar
 - Credentials when git needs them: a username with a password or token, an SSH key's passphrase, or whether to trust a server seen for the first time, asked in a GitDom dialog. Your credential helper keeps them, if you have one; GitDom stores nothing. The periodic fetch never asks: if it needs credentials it says so once, and **Fetch** asks
 
 ### Merging and conflicts
@@ -151,7 +152,7 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 
 ### Several repositories
 
-- Several repositories open side by side in tabs
+- Several repositories open side by side in tabs. A repository opens in its tab at once, with a loading animation while its history is read. Right-click a tab to close it, the others, those to its right or left, or all of them, or to copy its path or show it in its folder
 - Quick switcher on the repository name in the toolbar: open tabs, favorites and recent repositories, with search
 - Workspaces: save the open tabs under a name and reopen them together
 - Workspace dashboard (**View → Workspace Dashboard**, or **Dashboard** on the welcome screen): every repository you have open, saved in a workspace, favorite or recent, with its branch, commits to push and to pull, changes, stashes, and anything stuck such as a merge in progress. **Fetch all** fetches them a few at a time, **Pull** fast-forwards those that are only behind, and a click opens one

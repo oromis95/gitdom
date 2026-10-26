@@ -5,30 +5,15 @@ import { join } from 'path'
 import type { CloneOptions, CloneProgress, InitOptions, InitOutcome } from '../../shared/api'
 import { gitignoreContent, licenseText } from '../../shared/templates'
 import { runGit, tryGit } from './exec'
-
-// Share of the overall progress bar given to each phase git reports, in order
-const PHASES: [RegExp, number, number][] = [
-  [/^(remote: )?(Enumerating|Counting|Compressing) objects/, 0, 10],
-  [/^Receiving objects/, 10, 80],
-  [/^Resolving deltas/, 80, 95],
-  [/^(Updating files|Checking out files|Filtering content)/, 95, 100]
-]
-
-const PROGRESS_RE = /^(.*?):\s+(\d{1,3})%/
+import { CLONE_PHASES, parseProgress, progressReader } from './progress'
 
 /**
  * Reads one line of `git clone --progress` output into overall progress,
  * or null for lines that aren't progress (warnings, submodule messages).
  */
 export function parseCloneProgress(line: string): CloneProgress | null {
-  const match = PROGRESS_RE.exec(line.trim())
-  if (!match) return null
-  const phase = match[1].replace(/^remote: /, '')
-  const percent = Math.min(100, Number(match[2]))
-  const range = PHASES.find(([re]) => re.test(match[1]))
-  if (!range) return { phase, percent: null }
-  const [, from, to] = range
-  return { phase, percent: Math.round(from + ((to - from) * percent) / 100) }
+  const progress = parseProgress(line, CLONE_PHASES)
+  return progress && { phase: progress.phase, percent: progress.percent }
 }
 
 function checkName(name: string): void {
@@ -76,24 +61,10 @@ export async function cloneRepository(
 
   const controller = new AbortController()
   clones.set(id, controller)
-  // git rewrites progress lines in place with \r: split on both
-  let partial = ''
-  let last = ''
   try {
     await runGit(options.parent, args, {
       signal: controller.signal,
-      onStderr(chunk) {
-        const lines = (partial + chunk).split(/[\r\n]/)
-        partial = lines.pop() ?? ''
-        for (const line of lines) {
-          const progress = parseCloneProgress(line)
-          const key = progress && `${progress.phase}:${progress.percent}`
-          if (progress && key !== last) {
-            last = key!
-            onProgress(progress)
-          }
-        }
-      }
+      onStderr: progressReader(CLONE_PHASES, onProgress)
     })
     return target
   } catch (e) {

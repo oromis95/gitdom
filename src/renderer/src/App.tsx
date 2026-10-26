@@ -15,6 +15,9 @@ import TabBar from './components/TabBar'
 import Toolbar from './components/Toolbar'
 import Workspace from './components/Workspace'
 import BisectBar from './components/BisectBar'
+import BusyBar from './components/BusyBar'
+import { busyText } from './progress'
+import RepoLoading from './components/RepoLoading'
 import MatrixRain from './components/MatrixRain'
 import Overlays from './components/Overlays'
 import { HoverLayer } from './components/HoverCards'
@@ -215,6 +218,12 @@ function App(): React.JSX.Element {
     []
   )
 
+  useEffect(
+    () =>
+      window.api.onOpProgress((path, progress) => useApp.getState().setProgress(path, progress)),
+    []
+  )
+
   // Keep remote branches current with a periodic background fetch
   const autoFetchMinutes = useSettings((s) => s.autoFetchMinutes)
   useEffect(() => {
@@ -305,12 +314,13 @@ function App(): React.JSX.Element {
       ) : (
         <>
           <Toolbar tab={tab} />
+          {tab.busy && <BusyBar busy={tab.busy} progress={tab.progress} />}
           {tab.error && <div className="banner-error">{tab.error}</div>}
           {snapshot && <BisectBar snapshot={snapshot} busy={!!tab.busy} />}
           {snapshot ? (
             <Workspace key={tab.path} tab={tab} snapshot={snapshot} />
           ) : (
-            <div className="center-message">{tab.loading ? 'Loading repository…' : ''}</div>
+            <div className="center-message">{tab.loading && <RepoLoading name={tab.name} />}</div>
           )}
         </>
       )}
@@ -328,7 +338,7 @@ function App(): React.JSX.Element {
             </span>
           </>
         )}
-        {tab?.busy && <span className="status-busy">{tab.busy}…</span>}
+        {tab?.busy && <span className="status-busy">{busyText(tab.busy, tab.progress)}</span>}
         <span style={{ marginLeft: 'auto' }} />
         {snapshot && <IdentityButton snapshot={snapshot} />}
         <button

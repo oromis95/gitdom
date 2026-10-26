@@ -246,7 +246,11 @@ export default function Toolbar({ tab }: { tab: RepoTab }): React.JSX.Element {
         </button>
       </div>
       <Tool
-        label="Push"
+        label={
+          tab.busy === 'Pushing' && tab.progress?.percent != null
+            ? `${tab.progress.percent}%`
+            : 'Push'
+        }
         icon={icon('Pushing', <ArrowUpFromLine size={20} />)}
         disabled={busy || !head?.branch}
         title={hint('Push', keys.push)}

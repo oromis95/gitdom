@@ -4,6 +4,12 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 
 ## Unreleased
 
+### Added
+
+- Right-click a tab to close it, **Close others**, **Close tabs to the right**, **Close tabs to the left** or **Close all**, or to copy its path or show it in its folder; **Close other tabs** and **Close all tabs** are in the command palette too
+- A repository opens in a new tab at once, with an animation while its history is read, instead of nothing happening for a few seconds
+- Push shows its progress: a bar under the toolbar fills as git counts, compresses and sends the objects, the status bar shows the phase, the amount sent and the speed, and the Push button the percentage. Fetch, pull and the other long operations show a moving bar
+
 ### Changed
 
 - Statistics: in **Hot files** and **Files only one person knows**, each file shows its name in full, with its folder beneath, and both lists take the whole width

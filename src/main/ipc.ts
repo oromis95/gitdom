@@ -11,6 +11,7 @@ import { activityEntries, clearActivity, inAction, onActivity, redact } from './
 import { cancelClone, cloneRepository, initRepository } from './git/clone'
 import { GitError } from './git/exec'
 import { runOp, setTrash } from './git/operations'
+import { withProgress } from './git/progress'
 import type { GraphFilter, StatisticsOptions } from '../shared/types'
 import { ensureCommitGraph, openSnapshot } from './git/repository'
 import { cancelStatistics, repoStatistics } from './git/statistics'
@@ -87,8 +88,15 @@ export function registerIpcHandlers(): void {
     })
   )
 
-  ipcMain.handle(IPC.op, (_event, repoPath: string, name: OpName, args: OpArgs<OpName>) =>
-    toResult(() => runOp(repoPath, name, args))
+  ipcMain.handle(IPC.op, (event, repoPath: string, name: OpName, args: OpArgs<OpName>) =>
+    toResult(() =>
+      withProgress(
+        (progress) => {
+          if (!event.sender.isDestroyed()) event.sender.send(IPC.opProgress, repoPath, progress)
+        },
+        () => runOp(repoPath, name, args)
+      )
+    )
   )
 
   ipcMain.on(IPC.watch, (event, repoPaths: string[]) => {

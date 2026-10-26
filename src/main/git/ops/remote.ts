@@ -1,6 +1,7 @@
 // Operations on remotes, submodules, worktrees and Git LFS.
 import { resolve } from 'path'
 import { runGit } from '../exec'
+import { PUSH_PHASES, progressReader, reportProgress } from '../progress'
 import {
   type OpImpl,
   assertArg,
@@ -49,7 +50,8 @@ export const remoteOps: Pick<
     const branch = await currentBranch(repo)
     const remote = await getConfig(repo, `branch.${branch}.remote`)
     const merge = await getConfig(repo, `branch.${branch}.merge`)
-    const args = ['push']
+    // --progress: git only reports it to a terminal otherwise
+    const args = ['push', '--progress']
     if (forceWithLease) args.push('--force-with-lease')
     if (remote && merge) {
       // Explicit refspec: works even when the upstream has a different name (push.default=simple would refuse)
@@ -61,7 +63,10 @@ export const remoteOps: Pick<
         `refs/heads/${branch}:refs/heads/${branch}`
       )
     }
-    return runGit(repo, args, { withStderr: true })
+    return runGit(repo, args, {
+      withStderr: true,
+      onStderr: progressReader(PUSH_PHASES, reportProgress)
+    })
   },
 
   async addRemote(repo, name, url) {

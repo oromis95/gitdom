@@ -613,6 +613,12 @@ export interface CloneProgress {
   percent: number | null
 }
 
+/** Progress of a long operation such as a push, as git reports it */
+export interface OpProgress extends CloneProgress {
+  /** Amount sent or received and the speed, e.g. "1.20 MiB, 500.00 KiB/s" */
+  transfer?: string
+}
+
 export interface InitOptions {
   /** Folder the repository is created in, as a new subfolder */
   parent: string
@@ -896,6 +902,8 @@ export interface GitDomApi {
   watch(repoPaths: string[]): void
   /** Subscribes to on-disk changes; returns the unsubscribe function. */
   onRepoChanged(listener: (repoPath: string, scope: ChangeScope) => void): () => void
+  /** Subscribes to the progress operations report (push); returns the unsubscribe function. */
+  onOpProgress(listener: (repoPath: string, progress: OpProgress) => void): () => void
   repos: ReposApi
   tools: ToolsApi
   terminal: TerminalApi
@@ -913,6 +921,7 @@ export const IPC = {
   op: 'repo:op',
   watch: 'repo:watch',
   changed: 'repo:changed',
+  opProgress: 'repo:op-progress',
   terminalShells: 'term:shells',
   terminalOpen: 'term:open',
   terminalWrite: 'term:write',

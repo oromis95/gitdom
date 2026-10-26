@@ -294,6 +294,12 @@ export function buildCommands(): Command[] {
     if (i !== app.active) add('Tabs', `Switch to ${t.name}`, () => app.setActive(i), t.path)
   })
   if (tab) add('Tabs', `Close ${tab.name}`, () => app.closeTab(app.active))
+  if (app.tabs.length > 1) {
+    add('Tabs', 'Close other tabs', () =>
+      app.closeTabs(app.tabs.filter((t) => t !== tab).map((t) => t.path))
+    )
+    add('Tabs', 'Close all tabs', () => app.closeTabs(app.tabs.map((t) => t.path)))
+  }
   // Favorites first, then the other recent repositories
   const known = [...app.favorites, ...app.recent.filter((p) => !app.favorites.includes(p))]
   for (const path of known) {
