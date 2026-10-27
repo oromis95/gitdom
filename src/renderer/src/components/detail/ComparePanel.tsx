@@ -56,7 +56,7 @@ export function ComparePanel({
   return (
     <div className="detail-scroll">
       <div className="detail-title-row">
-        <div className="detail-title">Comparing two revisions</div>
+        <div className="detail-title">{target.title ?? 'Comparing two revisions'}</div>
         <ViewToggle view={view} onChange={changeView} />
       </div>
       <dl className="detail-meta">

@@ -239,7 +239,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Pull request — piano (Step 19–23)
 
-> 📝 In progettazione, richiesto dall'utente il 2026-10-27: pull request di GitHub, GitLab, Bitbucket e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
+> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 completato, non ancora pubblicato): pull request di GitHub, GitLab, Bitbucket e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
 
 ### Decisioni comuni a tutti gli step
 
@@ -272,7 +272,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
    La finestra spiega quali permessi spuntare e apre la pagina giusta del provider.
 
-I token vanno in un file a parte nella cartella di GitDom, cifrati con `safeStorage` (NFR-06). Non stanno in `settings.json`, così **Export Settings** non li esporta mai. Non arrivano mai all'interfaccia: tutte le chiamate di rete partono dal main con `net.fetch`, che passa dal proxy di sistema, e il token non compare né nell'Activity log né nelle notifiche.
+I token vanno in un file a parte nella cartella di GitDom (`accounts.json`), cifrati con `safeStorage` (NFR-06); quelli di Git Credential Manager non vengono copiati affatto, si richiedono a GCM a ogni sessione. Non stanno in `settings.json`, così **Export Settings** non li esporta mai. Se il sistema non sa cifrare, l'account dura fino alla chiusura di GitDom. I token non arrivano mai all'interfaccia: tutte le chiamate di rete partono dal main con `net.fetch`, che passa dal proxy di sistema, e il token non compare né nell'Activity log (`git credential fill` non passa da lì) né nelle notifiche.
 
 Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con avatar, nome, host e origine del token (GCM, OAuth o token manuale), e un pulsante per scollegarli.
 
@@ -280,24 +280,25 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
 
 - Nuova cartella `src/main/forge/`:
   - `detect.ts`: dal remoto al provider, al progetto e al repository;
-  - `auth.ts`: GCM, device flow e token cifrati;
-  - un modulo per provider, `github.ts`, `gitlab.ts`, `bitbucket.ts` e `azure.ts`, tutti con la stessa interfaccia `ForgeProvider`;
-  - `cache.ts`: dati per repository, ETag e stato offline.
+  - `accounts.ts` (token cifrati), `credential.ts` (GCM) e `device.ts` (device flow);
+  - `http.ts`: richieste, errori chiari (token rifiutato, permesso mancante, rate limit, rete);
+  - un modulo per provider, `github.ts` e `gitlab.ts`, poi `bitbucket.ts` e `azure.ts`, tutti con la stessa interfaccia `ForgeProvider` (`provider.ts`);
+  - `service.ts`: account da usare, ultimo stato di ogni repository, fetch delle PR; `ipc.ts`.
 - Modello normalizzato in `src/shared/forge.ts`:
   - `PullRequest` con numero, titolo, autore, stato (bozza, aperta, merged, chiusa), branch sorgente e destinazione, repository sorgente, sha della testa, reviewer col loro voto, riassunto dei check, mergeability (pulita, conflitti, bloccata con il motivo), commenti e URL;
   - `capabilities` per provider, per esempio: label, auto-merge, "richiedi modifiche", metodi di merge permessi dal repository. L'interfaccia nasconde ciò che il provider non ha.
 - Chiamate:
-  - per GitHub, GraphQL per gli elenchi (PR, review e `statusCheckRollup` in una richiesta) e REST per le azioni;
-  - per gli altri provider, REST: GitLab v4, Bitbucket 2.0, Azure DevOps `api-version=7.1`.
+  - per GitHub e GitLab, GraphQL per gli elenchi: PR, review, check e mergeability in una richiesta; le query sono validate sugli schemi ufficiali;
+  - REST per le azioni e per gli altri provider: Bitbucket 2.0, Azure DevOps `api-version=7.1`.
 - **Aggiornamento**:
   - nella scheda attiva, ogni 60 s con la finestra in primo piano e ogni 5 minuti in background;
   - subito dopo push e fetch;
-  - con GitHub, richieste condizionate (ETag), che con risposta 304 non consumano il limite di richieste;
-  - gli header di rate limit vengono rispettati.
+  - GraphQL non ha richieste condizionate (ETag): una query al minuto resta molto sotto il limite di GitHub (5000 punti l'ora);
+  - se il limite finisce, l'errore dice fino a quando.
 
   Senza rete restano gli ultimi dati, segnati come non aggiornati.
 
-- Markdown di descrizioni e commenti: va scelto se usare una piccola dipendenza (`marked` più `DOMPurify`) o scrivere un renderer minimo. In ogni caso niente HTML grezzo, link aperti nel browser e immagini remote caricate dal main o non mostrate. La sandbox e la CSP restano come sono.
+- Markdown di descrizioni e commenti: un parser di GitDom (`src/shared/markdown.ts`, senza dipendenze) che produce elementi React, mai HTML: i tag vengono tolti, i link aperti nel browser solo se http(s), le immagini mostrate come link. Gli avatar li carica il main e li passa come `data:`. La sandbox e la CSP restano come sono.
 
 **Test**
 
@@ -305,29 +306,35 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
 - Gli E2E usano un server finto locale (`GITDOM_FORGE_MOCK`) che imita i quattro provider. La CI non usa mai la rete né account veri.
 - Prima di ogni release, prova a mano con account veri. Per GitLab, Bitbucket e Azure DevOps bastano account gratuiti di prova.
 
-### Step 19 — v1.13: Pull request, fondamenta e lettura (GitHub e GitLab)
+### Step 19 — v1.13: Pull request, fondamenta e lettura (GitHub e GitLab) ✅
 
-Due provider insieme, per verificare subito che l'interfaccia comune funzioni anche per un servizio diverso da GitHub.
+> Completato il 2026-10-27, non ancora pubblicato. Due provider insieme, per verificare subito che l'interfaccia comune funzioni anche per un servizio diverso da GitHub. Provato anche contro il vero GitHub (il repository di GitDom ed `electron/electron`), che ha trovato tre cose che lo schema non diceva:
+>
+> - il token di GCM non ha `read:org`, che serve per leggere i **team** fra i reviewer: GitDom riprova senza team e se lo ricorda per l'host;
+> - `mergeStateStatus` su 30 PR di un repository grande supera il tempo che GitHub concede (502): l'elenco ne fa a meno e legge 20 PR (10 se GitHub risponde ancora 502), e la vista della PR chiede il verdetto esatto per quella sola;
+> - una rilettura chiesta mentre ne era già in corsa una veniva persa (la sezione restava su **Connect** dopo la connessione): ora si ripete.
+>
+> Il device flow è pronto ma non viene offerto finché non si registrano le app OAuth "GitDom" su GitHub e gitlab.com (client ID in `src/main/forge/device.ts`).
 
-- Rilevamento del provider, sezione **Accounts**, login con GCM, device flow e token, file dei token cifrato
-- **Badge nel grafo**:
+- ✅ Rilevamento del provider, sezione **Accounts**, login con GCM, device flow e token, file dei token cifrato
+- ✅ **Badge nel grafo**:
   - sull'etichetta del branch con una PR aperta compare `#42`, colorato per stato: bozza, aperta, approvata, con modifiche richieste, con conflitti;
   - accanto, un pallino per la CI: verde, rosso, oppure giallo che pulsa mentre gira;
   - il badge compare sul branch locale che segue il branch sorgente e sul branch remoto.
-- **Scheda al passaggio del mouse**, come quelle dei commit: titolo, autore, reviewer e voti, check falliti con il nome, mergeability con il motivo del blocco.
-- **Sezione Pull Requests** nella sidebar (SIDE-07):
+- ✅ **Scheda al passaggio del mouse**, come quelle dei commit: titolo, autore, reviewer e voti, check falliti con il nome, mergeability con il motivo del blocco.
+- ✅ **Sezione Pull Requests** nella sidebar (SIDE-07):
   - gruppi **Le mie**, **Review richiesta a me** e **Altre**;
   - ogni riga mostra stato, CI, approvazioni e commenti;
   - il filtro della sidebar funziona anche qui, e la sezione si può nascondere come le altre.
-- **Vista della PR**, in sola lettura:
+- ✅ **Vista della PR**, in sola lettura (i file cambiati nel pannello di dettaglio, il diff sopra la vista, Esc torna alla PR):
   - intestazione con stato, branch e reviewer;
   - descrizione in markdown e timeline di commenti e review;
   - elenco dei commit, con un clic che li seleziona nel grafo;
   - check con link ai log sul provider.
-- **Diff in locale**:
+- ✅ **Diff in locale**:
   - GitDom scarica la testa della PR (`refs/pull/N/head` su GitHub, `refs/merge-requests/N/head` su GitLab) e calcola il diff dal merge-base con il branch di destinazione, come fa il provider, usando il DiffView esistente con tutte le sue opzioni;
-  - funziona anche con le PR da fork.
-- **Palette dei comandi**: "Open pull request…", "Open pull request in browser", "Refresh pull requests".
+  - funziona anche con le PR da fork; i commit vanno in `refs/gitdom/pull/N/`, fuori dal grafo, e si tolgono quando la PR non è più aperta.
+- ✅ **Palette dei comandi**: ogni PR aperta, la PR del branch corrente (nell'app o nel browser), "Connect to GitHub", "Refresh pull requests".
 
 ### Step 20 — v1.14: Azure DevOps e Bitbucket in lettura
 

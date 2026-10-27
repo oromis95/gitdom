@@ -2,6 +2,16 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- Pull requests of GitHub and GitLab (merge requests), also on GitHub Enterprise and self-managed GitLab: **Connect** in the new **Pull Requests** section of the sidebar uses the token Git Credential Manager already keeps for the host, or a token you paste, kept encrypted
+- The sidebar lists the open pull requests in **Mine**, **Review requested** and **Others**, with their checks, comments and your review, and keeps them up to date
+- The branch of a pull request shows a badge on the graph with its number, its state and its checks; resting the mouse on it shows the reviewers, the failing checks and whether it can be merged
+- Open a pull request to read its description, conversation, reviewers, checks and commits in place of the graph; its changes are fetched and listed in the detail panel, to read in GitDom's diff
+- **Preferences → Accounts**: the connected accounts, the badges on or off, and servers of your own
+
 ## 1.12.0 — 2026-10-26
 
 ### Added

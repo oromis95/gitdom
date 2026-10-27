@@ -1,0 +1,65 @@
+{
+  "data": {
+    "project": {
+      "mergeRequest": {
+        "iid": "7722",
+        "description": "This MR contains the following updates:\n\n| Package | Type | Update | Change |\n|---|---|---|---|\n| [github.com/moby/moby/api](https://github.com/moby/moby) | require | patch | `v1.56.0` → `v1.56.1` |\n\n---\n\n> ⚠️ **Warning**\n> \n> Some dependencies could not be looked up. Check the [Dependency Dashboard](#37837) for more information.\n\nMR created with the help of [gitlab-org/frontend/renovate-gitlab-bot](https://gitlab.com/gitlab-org/frontend/renovate-gitlab-bot)\n\n---\n\n### Release Notes\n\n<details>\n<summary>moby/moby (github.com/moby/moby/api)</summary>\n\n### [`v1.56.1`](https://github.com/moby/moby/",
+        "commits": {
+          "nodes": [
+            {
+              "sha": "aadbe4c18a915843bf9f672a74c1190278a2e58b"
+            }
+          ]
+        },
+        "notes": {
+          "nodes": [
+            {
+              "body": "### Renovate Comment\n\n\n## What are the next steps?\n\nIf you have been assigned as a reviewer to this Merge Request,\nplease review this Merge Request with the same scrutiny as any community contribution:\n\n1.  Ensure that the dependencies updated meet our standards:\n    - _Security_: Dependencies do not contain malicious code\n    - _Performance_: Dependencies do not bloat the application code or prolong CI times unnecessarily\n    - _Stability_: Pipelines are passing\n\n2.  Review the changes introduced by the version upgrade. Consider using https://my.diffend.io to compare the two versions in case the updated dependency is either a Ruby Gem or a Node.js package, for example to [compare `pg_query` `2.1.0` and `2.1.4`](https://my.diffend.io/gems/pg_query/2.1.0/2.1.4).\n\n3.  Review the upstream changelog or release notes for behavior changes, such as changed status codes, changed defaults, and deprecations. Do this even on patch bumps.\n    - If a change qualifies as a [breaking change](https://docs.gitlab.com/development/api_styleguide/#what-is-a-breaking-change), mark this MR as draft and complete the [breaking-change approval process](https://docs.gitlab.com/development/deprecation_guidelines/#how-do-i-get-approval-to-move-forward-with-a-breaking-change) before merging.\n    - Once approved, or for behavior changes that are [not breaking changes](https://docs.gitlab.com/development/api_styleguide/#what-is-not-a-breaking-change), add a `Changelog: changed` trailer to the commit, consider notifying support, and have a rollback plan before merging.\n\n4.  Check if `bundle install` works locally, in the context of GDK.\n\n5.  If tests are passing and you've reviewed the updated dependencies, execute pipelines in the [context of the main project][main_context]\n\n    This MR is created from a fork, therefore not _all_ jobs (e.g. Danger) might have been executed.\n    Instead of hitting MWPS right away, you might want to wait until the pipeline you've just triggered finished.\n\n    _Note_: This might not be available in projects, in that case merging right away is an option\n\n6.  Assign the current milestone to the MR\n\n7.  Merge away!\n\n## Troubleshooting\n\nWe have assembled some [FAQs] to help reviewers of these kind of merge requests.\n\n<small>\n\n[Improve this message][message_source] – The JSON comment below is for [automation purposes][process].\n\n</small>\n\n[renovate-gitlab-bot]: https://gitlab.com/gitlab-org/frontend/renovate-gitlab-bot\n[main_context]: https://docs.gitlab.com/ee/ci/pipelines/merge_request_pipelines.html#run-pipelines-in-the-parent-project\n[message_source]: https://gitlab.com/gitlab-org/frontend/renovate-gitlab-bot/-/blob/main/renovate/comment_templates/default.md\n[process]: https://gitlab.com/gitlab-org/frontend/renovate-gitlab-bot/-/blob/main/docs/process.md\n[FAQs]: https://gitlab.com/gitlab-org/frontend/renovate-gitlab-bot/-/blob/main/docs/faq.md\n\n\n```json\n{\"labels\":[\"maintenance::dependency\",\"type::maintenance\",\"automation:bot-authored\"],\"assignees\":[\"gitlab-dependency-update-bot\"],\"reviewers\":[\"ratchade\",\"vtak\"]}\n```",
+              "system": false,
+              "createdAt": "2026-10-27T15:16:43Z",
+              "author": {
+                "username": "gitlab-dependency-update-bot",
+                "name": "GitLab Dependency Bot",
+                "avatarUrl": "https://secure.gravatar.com/avatar/3d0463f813f54718127bf38acba616ef6bc5160fea8111c47dd4088fcacdb91a?s=80&d=identicon"
+              },
+              "position": null
+            },
+            {
+              "body": "mentioned in issue #37837",
+              "system": true,
+              "createdAt": "2026-10-27T15:16:52Z",
+              "author": {
+                "username": "gitlab-dependency-update-bot",
+                "name": "GitLab Dependency Bot",
+                "avatarUrl": "https://secure.gravatar.com/avatar/3d0463f813f54718127bf38acba616ef6bc5160fea8111c47dd4088fcacdb91a?s=80&d=identicon"
+              },
+              "position": null
+            },
+            {
+              "body": "requested review from @ratchade and @vtak",
+              "system": true,
+              "createdAt": "2026-10-27T15:17:00Z",
+              "author": {
+                "username": "gitlab-bot",
+                "name": "🤖 GitLab Bot 🤖",
+                "avatarUrl": "/uploads/-/system/user/avatar/1786152/avatar.png?v=1793114204"
+              },
+              "position": null
+            },
+            {
+              "body": "assigned to @gitlab-dependency-update-bot",
+              "system": true,
+              "createdAt": "2026-10-27T15:17:00Z",
+              "author": {
+                "username": "gitlab-bot",
+                "name": "🤖 GitLab Bot 🤖",
+                "avatarUrl": "/uploads/-/system/user/avatar/1786152/avatar.png?v=1793114204"
+              },
+              "position": null
+            }
+          ]
+        }
+      }
+    }
+  }
+}

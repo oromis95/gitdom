@@ -52,6 +52,10 @@ export interface Settings extends ToolSettings {
   checkMessage: boolean
   /** Branches and tags grouped in folders by their slashes, or a flat list (SIDE-11) */
   sidebarTree: boolean
+  /** Servers of one's own for pull requests, as "host kind" lines, e.g. "git.example.com gitlab" */
+  forgeHosts: string
+  /** Pull request badges and status on the branches of the graph */
+  graphPullRequests: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -86,6 +90,8 @@ export const DEFAULT_SETTINGS: Settings = {
   checkLargeFiles: true,
   checkDebugCode: true,
   checkMessage: true,
+  forgeHosts: '',
+  graphPullRequests: true,
   gitPath: '',
   editor: '',
   mergeTool: '',
@@ -177,6 +183,7 @@ function apply(s: Settings): void {
     mergeTool: s.mergeTool,
     diffTool: s.diffTool
   })
+  window.api.forge.configure(s.forgeHosts)
 }
 
 export function updateSettings(patch: Partial<Settings>): void {

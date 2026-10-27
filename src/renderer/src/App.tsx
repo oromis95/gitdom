@@ -48,6 +48,7 @@ import { showTip, startupTip } from './tips'
 import { primaryKey } from './keys'
 import { useShortcut, useShortcutLabel } from './shortcuts'
 import { focusPanel, type Panel } from './focus'
+import { startForge } from './forge'
 
 function IdentityButton({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
   const { name, email, scope } = snapshot.identity
@@ -159,6 +160,8 @@ function App(): React.JSX.Element {
     startActivityLog()
     startupChecks()
   }, [])
+
+  useEffect(() => startForge(), [])
 
   useEffect(() => {
     if (!splash) startupTip()

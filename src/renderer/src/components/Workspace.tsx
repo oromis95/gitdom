@@ -1,5 +1,6 @@
 // The panels of an open repository, arranged by the layout of the theme: the sidebar, the graph
-// or a view taking its place (diff, file, recovery, statistics) and the detail of the selection.
+// or a view taking its place (diff, file, recovery, statistics, pull request) and the detail of the
+// selection.
 import { Fragment, Suspense, lazy, useEffect } from 'react'
 import type { RepoSnapshot } from '../../../shared/types'
 import type { RepoTab } from '../store'
@@ -17,6 +18,7 @@ const ConflictView = lazy(() => import('./ConflictView'))
 const FileInspector = lazy(() => import('./FileInspector'))
 const RecoveryView = lazy(() => import('./RecoveryView'))
 const StatisticsView = lazy(() => import('./StatisticsView'))
+const PullRequestView = lazy(() => import('./forge/PullRequestView'))
 
 /** The IDE panel keeps this much room above it for the graph */
 const ABOVE_PANEL = 160
@@ -59,7 +61,12 @@ export default function Workspace({
   ) : tab.statistics ? (
     <StatisticsView snapshot={snapshot} />
   ) : null
-  const view = page ?? diff
+  // A diff opened from a pull request's changes shows over it; closing the diff goes back to it
+  const pull =
+    tab.pullRequest !== undefined ? (
+      <PullRequestView snapshot={snapshot} number={tab.pullRequest} />
+    ) : null
+  const view = page ?? diff ?? pull
   const graph = (
     <GraphView
       snapshot={snapshot}
@@ -99,7 +106,7 @@ export default function Workspace({
         {sidebar}
         <div className="ide-main">
           <div className="ide-top">
-            <Suspense fallback={loading}>{page ?? graph}</Suspense>
+            <Suspense fallback={loading}>{page ?? pull ?? graph}</Suspense>
           </div>
           <div className="ide-panel">
             <ResizeHandle

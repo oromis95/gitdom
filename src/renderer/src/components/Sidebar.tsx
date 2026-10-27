@@ -10,14 +10,12 @@ import {
   Folder,
   FolderGit2,
   GitBranch,
-  ListChecks,
   Globe,
   HardDrive,
   Laptop,
   List,
   ListTree,
   Package,
-  Plus,
   Search,
   Tag,
   TriangleAlert
@@ -31,8 +29,11 @@ import * as actions from '../actions'
 import { roomBeside, updateSettings, useSettings } from '../settings'
 import { hoverCard } from '../hover'
 import ResizeHandle from './ResizeHandle'
+import Section from './SidebarSection'
+import PullSection from './forge/PullSection'
 import { RefCard, StashCard, WorktreeCard } from './HoverCards'
 import * as worktrees from '../worktrees'
+import { useForgeStatus } from '../forge'
 
 const SUBMODULE_STATES: Record<SubmoduleState, string> = {
   uninitialized: 'not initialized',
@@ -167,69 +168,13 @@ function Tree({
   )
 }
 
-function Section({
-  title,
-  icon,
-  count,
-  onAdd,
-  onOverview,
-  children
-}: {
-  title: string
-  icon: React.ReactNode
-  count: number
-  /** Shows a + button in the header, e.g. to create a branch */
-  onAdd?: { title: string; run: () => void }
-  /** Shows a button for an overview of the section, e.g. of the branches */
-  onOverview?: { title: string; run: () => void }
-  children: React.ReactNode
-}): React.JSX.Element {
-  const [open, setOpen] = useState(true)
-  return (
-    <div>
-      <button className="section-header" onClick={() => setOpen(!open)}>
-        {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-        {icon}
-        {title}
-        <span className="section-count">{count}</span>
-        {onOverview && (
-          <span
-            role="button"
-            className="section-add"
-            title={onOverview.title}
-            onClick={(e) => {
-              e.stopPropagation()
-              onOverview.run()
-            }}
-          >
-            <ListChecks size={15} />
-          </span>
-        )}
-        {onAdd && (
-          <span
-            role="button"
-            className="section-add"
-            title={onAdd.title}
-            onClick={(e) => {
-              e.stopPropagation()
-              onAdd.run()
-            }}
-          >
-            <Plus size={15} />
-          </span>
-        )}
-      </button>
-      {open && <div className="section-body">{children}</div>}
-    </div>
-  )
-}
-
 export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
   const select = useApp((s) => s.select)
   const openRepo = useApp((s) => s.openRepo)
   const [filter, setFilter] = useState('')
   const folders = useSettings((s) => s.sidebarTree)
   const filterRef = useRef<HTMLInputElement>(null)
+  const forge = useForgeStatus(snapshot.path)
   useShortcut('filterSidebar', () => {
     if (document.querySelector('.modal, .palette')) return false
     filterRef.current?.focus()
@@ -358,6 +303,10 @@ export default function Sidebar({ snapshot }: { snapshot: RepoSnapshot }): React
             </div>
           ))}
         </Section>
+
+        {forge && forge.state !== 'none' && (
+          <PullSection snapshot={snapshot} status={forge} filter={filter} />
+        )}
 
         <Section title="Stashes" icon={<Archive size={15} />} count={stashes.length}>
           {stashes.map((s) => (

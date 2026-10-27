@@ -29,6 +29,15 @@ import {
   loadProfiles
 } from './identity'
 import { FILE_MANAGER, TRASH } from './platform'
+import { FORGE_NAMES, PULL_NOUN } from '../../shared/forge'
+import {
+  connectForge,
+  currentPull,
+  openInBrowser,
+  pullLabel,
+  refreshForge,
+  useForge
+} from './forge'
 
 export interface Command {
   title: string
@@ -83,6 +92,35 @@ export function buildCommands(): Command[] {
       if (current) add('Remote', 'Push', () => void actions.push(repo), shortcutLabel('push'))
     }
     add('Remote', 'Add remote…', () => void actions.addRemote(repo))
+
+    const forge = useForge.getState().byRepo[repo]
+    if (forge && forge.state !== 'none') {
+      const { kind, host } = forge.repo
+      const noun = PULL_NOUN[kind].name
+      const group = noun === 'merge request' ? 'Merge requests' : 'Pull requests'
+      if (forge.state === 'ready') {
+        const own = currentPull(forge, snapshot)
+        if (own) {
+          add(group, `Open ${pullLabel(kind, own.number)} of ${current}`, () =>
+            app.openPullRequest(own.number)
+          )
+          add(group, `Open ${pullLabel(kind, own.number)} in ${FORGE_NAMES[kind]}`, () =>
+            openInBrowser(own.url)
+          )
+        }
+        for (const pull of forge.pulls)
+          add(group, `Open ${pullLabel(kind, pull.number)} ${pull.title}`, () =>
+            app.openPullRequest(pull.number)
+          )
+      } else if (forge.state === 'signedOut' || forge.auth) {
+        add(
+          group,
+          `Connect to ${FORGE_NAMES[kind]} to see the ${noun}s`,
+          () => void connectForge({ host, kind, device: forge.device })
+        )
+      }
+      add(group, `Refresh ${noun}s`, () => void refreshForge(repo, true))
+    }
 
     const changes = snapshot.status.staged.length + snapshot.status.unstaged.length
     if (changes)

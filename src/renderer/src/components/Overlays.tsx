@@ -4,6 +4,7 @@ import { primaryKey } from '../keys'
 import { useUi, type FormValues } from '../ui'
 import CommandPalette from './CommandPalette'
 import CredentialDialog from './CredentialDialog'
+import ConnectDialog from './forge/ConnectDialog'
 import RepoDialogs from './RepoDialogs'
 
 // Loaded on first use, to keep the startup bundle small
@@ -298,6 +299,7 @@ export default function Overlays(): React.JSX.Element {
       <CommandPalette />
       <RepoDialogs />
       <FormDialog />
+      <ConnectDialog />
       {/* Above any other dialog: a command that asks waits on it */}
       <CredentialDialog />
       <Toasts />

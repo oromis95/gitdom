@@ -1,0 +1,196 @@
+// Pull requests of the services hosting a repository (INT-01, INT-03, SIDE-07): GitHub, GitLab,
+// Bitbucket and Azure DevOps, read in the main process and shown in a shape common to them all.
+
+export type ForgeKind = 'github' | 'gitlab' | 'bitbucket' | 'azure'
+
+export const FORGE_NAMES: Record<ForgeKind, string> = {
+  github: 'GitHub',
+  gitlab: 'GitLab',
+  bitbucket: 'Bitbucket',
+  azure: 'Azure DevOps'
+}
+
+/** What the service calls a pull request */
+export const PULL_NOUN: Record<ForgeKind, { name: string; short: string; prefix: string }> = {
+  github: { name: 'pull request', short: 'PR', prefix: '#' },
+  gitlab: { name: 'merge request', short: 'MR', prefix: '!' },
+  bitbucket: { name: 'pull request', short: 'PR', prefix: '#' },
+  azure: { name: 'pull request', short: 'PR', prefix: '!' }
+}
+
+/** A server of the user's own (GitHub Enterprise, GitLab self-managed), set in the preferences. */
+export interface ForgeHost {
+  host: string
+  kind: ForgeKind
+}
+
+/** The repository on the service whose pull requests GitDom reads. */
+export interface ForgeRepo {
+  kind: ForgeKind
+  /** e.g. github.com, or a server of the user's */
+  host: string
+  /** owner/name on GitHub, the namespace path on GitLab (group/subgroup/name) */
+  path: string
+  /** The remote it was found from: upstream when there's one, origin otherwise */
+  remote: string
+  webUrl: string
+}
+
+export interface ForgeUser {
+  login: string
+  name: string | null
+  /** Absolute URL; GitDom loads it in the main process (see ForgeApi.avatar) */
+  avatarUrl: string | null
+}
+
+export type PullState = 'open' | 'draft' | 'merged' | 'closed'
+
+/** A reviewer's latest word; `requested` when asked and not answered yet */
+export type ReviewVote = 'approved' | 'changes' | 'commented' | 'requested'
+
+export interface PullReviewer {
+  user: ForgeUser
+  vote: ReviewVote
+}
+
+export type CheckState = 'success' | 'failure' | 'pending' | 'neutral'
+
+export interface PullCheck {
+  name: string
+  state: CheckState
+  /** Its log or page on the service */
+  url: string | null
+}
+
+export interface PullChecks {
+  state: CheckState
+  items: PullCheck[]
+  /** The pipeline or checks page */
+  url: string | null
+}
+
+export type MergeState = 'clean' | 'conflicts' | 'blocked' | 'behind' | 'draft' | 'unknown'
+
+export interface Mergeability {
+  state: MergeState
+  /** Why it can't be merged, or what to know though it can, e.g. "Some checks are failing" */
+  reason: string | null
+}
+
+/** Where the pull request stands with its reviews overall */
+export type ReviewDecision = 'approved' | 'changes' | 'required' | null
+
+export interface PullLabel {
+  name: string
+  /** CSS colour, null when the service has none */
+  color: string | null
+}
+
+export interface PullRequest {
+  number: number
+  title: string
+  url: string
+  state: PullState
+  author: ForgeUser
+  sourceBranch: string
+  /** Repository the source branch is in (its path, as in ForgeRepo): another one for a fork */
+  sourceRepo: string
+  targetBranch: string
+  /** Last commit of the source branch */
+  headSha: string
+  /** Unix milliseconds */
+  createdAt: number
+  updatedAt: number
+  review: ReviewDecision
+  reviewers: PullReviewer[]
+  checks: PullChecks | null
+  merge: Mergeability
+  comments: number
+  labels: PullLabel[]
+}
+
+export interface PullComment {
+  author: ForgeUser
+  body: string
+  date: number
+  /** Set for a review: its verdict */
+  vote?: ReviewVote
+  /** Set for a comment on a line of the diff */
+  path?: string
+  line?: number
+}
+
+export interface PullDetail {
+  number: number
+  /** Markdown */
+  body: string
+  /** Mergeability worked out more exactly than in the list, when the service does so */
+  merge?: Mergeability
+  /** Comments and reviews, oldest first */
+  timeline: PullComment[]
+  /** Hashes of the commits, oldest first */
+  commits: string[]
+}
+
+/** Where a token came from: Git Credential Manager's, a device login, or typed in */
+export type TokenSource = 'gcm' | 'oauth' | 'token'
+
+export interface ForgeAccount {
+  host: string
+  kind: ForgeKind
+  user: ForgeUser
+  source: TokenSource
+}
+
+export type ForgeStatus =
+  /** No remote on a service GitDom knows */
+  | { state: 'none' }
+  /** On a known service, without an account for it yet */
+  | { state: 'signedOut'; repo: ForgeRepo; device: boolean }
+  | {
+      state: 'ready'
+      repo: ForgeRepo
+      viewer: ForgeUser
+      pulls: PullRequest[]
+      /** Remotes on the same service and the repository each is (its path): the fork, upstream */
+      remotes: Record<string, string>
+      /** Unix milliseconds */
+      fetchedAt: number
+    }
+  /** `auth` when the account's token was refused: it has to be connected again */
+  | { state: 'error'; repo: ForgeRepo; error: string; auth: boolean; device: boolean }
+
+/** A device login in progress: the code to type on the service's page. */
+export interface DeviceLogin {
+  id: number
+  userCode: string
+  verificationUri: string
+  /** Seconds */
+  expiresIn: number
+}
+
+/** The revisions a pull request's changes are between, fetched into the repository. */
+export interface PullRange {
+  /** Where the source branch left the target one (their merge base) */
+  from: string
+  /** The source branch's last commit */
+  to: string
+}
+
+/** Compares repository paths on a service, which treats them case-insensitively. */
+export const sameRepoPath = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase()
+
+/** "git.example.com gitlab" lines, as written in the preferences; unknown lines are skipped. */
+export function parseForgeHosts(text: string): ForgeHost[] {
+  const hosts: ForgeHost[] = []
+  for (const line of text.split(/\r?\n/)) {
+    const [host, kind] = line.trim().split(/\s+/)
+    const name = host
+      ?.toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '')
+    if (name && kind && kind.toLowerCase() in FORGE_NAMES)
+      hosts.push({ host: name, kind: kind.toLowerCase() as ForgeKind })
+  }
+  return hosts
+}

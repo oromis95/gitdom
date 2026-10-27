@@ -17,6 +17,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - [Staging](#staging-and-committing) of files, hunks or single lines, with checks for secrets and big files before you commit
 - [Interactive rebase, fixup, split and reorder](#rewriting-history), with an automatic [backup and undo](#safety-net) for every risky operation
 - A [time-lapse](#history-and-code-archaeology) of any file, blame back in time, the history of a function, and bisect
+- [Pull requests](#pull-requests) of GitHub and GitLab on the branches of the graph, with their reviews, checks and changes read in GitDom's own diff
 - [Statistics](#statistics-and-maintenance), a [dashboard of all your repositories](#several-repositories) and a weekly summary of what you did
 - [Themes](#themes) from Nord to Retro 2000, four that rearrange the whole window, and your own
 - Windows, macOS and Linux, with [updates](#updates-and-help) that install themselves
@@ -105,6 +106,17 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 - Push with a progress bar under the toolbar: it fills as git counts, compresses and sends the objects, with the amount sent and the speed in the status bar and the percentage on the Push button. Fetch, pull and the other long operations show a moving bar
 - Credentials when git needs them: a username with a password or token, an SSH key's passphrase, or whether to trust a server seen for the first time, asked in a GitDom dialog. Your credential helper keeps them, if you have one; GitDom stores nothing. The periodic fetch never asks: if it needs credentials it says so once, and **Fetch** asks
 
+### Pull requests
+
+GitHub (and GitHub Enterprise) and GitLab (gitlab.com or your own server); Bitbucket and Azure DevOps are next.
+
+- **Connect** in the **Pull Requests** section of the sidebar. If you already push over HTTPS, GitDom uses the token Git Credential Manager keeps for the host, and asks nothing; otherwise paste a token (the dialog says which permissions to tick and opens the page to create it). Tokens are encrypted with the system's keychain and only sent to their service; Git Credential Manager's aren't copied at all
+- The section lists the open pull requests (merge requests on GitLab) in **Mine**, **Review requested** and **Others**, with their checks, comments and your review, kept up to date while GitDom is in use
+- On the graph, the branch of a pull request shows a badge with its number, coloured by its state (draft, open, approved, changes requested, conflicts), and a dot for its checks. Resting the mouse on it shows who opened it, the reviewers and their verdict, the failing checks and whether it can be merged
+- Click a pull request to open it in place of the graph: its description and conversation, reviewers, checks with links to their logs, commits, and whether it can be merged, with the reason when it can't. Its commits are fetched into the repository (also from forks), and its changes are listed in the detail panel and read in GitDom's diff, from where it left the target branch as the service shows them
+- Every open pull request is in the command palette, with **Refresh pull requests**
+- **Preferences → Accounts**: the connected accounts, to disconnect them; the badges on or off; your own servers (GitHub Enterprise, self-managed GitLab) as `host kind` lines
+
 ### Merging and conflicts
 
 - Merge and rebase, or drag a branch onto another to fast-forward, merge or rebase
@@ -187,6 +199,7 @@ Open them with **File → Preferences** or `Ctrl+,`.
 - Drag the edges of the side panels to resize them; GitDom remembers the sizes (double-click an edge to reset it)
 - Background fetch interval (or off), default pull strategy, automatic stash on checkout
 - Path of the git executable, external editor, merge tool and diff tool
+- **Accounts**: the services connected for [pull requests](#pull-requests), and servers of your own
 - **Git config**: see and edit your global git settings and those of the open repository, with a filter
 - Startup check for new versions
 - **Export Settings…** and **Import Settings…** in the **File** menu: every setting in one file, to keep or to take to another computer. GitDom keeps them in `settings.json`, in its folder (`%APPDATA%\GitDom` on Windows)
@@ -230,6 +243,7 @@ GitDom has no account, no telemetry and no server of its own. Besides the git co
 
 - **Author pictures**: looked up on Gravatar (or GitHub, for its noreply addresses) from a hash of the author's email. Turn them off in **Preferences → Author pictures**
 - **Updates**: the startup check reads the latest version from GitHub. Turn it off in Preferences
+- **Pull requests**: only for a service you connected, GitDom reads the pull requests of the open repository from it, about once a minute while GitDom is in front. **Disconnect** in **Preferences → Accounts** stops it
 
 ## Building from source
 
@@ -265,7 +279,8 @@ npm run dev
 
 ```
 src/
-  main/       Electron main process: git commands, file watcher, terminal, menu
+  main/       Electron main process: git commands, file watcher, terminal, menu,
+              pull requests of the services (forge/)
   preload/    Bridge that exposes a typed API to the interface
   renderer/   React interface: graph, panels, diff, dialogs, themes
   shared/     Types and helpers shared by both sides

@@ -20,6 +20,7 @@ import { displayCombo, isMac } from '../keys'
 import ThemeSettings from './ThemeSettings'
 import ShortcutSettings from './ShortcutSettings'
 import ConfigSettings from './ConfigSettings'
+import AccountSettings from './forge/AccountSettings'
 
 const PULL_MODES: { value: PullMode; label: string }[] = [
   { value: 'ff', label: 'Fast-forward if possible, otherwise merge' },
@@ -52,7 +53,7 @@ const COMMON_MERGE_TOOLS: MergeToolInfo[] = [
   { name: 'smerge', label: 'Sublime Merge', available: false }
 ]
 
-type Section = 'appearance' | 'themes' | 'keyboard' | 'git' | 'config' | 'tools'
+type Section = 'appearance' | 'themes' | 'keyboard' | 'git' | 'config' | 'tools' | 'accounts'
 
 /**
  * A text setting saved when the field loses focus or Enter is pressed, not at every key:
@@ -505,7 +506,8 @@ export default function Preferences(): React.JSX.Element | null {
                 ['keyboard', 'Keyboard'],
                 ['git', 'Git'],
                 ['config', 'Git config'],
-                ['tools', 'External tools']
+                ['tools', 'External tools'],
+                ['accounts', 'Accounts']
               ] as const
             ).map(([id, label]) => (
               <button
@@ -525,13 +527,14 @@ export default function Preferences(): React.JSX.Element | null {
             {section === 'git' && <Git s={settings} />}
             {section === 'config' && <ConfigSettings />}
             {section === 'tools' && <Tools s={settings} />}
+            {section === 'accounts' && <AccountSettings />}
           </div>
         </div>
         <div className="modal-actions">
           <button
             className="btn"
             title="Fonts, zoom, panels, fetch interval and tools; the theme and the keys stay"
-            onClick={() => updateSettings(DEFAULT_SETTINGS)}
+            onClick={() => updateSettings({ ...DEFAULT_SETTINGS, forgeHosts: settings.forgeHosts })}
           >
             Restore defaults
           </button>

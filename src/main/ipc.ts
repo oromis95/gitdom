@@ -18,6 +18,7 @@ import { cancelStatistics, repoStatistics } from './git/statistics'
 import { setWatchedRepos } from './watcher'
 import { registerTerminalHandlers } from './terminal'
 import { registerToolHandlers } from './tools'
+import { registerForgeHandlers } from './forge/ipc'
 import {
   canSelfUpdate,
   cancelUpdate,
@@ -142,4 +143,5 @@ export function registerIpcHandlers(): void {
 
   registerTerminalHandlers()
   registerToolHandlers()
+  registerForgeHandlers()
 }

@@ -31,6 +31,8 @@ export interface RepoTab {
   recovery?: RecoveryView
   /** Repository statistics shown instead of the graph */
   statistics?: boolean
+  /** Number of the pull request shown instead of the graph */
+  pullRequest?: number
   /** Label of the long-running operation in progress (fetch, push…) */
   busy?: string
   /** What git reported of that operation's progress, when it reports any (push) */
@@ -52,6 +54,8 @@ export interface CompareTarget {
   /** Revisions as the user picked them: hashes, branch or tag names */
   from: string
   to: string
+  /** What the two are, e.g. the changes of a pull request */
+  title?: string
 }
 
 export interface FileInspect {
@@ -149,6 +153,8 @@ interface AppState {
   openRecovery(view: RecoveryView | null): void
   /** Shows or hides the repository statistics in place of the graph. */
   openStatistics(open: boolean): void
+  /** Shows a pull request in place of the graph, or closes it. */
+  openPullRequest(number: number | null): void
   setDraft(path: string, draft: Partial<CommitDraft>): void
   setBusy(path: string, busy: string | undefined): void
   /** Progress of the running operation, ignored once it has finished */
@@ -428,7 +434,8 @@ export const useApp = create<AppState>((set, get) => {
           inspect: inspect ?? undefined,
           diff: undefined,
           recovery: undefined,
-          statistics: undefined
+          statistics: undefined,
+          pullRequest: undefined
         })
       }
     },
@@ -440,7 +447,8 @@ export const useApp = create<AppState>((set, get) => {
           recovery: view ?? undefined,
           diff: undefined,
           inspect: undefined,
-          statistics: undefined
+          statistics: undefined,
+          pullRequest: undefined
         })
       }
     },
@@ -452,7 +460,21 @@ export const useApp = create<AppState>((set, get) => {
           statistics: open || undefined,
           diff: undefined,
           inspect: undefined,
-          recovery: undefined
+          recovery: undefined,
+          pullRequest: undefined
+        })
+      }
+    },
+
+    openPullRequest(number) {
+      const tab = get().tabs[get().active]
+      if (tab) {
+        updateTab(tab.path, {
+          pullRequest: number ?? undefined,
+          diff: undefined,
+          inspect: undefined,
+          recovery: undefined,
+          statistics: undefined
         })
       }
     },

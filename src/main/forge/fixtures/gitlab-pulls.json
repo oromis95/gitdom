@@ -1,0 +1,358 @@
+{
+  "data": {
+    "currentUser": null,
+    "project": {
+      "webUrl": "https://gitlab.com/gitlab-org/gitlab-runner",
+      "mergeRequests": {
+        "nodes": [
+          {
+            "iid": "7722",
+            "title": "go: Update module github.com/moby/moby/api to v1.56.1",
+            "webUrl": "https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7722",
+            "draft": false,
+            "createdAt": "2026-10-27T15:16:42Z",
+            "updatedAt": "2026-10-27T15:17:00Z",
+            "author": {
+              "username": "gitlab-dependency-update-bot",
+              "name": "GitLab Dependency Bot",
+              "avatarUrl": "https://secure.gravatar.com/avatar/3d0463f813f54718127bf38acba616ef6bc5160fea8111c47dd4088fcacdb91a?s=80&d=identicon"
+            },
+            "sourceBranch": "renovate/github.com-moby-moby-api-1.x",
+            "targetBranch": "main",
+            "diffHeadSha": "aadbe4c18a915843bf9f672a74c1190278a2e58b",
+            "sourceProject": {
+              "fullPath": "gitlab-renovate-forks/gitlab-runner"
+            },
+            "detailedMergeStatus": "NOT_APPROVED",
+            "conflicts": false,
+            "userNotesCount": 1,
+            "approved": false,
+            "approvalsLeft": 1,
+            "approvedBy": {
+              "nodes": []
+            },
+            "reviewers": {
+              "nodes": [
+                {
+                  "username": "ratchade",
+                  "name": "Romuald Atchadé",
+                  "avatarUrl": "/uploads/-/system/user/avatar/8111826/avatar.png?v=1793061104",
+                  "mergeRequestInteraction": {
+                    "reviewState": "UNREVIEWED",
+                    "approved": false
+                  }
+                },
+                {
+                  "username": "vtak",
+                  "name": "Vishal Tak",
+                  "avatarUrl": "/uploads/-/system/user/avatar/10764887/avatar.png?v=1793111864",
+                  "mergeRequestInteraction": {
+                    "reviewState": "UNREVIEWED",
+                    "approved": false
+                  }
+                }
+              ]
+            },
+            "labels": {
+              "nodes": [
+                {
+                  "title": "automation:bot-authored",
+                  "color": "#FFECDB"
+                },
+                {
+                  "title": "maintenance::dependency",
+                  "color": "#7f8c8d"
+                },
+                {
+                  "title": "type::maintenance",
+                  "color": "#330066"
+                }
+              ]
+            },
+            "headPipeline": {
+              "status": "SUCCESS",
+              "path": "/gitlab-renovate-forks/gitlab-runner/-/pipelines/2995128104",
+              "jobs": {
+                "nodes": [
+                  {
+                    "name": "test coverage report",
+                    "status": "SUCCESS",
+                    "webPath": "/gitlab-renovate-forks/gitlab-runner/-/jobs/17509288095"
+                  },
+                  {
+                    "name": "logging-field-validator",
+                    "status": "SUCCESS",
+                    "webPath": "/gitlab-renovate-forks/gitlab-runner/-/jobs/17509288094"
+                  },
+                  {
+                    "name": "fuzz variable mask",
+                    "status": "SUCCESS",
+                    "webPath": "/gitlab-renovate-forks/gitlab-runner/-/jobs/17509288093"
+                  },
+                  {
+                    "name": "unit test",
+                    "status": "SUCCESS",
+                    "webPath": "/gitlab-renovate-forks/gitlab-runner/-/jobs/17509288092"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "iid": "7721",
+            "title": "Move FF_USE_FASTZIP removal from 19.7 to 19.9",
+            "webUrl": "https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7721",
+            "draft": false,
+            "createdAt": "2026-10-27T11:21:10Z",
+            "updatedAt": "2026-10-27T14:41:09Z",
+            "author": {
+              "username": "adebayo_a",
+              "name": "Adebayo Adesanya",
+              "avatarUrl": "/uploads/-/system/user/avatar/19049173/avatar.png?v=1793110092"
+            },
+            "sourceBranch": "docs-ff-use-fastzip-removal-19-9",
+            "targetBranch": "main",
+            "diffHeadSha": "e615086b4d9af87b2eabcf7b4113cdbafeede41a",
+            "sourceProject": {
+              "fullPath": "gitlab-org/gitlab-runner"
+            },
+            "detailedMergeStatus": "MERGEABLE",
+            "conflicts": false,
+            "userNotesCount": 2,
+            "approved": true,
+            "approvalsLeft": 0,
+            "approvedBy": {
+              "nodes": [
+                {
+                  "username": "GitLabDuo",
+                  "name": "GitLab Duo",
+                  "avatarUrl": "/uploads/-/system/user/avatar/21826781/duo-bot.png?v=1792265836"
+                },
+                {
+                  "username": "vtak",
+                  "name": "Vishal Tak",
+                  "avatarUrl": "/uploads/-/system/user/avatar/10764887/avatar.png?v=1793111864"
+                },
+                {
+                  "username": "rsarangadharan",
+                  "name": "Roshni Sarangadharan",
+                  "avatarUrl": "/uploads/-/system/user/avatar/21979359/avatar.png?v=1793100208"
+                }
+              ]
+            },
+            "reviewers": {
+              "nodes": [
+                {
+                  "username": "vtak",
+                  "name": "Vishal Tak",
+                  "avatarUrl": "/uploads/-/system/user/avatar/10764887/avatar.png?v=1793111864",
+                  "mergeRequestInteraction": {
+                    "reviewState": "APPROVED",
+                    "approved": true
+                  }
+                },
+                {
+                  "username": "GitLabDuo",
+                  "name": "GitLab Duo",
+                  "avatarUrl": "/uploads/-/system/user/avatar/21826781/duo-bot.png?v=1792265836",
+                  "mergeRequestInteraction": {
+                    "reviewState": "APPROVED",
+                    "approved": true
+                  }
+                },
+                {
+                  "username": "rsarangadharan",
+                  "name": "Roshni Sarangadharan",
+                  "avatarUrl": "/uploads/-/system/user/avatar/21979359/avatar.png?v=1793100208",
+                  "mergeRequestInteraction": {
+                    "reviewState": "APPROVED",
+                    "approved": true
+                  }
+                }
+              ]
+            },
+            "labels": {
+              "nodes": [
+                {
+                  "title": "Category:Runner Core",
+                  "color": "#6699cc"
+                },
+                {
+                  "title": "Technical Writing",
+                  "color": "#228B22"
+                },
+                {
+                  "title": "devops::verify",
+                  "color": "#E44D2A"
+                },
+                {
+                  "title": "documentation",
+                  "color": "#D10069"
+                },
+                {
+                  "title": "feature flag",
+                  "color": "#A8D695"
+                },
+                {
+                  "title": "group::runner core",
+                  "color": "#a8d695"
+                },
+                {
+                  "title": "maintenance::refactor",
+                  "color": "#7f8c8d"
+                },
+                {
+                  "title": "runner::core",
+                  "color": "#6699cc"
+                },
+                {
+                  "title": "section::ci",
+                  "color": "#f0ad4e"
+                },
+                {
+                  "title": "type::maintenance",
+                  "color": "#330066"
+                }
+              ]
+            },
+            "headPipeline": {
+              "status": "RUNNING",
+              "path": "/gitlab-org/gitlab-runner/-/pipelines/2994937121",
+              "jobs": {
+                "nodes": [
+                  {
+                    "name": "windows 21H2 integration tests 1/4",
+                    "status": "RUNNING",
+                    "webPath": "/gitlab-org/gitlab-runner/-/jobs/17509980892"
+                  },
+                  {
+                    "name": "windows 21H2 integration tests 3/4",
+                    "status": "RUNNING",
+                    "webPath": "/gitlab-org/gitlab-runner/-/jobs/17509860335"
+                  },
+                  {
+                    "name": "windows 21H2 integration tests 4/4",
+                    "status": "RUNNING",
+                    "webPath": "/gitlab-org/gitlab-runner/-/jobs/17509824276"
+                  },
+                  {
+                    "name": "integration kubernetes exec legacy",
+                    "status": "SUCCESS",
+                    "webPath": "/gitlab-org/gitlab-runner/-/jobs/17509342654"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "iid": "7700",
+            "title": "Add missing context to runner error-path log lines",
+            "webUrl": "https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7700",
+            "draft": false,
+            "createdAt": "2026-10-23T12:04:38Z",
+            "updatedAt": "2026-10-27T13:57:14Z",
+            "author": {
+              "username": "cam_swords",
+              "name": "Cameron Swords",
+              "avatarUrl": "https://secure.gravatar.com/avatar/670143200bdf14ee6c047f75a51b3b1560c9c2c52054c7f714ee887f49e9bd6b?s=80&d=identicon"
+            },
+            "sourceBranch": "fix/error-log-context-high-findings",
+            "targetBranch": "main",
+            "diffHeadSha": "7aa77e646d64e44aaf254f7d3a63fd0b2c21b790",
+            "sourceProject": {
+              "fullPath": "gitlab-org/gitlab-runner"
+            },
+            "detailedMergeStatus": "REQUESTED_CHANGES",
+            "conflicts": false,
+            "userNotesCount": 10,
+            "approved": false,
+            "approvalsLeft": 1,
+            "approvedBy": {
+              "nodes": [
+                {
+                  "username": "takax",
+                  "name": "Taka Nishida",
+                  "avatarUrl": "/uploads/-/system/user/avatar/15293556/avatar.png?v=1793114482"
+                }
+              ]
+            },
+            "reviewers": {
+              "nodes": [
+                {
+                  "username": "takax",
+                  "name": "Taka Nishida",
+                  "avatarUrl": "/uploads/-/system/user/avatar/15293556/avatar.png?v=1793114482",
+                  "mergeRequestInteraction": {
+                    "reviewState": "APPROVED",
+                    "approved": true
+                  }
+                },
+                {
+                  "username": "GitLabDuo",
+                  "name": "GitLab Duo",
+                  "avatarUrl": "/uploads/-/system/user/avatar/21826781/duo-bot.png?v=1792265836",
+                  "mergeRequestInteraction": {
+                    "reviewState": "REQUESTED_CHANGES",
+                    "approved": false
+                  }
+                }
+              ]
+            },
+            "labels": {
+              "nodes": [
+                {
+                  "title": "Category:Runner Core",
+                  "color": "#6699cc"
+                },
+                {
+                  "title": "group::runner core",
+                  "color": "#a8d695"
+                },
+                {
+                  "title": "primitives::runner functions runtime",
+                  "color": "#6699cc"
+                },
+                {
+                  "title": "section::primitives",
+                  "color": "#6699cc"
+                },
+                {
+                  "title": "type::maintenance",
+                  "color": "#330066"
+                }
+              ]
+            },
+            "headPipeline": {
+              "status": "SUCCESS",
+              "path": "/gitlab-org/gitlab-runner/-/pipelines/2989607514",
+              "jobs": {
+                "nodes": [
+                  {
+                    "name": "integration kubernetes concrete",
+                    "status": "SUCCESS",
+                    "webPath": "/gitlab-org/gitlab-runner/-/jobs/17468739267"
+                  },
+                  {
+                    "name": "review-docs-cleanup",
+                    "status": "MANUAL",
+                    "webPath": "/gitlab-org/gitlab-runner/-/jobs/17468047247"
+                  },
+                  {
+                    "name": "review-docs-deploy",
+                    "status": "MANUAL",
+                    "webPath": "/gitlab-org/gitlab-runner/-/jobs/17468047246"
+                  },
+                  {
+                    "name": "verify development resources",
+                    "status": "SUCCESS",
+                    "webPath": "/gitlab-org/gitlab-runner/-/jobs/17468047245"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

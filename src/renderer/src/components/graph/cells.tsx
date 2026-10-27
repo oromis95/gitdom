@@ -10,6 +10,10 @@ import { openMenu } from '../../ui'
 import { DEFAULT_SETTINGS, GRAPH_COLUMN_WIDTH, updateSettings, useSettings } from '../../settings'
 import * as actions from '../../actions'
 import { RefCard } from '../HoverCards'
+import { isReady, pullsByRef, useForgeStatus } from '../../forge'
+import { useApp } from '../../store'
+import { PullBadge } from '../forge/PullBits'
+import PullCard from '../forge/PullCard'
 import ResizeHandle from '../ResizeHandle'
 import type { WidthKey } from './shared'
 
@@ -65,20 +69,30 @@ export function RefPill({
 }): React.JSX.Element {
   const ref = snapshot.refs.find((r) => r.fullName === label.key)
   const [over, setOver] = useState(false)
+  const forge = useForgeStatus(snapshot.path)
+  const showPulls = useSettings((s) => s.graphPullRequests)
+  const pull = showPulls && isReady(forge) ? pullsByRef(forge, snapshot).get(label.key) : undefined
   const isBranch = ref?.type === 'local' || ref?.type === 'remote'
   const dragging = (e: React.DragEvent): boolean =>
     isBranch && e.dataTransfer.types.includes(REF_MIME)
   const card = hoverCard(() =>
     ref ? (
-      <RefCard
-        snapshot={snapshot}
-        refInfo={ref}
-        hint={
-          isBranch
-            ? `${label.current ? '' : 'Double-click to check out · '}Drag onto another branch to merge or rebase`
-            : undefined
-        }
-      />
+      <>
+        <RefCard
+          snapshot={snapshot}
+          refInfo={ref}
+          hint={
+            isBranch
+              ? `${label.current ? '' : 'Double-click to check out · '}Drag onto another branch to merge or rebase`
+              : undefined
+          }
+        />
+        {pull && isReady(forge) && (
+          <div className="hover-pull">
+            <PullCard pull={pull} kind={forge.repo.kind} hint="Click the badge to open it" />
+          </div>
+        )}
+      </>
     ) : null
   )
 
@@ -130,6 +144,13 @@ export function RefPill({
       <span>{label.name}</span>
       {label.local && <Laptop size={13} />}
       {label.remote && <Cloud size={13} />}
+      {pull && isReady(forge) && (
+        <PullBadge
+          pull={pull}
+          kind={forge.repo.kind}
+          onOpen={() => useApp.getState().openPullRequest(pull.number)}
+        />
+      )}
     </div>
   )
 }

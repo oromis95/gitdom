@@ -28,6 +28,15 @@ import type { RepoOperation } from './types'
 import type { CommitWarning } from './commitChecks'
 import type { ReleaseCommit } from './releaseNotes'
 import type { IgnoreRule } from './ignore'
+import type {
+  DeviceLogin,
+  ForgeAccount,
+  ForgeKind,
+  ForgeStatus,
+  PullDetail,
+  PullRange
+} from './forge'
+import type { Remote } from './types'
 
 /**
  * IPC results carry errors as values: Electron would otherwise mangle the message of thrown errors.
@@ -825,6 +834,36 @@ export interface AskpassApi {
   reply(id: number, answer: AskpassAnswer): void
 }
 
+/** Pull requests of the services the repositories are on (INT-01), and the accounts for them. */
+export interface ForgeApi {
+  /** The servers of the user's own, as "host kind" lines from the preferences. */
+  configure(hosts: string): void
+  /** Which service the repository is on, and its open pull requests when there's an account. */
+  status(repo: string, remotes: Remote[]): Promise<Result<ForgeStatus>>
+  /** Description, comments and commits of an open pull request of the last status read. */
+  detail(repo: string, number: number): Promise<Result<PullDetail>>
+  /** Fetches a pull request's commits and resolves the range of its changes. */
+  fetchPull(repo: string, number: number): Promise<Result<PullRange>>
+  accounts(): Promise<ForgeAccount[]>
+  /** Connects with Git Credential Manager's token; null when it has none the API accepts. */
+  connectWithGit(host: string, kind: ForgeKind): Promise<Result<ForgeAccount | null>>
+  /** Checks a token the user typed and saves it, encrypted. */
+  connectWithToken(host: string, kind: ForgeKind, token: string): Promise<Result<ForgeAccount>>
+  startLogin(host: string, kind: ForgeKind): Promise<Result<DeviceLogin>>
+  /** Resolves once the user approved the device login on the service's page. */
+  finishLogin(id: number): Promise<Result<ForgeAccount>>
+  cancelLogin(id: number): void
+  disconnect(host: string): Promise<void>
+  /** Whether tokens can be saved encrypted; otherwise they last until GitDom closes. */
+  canSaveTokens(): Promise<boolean>
+  /** A profile picture as a data: URL, null when it can't be loaded. */
+  avatar(url: string): Promise<string | null>
+  /** Opens a page in the browser: the pull request, a check's log, the token page. */
+  openUrl(url: string): void
+  /** The page where a token with the right permissions is created. */
+  tokenPage(host: string, kind: ForgeKind): Promise<string>
+}
+
 /**
  * A theme offered in the app and in the Window menu: 'dark', 'light', 'studio', 'system' (Windows'
  * light or dark setting), a built-in palette such as 'nord', or one of the user's ('custom-...').
@@ -913,6 +952,7 @@ export interface GitDomApi {
   statistics: StatisticsApi
   askpass: AskpassApi
   storage: StorageApi
+  forge: ForgeApi
 }
 
 export const IPC = {
@@ -967,5 +1007,20 @@ export const IPC = {
   settingsSet: 'settings:set',
   settingsRemove: 'settings:remove',
   settingsExport: 'settings:export',
-  settingsImport: 'settings:import'
+  settingsImport: 'settings:import',
+  forgeConfigure: 'forge:configure',
+  forgeStatus: 'forge:status',
+  forgeDetail: 'forge:detail',
+  forgeFetchPull: 'forge:fetch-pull',
+  forgeAccounts: 'forge:accounts',
+  forgeConnectGit: 'forge:connect-git',
+  forgeConnectToken: 'forge:connect-token',
+  forgeStartLogin: 'forge:start-login',
+  forgeFinishLogin: 'forge:finish-login',
+  forgeCancelLogin: 'forge:cancel-login',
+  forgeDisconnect: 'forge:disconnect',
+  forgeCanSave: 'forge:can-save',
+  forgeAvatar: 'forge:avatar',
+  forgeOpenUrl: 'forge:open-url',
+  forgeTokenPage: 'forge:token-page'
 } as const
