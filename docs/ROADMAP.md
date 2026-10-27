@@ -237,16 +237,174 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ---
 
+## Pull request — piano (Step 19–23)
+
+> 📝 In progettazione, richiesto dall'utente il 2026-10-27: pull request di GitHub, GitLab, Bitbucket e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
+
+### Decisioni comuni a tutti gli step
+
+**Provider e repository**
+
+- Il provider si riconosce dagli URL dei remoti:
+  - `github.com`;
+  - `gitlab.com`;
+  - `bitbucket.org`;
+  - per Azure DevOps `dev.azure.com/<org>/<progetto>/_git/<repo>`, `<org>.visualstudio.com` e `ssh.dev.azure.com:v3/…`.
+
+  I server propri (GitHub Enterprise, GitLab self-managed, Azure DevOps Server) si aggiungono nelle preferenze, indicando host e tipo. Bitbucket Data Center ha API diverse da Bitbucket Cloud: resta fuori, si valuta dopo.
+
+- Se c'è un remoto `upstream`, cioè la repository è un fork, le PR si leggono lì, e il branch sorgente sta su `origin`. Altrimenti si usa `origin`.
+- Il termine segue il provider: "Pull request" su GitHub, Bitbucket e Azure DevOps, "Merge request" su GitLab.
+
+**Login, un account per host, in quest'ordine**
+
+1. **Token di Git Credential Manager**: `git credential fill` per l'host, con `GCM_INTERACTIVE=never` e `GIT_TERMINAL_PROMPT=0`, senza askpass, così non compare nessuna finestra. Una chiamata di prova verifica che il token vada bene per le API. Dal codice di GCM risulta che:
+   - con **GitHub** funziona: GCM chiede gli scope `repo`, `gist` e `workflow`;
+   - con **Azure DevOps** funziona: GCM usa un token Entra ID oppure un PAT `vso.code_write`, che copre le PR;
+   - con **GitLab** non basta: GCM chiede solo `read_repository` e `write_repository`, che non danno accesso alle API;
+   - con **Bitbucket** non basta: GCM chiede `repository:write` e `account`, ma non `pullrequest`.
+2. **Device flow OAuth**: si inserisce un codice nella pagina del provider. È possibile su GitHub e su gitlab.com, ma serve un'app OAuth "GitDom" registrata su ciascuno, con un client ID pubblico incluso nell'app.
+3. **Token inserito a mano**:
+   - GitHub: PAT;
+   - GitLab: PAT con scope `api`;
+   - Bitbucket: API token Atlassian con email e scope `read:pullrequest`/`write:pullrequest`, che sostituisce le app password;
+   - Azure DevOps: PAT "Code: Read & Write".
+
+   La finestra spiega quali permessi spuntare e apre la pagina giusta del provider.
+
+I token vanno in un file a parte nella cartella di GitDom, cifrati con `safeStorage` (NFR-06). Non stanno in `settings.json`, così **Export Settings** non li esporta mai. Non arrivano mai all'interfaccia: tutte le chiamate di rete partono dal main con `net.fetch`, che passa dal proxy di sistema, e il token non compare né nell'Activity log né nelle notifiche.
+
+Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con avatar, nome, host e origine del token (GCM, OAuth o token manuale), e un pulsante per scollegarli.
+
+**Architettura**
+
+- Nuova cartella `src/main/forge/`:
+  - `detect.ts`: dal remoto al provider, al progetto e al repository;
+  - `auth.ts`: GCM, device flow e token cifrati;
+  - un modulo per provider, `github.ts`, `gitlab.ts`, `bitbucket.ts` e `azure.ts`, tutti con la stessa interfaccia `ForgeProvider`;
+  - `cache.ts`: dati per repository, ETag e stato offline.
+- Modello normalizzato in `src/shared/forge.ts`:
+  - `PullRequest` con numero, titolo, autore, stato (bozza, aperta, merged, chiusa), branch sorgente e destinazione, repository sorgente, sha della testa, reviewer col loro voto, riassunto dei check, mergeability (pulita, conflitti, bloccata con il motivo), commenti e URL;
+  - `capabilities` per provider, per esempio: label, auto-merge, "richiedi modifiche", metodi di merge permessi dal repository. L'interfaccia nasconde ciò che il provider non ha.
+- Chiamate:
+  - per GitHub, GraphQL per gli elenchi (PR, review e `statusCheckRollup` in una richiesta) e REST per le azioni;
+  - per gli altri provider, REST: GitLab v4, Bitbucket 2.0, Azure DevOps `api-version=7.1`.
+- **Aggiornamento**:
+  - nella scheda attiva, ogni 60 s con la finestra in primo piano e ogni 5 minuti in background;
+  - subito dopo push e fetch;
+  - con GitHub, richieste condizionate (ETag), che con risposta 304 non consumano il limite di richieste;
+  - gli header di rate limit vengono rispettati.
+
+  Senza rete restano gli ultimi dati, segnati come non aggiornati.
+
+- Markdown di descrizioni e commenti: va scelto se usare una piccola dipendenza (`marked` più `DOMPurify`) o scrivere un renderer minimo. In ogni caso niente HTML grezzo, link aperti nel browser e immagini remote caricate dal main o non mostrate. La sandbox e la CSP restano come sono.
+
+**Test**
+
+- Ogni provider viene testato con risposte JSON registrate e un `fetch` finto: mapping dei campi, paginazione, errori, permessi mancanti e rate limit.
+- Gli E2E usano un server finto locale (`GITDOM_FORGE_MOCK`) che imita i quattro provider. La CI non usa mai la rete né account veri.
+- Prima di ogni release, prova a mano con account veri. Per GitLab, Bitbucket e Azure DevOps bastano account gratuiti di prova.
+
+### Step 19 — v1.13: Pull request, fondamenta e lettura (GitHub e GitLab)
+
+Due provider insieme, per verificare subito che l'interfaccia comune funzioni anche per un servizio diverso da GitHub.
+
+- Rilevamento del provider, sezione **Accounts**, login con GCM, device flow e token, file dei token cifrato
+- **Badge nel grafo**:
+  - sull'etichetta del branch con una PR aperta compare `#42`, colorato per stato: bozza, aperta, approvata, con modifiche richieste, con conflitti;
+  - accanto, un pallino per la CI: verde, rosso, oppure giallo che pulsa mentre gira;
+  - il badge compare sul branch locale che segue il branch sorgente e sul branch remoto.
+- **Scheda al passaggio del mouse**, come quelle dei commit: titolo, autore, reviewer e voti, check falliti con il nome, mergeability con il motivo del blocco.
+- **Sezione Pull Requests** nella sidebar (SIDE-07):
+  - gruppi **Le mie**, **Review richiesta a me** e **Altre**;
+  - ogni riga mostra stato, CI, approvazioni e commenti;
+  - il filtro della sidebar funziona anche qui, e la sezione si può nascondere come le altre.
+- **Vista della PR**, in sola lettura:
+  - intestazione con stato, branch e reviewer;
+  - descrizione in markdown e timeline di commenti e review;
+  - elenco dei commit, con un clic che li seleziona nel grafo;
+  - check con link ai log sul provider.
+- **Diff in locale**:
+  - GitDom scarica la testa della PR (`refs/pull/N/head` su GitHub, `refs/merge-requests/N/head` su GitLab) e calcola il diff dal merge-base con il branch di destinazione, come fa il provider, usando il DiffView esistente con tutte le sue opzioni;
+  - funziona anche con le PR da fork.
+- **Palette dei comandi**: "Open pull request…", "Open pull request in browser", "Refresh pull requests".
+
+### Step 20 — v1.14: Azure DevOps e Bitbucket in lettura
+
+Tutto lo Step 19 anche per gli altri due provider, con le loro differenze:
+
+- **Azure DevOps**:
+  - organizzazione e progetto si ricavano dall'URL;
+  - voti dei reviewer: approva (10), approva con suggerimenti (5), in attesa dell'autore (−5), rifiuta (−10);
+  - come CI valgono le policy di build validation e gli status della PR, e le policy obbligatorie spiegano perché la PR è bloccata;
+  - il diff si calcola sul branch sorgente, perché Azure DevOps espone solo `refs/pull/N/merge`.
+- **Bitbucket Cloud**:
+  - workspace e repository dall'URL;
+  - approvazioni e "richieste modifiche";
+  - commit status come CI;
+  - nessun ref per le PR: si scarica il branch sorgente dal repository di origine, anche da un fork.
+- In tutti e quattro i provider, le PR in bozza compaiono come bozze.
+
+### Step 21 — v1.15: Lavorare su una pull request
+
+- **Checkout della PR**:
+  - se la PR è nella stessa repository, crea un branch locale che segue il branch sorgente, così un push aggiorna la PR;
+  - se viene da un fork, crea un branch dalla testa della PR, con l'opzione di aggiungere il fork come remoto.
+- **Apri in un worktree**: la PR si apre in una cartella accanto alla repository e in una nuova scheda, senza toccare il lavoro in corso. Riusa i worktree dello Step 7.
+- **Creare una PR**:
+  - dopo un push su un branch senza PR compare la notifica "Create pull request";
+  - si apre anche dal menu del branch e dalla palette;
+  - nella finestra:
+    - la destinazione è il branch di default del provider;
+    - il titolo viene dal nome del branch o dall'unico commit;
+    - la descrizione usa il template del repository (`.github/pull_request_template.md`, `.gitlab/merge_request_templates/`, `.azuredevops/pull_request_template.md`), altrimenti l'elenco dei commit;
+    - si scelgono bozza, reviewer con ricerca, e label dove esistono;
+    - un'anteprima mostra commit e file che entrano.
+
+    Se il branch non è pubblicato, fa prima il push, con la barra di progresso.
+- **Modificare una PR**: titolo, descrizione, reviewer, passaggio da bozza a pronta.
+- **Merge**:
+  - si sceglie tra i metodi che il repository permette: merge, squash, rebase o fast-forward, secondo il provider;
+  - messaggio del commit modificabile;
+  - opzione per cancellare il branch sorgente;
+  - auto-merge quando i check passano, dove esiste: GitHub, GitLab "merge when pipeline succeeds", Azure DevOps auto-complete;
+  - se il merge è bloccato, il pulsante dice perché.
+- **Pulizia dopo il merge**: GitDom propone di tornare sul branch di destinazione, aggiornarlo e cancellare il branch locale, collegandosi a "Upstream gone" e a Clean Up.
+- Chiudere e riaprire una PR.
+
+### Step 22 — v1.16: Review nell'app
+
+- **Commenti sul diff**:
+  - un clic sul margine di una riga, o un trascinamento per più righe, apre un commento;
+  - i commenti già scritti compaiono in linea, con risposte, "risolto" e "riapri".
+- **Review in sospeso**:
+  - i commenti si accumulano e partono insieme con _Approve_, _Request changes_ o _Comment_, oppure con il voto di Azure DevOps;
+  - su GitHub è la review in sospeso del provider, sugli altri provider GitDom la tiene finché non si invia;
+  - le posizioni si convertono nel formato di ciascuno: `line`/`side` su GitHub, `position` con i tre sha su GitLab, `inline` su Bitbucket, `threadContext` su Azure DevOps.
+- **File visti**: si spuntano i file già guardati; quando l'autore fa push, si torna a vedere solo i file cambiati. Il diff "da quando l'ho vista", cioè dall'ultima testa vista a quella nuova, si calcola in locale.
+- Suggerimenti di modifica (GitHub e GitLab), mostrati come mini-diff e applicabili con un clic.
+- Scorciatoie: `N`/`P` per il file successivo o precedente, `C` per commentare, `V` per segnare come visto.
+
+### Step 23 — v1.17: Notifiche e dashboard
+
+- **Notifiche**: confrontando un aggiornamento con il precedente, GitDom mostra toast come "CI fallita su #42", "Mario ha approvato #42", "Review richiesta su !17", "#42 ha conflitti", e un contatore sulla sezione della sidebar. Si possono disattivare per tipo.
+- **Dashboard personale** (INT-05): una vista con le PR di tutti i repository preferiti e del workspace:
+  - le mie;
+  - da rivedere;
+  - con la CI rossa;
+  - pronte per il merge.
+
+  Un clic apre la repository nella scheda giusta, con la PR aperta.
+
+- **Descrizione con l'AI** (AI-05): solo se nel frattempo arriva l'assistente AI opzionale, altrimenti resta per dopo.
+
+---
+
 ## Forse, un giorno
 
 Funzioni che dipendono da servizi esterni o poco usate nel lavoro quotidiano: restano possibili, ma fuori dalla roadmap attiva.
 
-- **Integrazione GitHub**:
-  - login tramite device flow OAuth, con token salvato cifrato con `safeStorage` (AUTH-06, NFR-06);
-  - pull request: elenco, creazione dal branch corrente, stato delle review, merge (INT-01, SIDE-07);
-  - stato della CI accanto ai commit nel grafo (INT-03);
-  - issue: elenco, e creazione di un branch da una issue (INT-02, SIDE-08);
-  - dashboard personale con PR e issue di tutti i repository (INT-05).
+- **Issue** dei provider delle pull request: elenco, e creazione di un branch da una issue (INT-02, SIDE-08)
 - **Assistente AI**, opzionale, con chiave API fornita dall'utente e salvata cifrata, con i modelli Claude:
   - messaggio di commit generato (AI-01);
   - spiegazione di un commit o di un branch (AI-03);
