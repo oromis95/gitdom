@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.12.0 pubblicata il 2026-10-26 (Step 1–18 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.13.0 pubblicata il 2026-10-27 (Step 1–19 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -239,7 +239,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Pull request — piano (Step 19–23)
 
-> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 completato, non ancora pubblicato): pull request di GitHub, GitLab, Bitbucket e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
+> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 pubblicato con la v1.13.0): pull request di GitHub, GitLab, Bitbucket e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
 
 ### Decisioni comuni a tutti gli step
 
@@ -308,7 +308,7 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
 
 ### Step 19 — v1.13: Pull request, fondamenta e lettura (GitHub e GitLab) ✅
 
-> Completato il 2026-10-27, non ancora pubblicato. Due provider insieme, per verificare subito che l'interfaccia comune funzioni anche per un servizio diverso da GitHub. Provato anche contro il vero GitHub (il repository di GitDom ed `electron/electron`), che ha trovato tre cose che lo schema non diceva:
+> Completato con la v1.13.0. Due provider insieme, per verificare subito che l'interfaccia comune funzioni anche per un servizio diverso da GitHub. Provato anche contro il vero GitHub (il repository di GitDom ed `electron/electron`), che ha trovato tre cose che lo schema non diceva:
 >
 > - il token di GCM non ha `read:org`, che serve per leggere i **team** fra i reviewer: GitDom riprova senza team e se lo ricorda per l'host;
 > - `mergeStateStatus` su 30 PR di un repository grande supera il tempo che GitHub concede (502): l'elenco ne fa a meno e legge 20 PR (10 se GitHub risponde ancora 502), e la vista della PR chiede il verdetto esatto per quella sola;
