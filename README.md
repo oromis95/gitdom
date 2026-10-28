@@ -167,7 +167,7 @@ GitHub (and GitHub Enterprise), GitLab (gitlab.com or your own server), Bitbucke
 
 ### Several repositories
 
-- Several repositories open side by side in tabs. A repository opens in its tab at once, with a loading animation while its history is read. Right-click a tab to close it, the others, those to its right or left, or all of them, or to copy its path or show it in its folder
+- Several repositories open side by side in tabs. A repository opens in its tab at once, with a loading animation while its history is read: new cars keep coming in and getting in a row. Right-click a tab to close it, the others, those to its right or left, or all of them, or to copy its path or show it in its folder
 - Quick switcher on the repository name in the toolbar: open tabs, favorites and recent repositories, with search
 - Workspaces: save the open tabs under a name and reopen them together
 - Workspace dashboard (**View → Workspace Dashboard**, or **Dashboard** on the welcome screen): every repository you have open, saved in a workspace, favorite or recent, with its branch, commits to push and to pull, changes, stashes, and anything stuck such as a merge in progress. **Fetch all** fetches them a few at a time, **Pull** fast-forwards those that are only behind, and a click opens one
@@ -225,7 +225,7 @@ Open them with **File → Preferences** or `Ctrl+,`.
 
 ![GitDom, Studio theme](docs/screenshots/studio.png)
 
-At startup GitDom shows its logo: cars on a six-lane highway change lanes without ever touching, like changes from many authors flowing through Git. Click or press any key to skip it. You can also turn it off in Preferences or from the command palette.
+At startup GitDom shows its logo: cars on a six-lane highway, like changes from many authors, come in all together, overtake one another and brake, until a light runs over the road and puts them in a row, without one ever touching another. Click or press any key to skip it. You can also turn it off in Preferences or from the command palette.
 
 <p align="center"><img src="docs/screenshots/splash.png" alt="GitDom startup logo" width="600"></p>
 

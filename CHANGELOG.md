@@ -2,6 +2,13 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Changed
+
+- The startup animation tells a story: the cars come in all together, overtake one another and brake, with their brake lights on, until a light runs over the road and puts each one in its place. While a repository opens, new cars keep coming in and getting in a row
+- With reduced motion asked by the system, the logo of the loading screen stands still
+
 ## 1.15.0 — 2026-10-28
 
 ### Added
