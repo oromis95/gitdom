@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.15.0 pubblicata il 2026-10-28 (Step 1–21 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.15.1 pubblicata il 2026-10-28 (Step 1–21 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
