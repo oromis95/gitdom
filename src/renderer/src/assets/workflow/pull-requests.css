@@ -520,3 +520,181 @@
 .pull-box h3 .row-action {
   margin-left: auto;
 }
+
+/* The pull request's actions, under its summary */
+.pull-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.pull-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* A new pull request */
+.modal.create-pull {
+  width: 600px;
+  max-width: calc(100vw - 40px);
+  /* The backdrop keeps 15vh above */
+  max-height: calc(85vh - 16px);
+}
+.create-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -6px;
+  padding: 0 6px 2px;
+}
+.modal.create-pull .modal-title,
+.modal.merge-pull .modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.create-branches {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.create-branches .modal-field {
+  flex: 1;
+  min-width: 0;
+}
+.create-branches select {
+  width: 100%;
+}
+.create-arrow {
+  padding-bottom: 6px;
+  color: var(--text-muted);
+}
+.create-note {
+  color: var(--warning-text);
+}
+.create-body {
+  resize: vertical;
+  font-family: var(--font-code, monospace);
+  font-size: 12px;
+}
+.create-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.create-label {
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.create-label.on {
+  border-color: transparent;
+}
+.create-commits {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 12.5px;
+}
+.create-commit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Picking reviewers */
+.reviewer-picker {
+  position: relative;
+}
+.reviewer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.reviewer-chips input {
+  flex: 1;
+  min-width: 120px;
+  border: 0;
+  background: transparent;
+  outline: none;
+}
+.reviewer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px 1px 2px;
+  border-radius: 10px;
+  font-size: 12px;
+  background: var(--bg-hover);
+}
+.reviewer-chip button {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+.reviewer-results {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  font-size: 12.5px;
+}
+.reviewer-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-align: left;
+  color: var(--text);
+}
+.reviewer-result:hover {
+  background: var(--bg-hover);
+}
+
+/* Merging */
+.modal.merge-pull {
+  width: 520px;
+  max-height: calc(85vh - 16px);
+  overflow-y: auto;
+}
+.merge-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.merge-method {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.merge-method.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.merge-method span {
+  display: flex;
+  flex-direction: column;
+  font-size: 12.5px;
+}

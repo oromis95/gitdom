@@ -44,6 +44,8 @@ export interface ForgeUser {
   name: string | null
   /** Absolute URL; GitDom loads it in the main process (see ForgeApi.avatar) */
   avatarUrl: string | null
+  /** What the service's API names the person by, where it isn't the login (ids, uuids) */
+  id?: string
 }
 
 export type PullState = 'open' | 'draft' | 'merged' | 'closed'
@@ -159,11 +161,96 @@ export type ForgeStatus =
       pulls: PullRequest[]
       /** Remotes on the same service and the repository each is (its path): the fork, upstream */
       remotes: Record<string, string>
+      /** What the repository allows; null until it could be read */
+      info: ForgeRepoInfo | null
       /** Unix milliseconds */
       fetchedAt: number
     }
   /** `auth` when the account's token was refused: it has to be connected again */
   | { state: 'error'; repo: ForgeRepo; error: string; auth: boolean; device: boolean }
+
+export type MergeMethod = 'merge' | 'squash' | 'rebase' | 'rebaseMerge' | 'fastForward'
+
+export const MERGE_METHODS: Record<MergeMethod, { name: string; detail: string }> = {
+  merge: { name: 'Merge commit', detail: 'All the commits, joined by a merge commit' },
+  squash: { name: 'Squash', detail: 'The changes in a single commit' },
+  rebase: { name: 'Rebase', detail: 'The commits replayed on the target branch, no merge commit' },
+  rebaseMerge: {
+    name: 'Rebase, then merge commit',
+    detail: 'The commits replayed on the target branch, then a merge commit'
+  },
+  fastForward: { name: 'Fast-forward', detail: 'The target branch moved to the last commit' }
+}
+
+/** What a repository on the service allows. */
+export interface ForgeRepoInfo {
+  defaultBranch: string
+  /** Merge methods allowed, the default first; on Bitbucket they depend on the target branch */
+  methods: MergeMethod[]
+  /** Whether the source branch is deleted after a merge by default */
+  deleteBranch: boolean
+  /** Merging by itself once the checks pass and the reviews are in */
+  autoMerge: boolean
+  labels: boolean
+  /** A closed pull request can be opened again (not on Bitbucket) */
+  reopen: boolean
+}
+
+/** Someone who can be asked to review: `id` is what the service's API takes */
+export interface Candidate {
+  id: string
+  user: ForgeUser
+}
+
+export interface NewPull {
+  /** A local branch; GitDom finds the remote it's published to */
+  branch: string
+  targetBranch: string
+  title: string
+  body: string
+  draft: boolean
+  reviewers: Candidate[]
+  labels: string[]
+}
+
+/** What to change on an open pull request; reviewers are added to those already asked. */
+export interface PullChange {
+  title?: string
+  body?: string
+  draft?: boolean
+  state?: 'open' | 'closed'
+  reviewers?: Candidate[]
+}
+
+export interface MergeOptions {
+  method: MergeMethod
+  /** The commit message, empty for the service's own */
+  message: string
+  deleteBranch: boolean
+  /** Merge by itself once it can, instead of now */
+  auto: boolean
+}
+
+export interface CreatedPull {
+  number: number
+  url: string
+  /** Something that didn't work once the pull request was open, e.g. asking a reviewer */
+  warning?: string
+}
+
+/** Where a pull request's branch is, to check it out */
+export interface PullSource {
+  /** A remote of the repository with the branch: origin, or a fork already added */
+  remote: string | null
+  /** Otherwise the fork's address, null when it can't be told */
+  url: string | null
+  branch: string
+  /** Who the fork is of, to name a remote after them */
+  owner: string
+}
+
+/** Merged now, set to merge by itself, or waiting in the service's merge queue */
+export type MergeOutcome = 'merged' | 'auto' | 'queued'
 
 /** A device login in progress: the code to type on the service's page. */
 export interface DeviceLogin {

@@ -2,8 +2,10 @@
 // reviewers; checks need a request per pull request, kept while nothing changes (PerPullCache).
 // Bitbucket Data Center has another API and isn't supported.
 import type {
+  Candidate,
   CheckState,
   ForgeUser,
+  MergeMethod,
   Mergeability,
   PullChecks,
   PullComment,
@@ -11,10 +13,11 @@ import type {
   PullReviewer,
   ReviewDecision
 } from '../../shared/forge'
-import { requestJson } from './http'
+import { jsonBody, request, requestJson } from './http'
 import {
   PerPullCache,
   PULL_LIMIT,
+  afterCreate,
   basic,
   bearer,
   mapLimit,
@@ -30,6 +33,7 @@ interface Account {
   display_name: string
   nickname?: string
   account_id?: string
+  uuid?: string
   links?: { avatar?: { href?: string } }
 }
 
@@ -77,15 +81,21 @@ export const bitbucketUser = (account: Account | null): ForgeUser =>
         // Apps have no nickname
         login: account.nickname ?? account.display_name,
         name: account.display_name,
-        avatarUrl: account.links?.avatar?.href ?? null
+        avatarUrl: account.links?.avatar?.href ?? null,
+        ...(account.uuid ? { id: account.uuid } : {})
       }
     : GHOST
 
-async function api(ctx: ProviderContext, path: string): Promise<unknown> {
+async function api(ctx: ProviderContext, path: string, init?: RequestInit): Promise<unknown> {
   if (ctx.host !== 'bitbucket.org')
     throw new Error(`${ctx.host}: Bitbucket Data Center isn't supported yet`)
   return requestJson(`${API}${path}`, {
-    headers: { Accept: 'application/json', ...bitbucket.auth(ctx) }
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...(init?.headers as Record<string, string>),
+      ...bitbucket.auth(ctx)
+    }
   })
 }
 
@@ -177,6 +187,54 @@ interface Comment {
   inline?: { path: string; to: number | null; from: number | null } | null
 }
 
+// Bitbucket's merge strategies, as GitDom names them; two of them squash
+const STRATEGIES: [string, MergeMethod][] = [
+  ['merge_commit', 'merge'],
+  ['squash', 'squash'],
+  ['squash_fast_forward', 'squash'],
+  ['fast_forward', 'fastForward'],
+  ['rebase_fast_forward', 'rebase'],
+  ['rebase_merge', 'rebaseMerge']
+]
+
+interface BranchStrategies {
+  merge_strategies?: string[]
+  default_merge_strategy?: string
+}
+
+/** The methods a target branch allows, its default first, and the strategy behind each. */
+export function bitbucketMethods(branch: BranchStrategies): Map<MergeMethod, string> {
+  const allowed = branch.merge_strategies ?? ['merge_commit', 'squash', 'fast_forward']
+  const order = [branch.default_merge_strategy, ...STRATEGIES.map(([strategy]) => strategy)].filter(
+    (s): s is string => !!s && allowed.includes(s)
+  )
+  const methods = new Map<MergeMethod, string>()
+  for (const strategy of order) {
+    const method = STRATEGIES.find(([s]) => s === strategy)?.[1]
+    if (method && !methods.has(method)) methods.set(method, strategy)
+  }
+  return methods
+}
+
+const branchUrl = (repoPath: string, branch: string): string =>
+  `${repoUrl(repoPath)}/refs/branches/${encodeURIComponent(branch)}`
+
+// The members of each workspace, read once: Bitbucket can't search them by name
+const members = new Map<string, Promise<Candidate[]>>()
+
+async function workspaceMembers(ctx: ProviderContext, workspace: string): Promise<Candidate[]> {
+  const people: Candidate[] = []
+  let page: string | null = `/workspaces/${encodeURIComponent(workspace)}/members?pagelen=100`
+  // Three pages at most: a big workspace is searched among its first 300
+  for (let i = 0; page && i < 3; i++) {
+    const answer = (await api(ctx, page)) as { values: { user: Account }[]; next?: string }
+    for (const { user } of answer.values)
+      if (user.uuid) people.push({ id: user.uuid, user: bitbucketUser(user) })
+    page = answer.next ? answer.next.replace(API, '') : null
+  }
+  return people
+}
+
 const checksCache = new PerPullCache<PullChecks | null>((checks) => checks?.state !== 'pending')
 
 export const bitbucket: ForgeProvider = {
@@ -253,5 +311,119 @@ export const bitbucket: ForgeProvider = {
   auth: (ctx) => {
     if (!ctx.username) return bearer(ctx)
     return basic(ctx.username, ctx.token)
+  },
+
+  async info(ctx, repoPath, target) {
+    const repo = (await api(ctx, repoUrl(repoPath))) as { mainbranch?: { name: string } }
+    const defaultBranch = repo.mainbranch?.name ?? 'main'
+    const branch = (await api(ctx, branchUrl(repoPath, target ?? defaultBranch)).catch(
+      () => ({})
+    )) as BranchStrategies
+    return {
+      defaultBranch,
+      methods: [...bitbucketMethods(branch).keys()],
+      deleteBranch: false,
+      autoMerge: false,
+      labels: false,
+      reopen: false
+    }
+  },
+
+  async candidates(ctx, repoPath, query) {
+    const workspace = repoPath.split('/')[0]
+    let all = members.get(workspace)
+    if (!all) {
+      all = workspaceMembers(ctx, workspace)
+      members.set(workspace, all)
+      all.catch(() => members.delete(workspace))
+    }
+    const q = query.trim().toLowerCase()
+    return (await all)
+      .filter(
+        (c) =>
+          !q || c.user.login.toLowerCase().includes(q) || c.user.name?.toLowerCase().includes(q)
+      )
+      .slice(0, 20)
+  },
+
+  labels: async () => [],
+
+  async create(ctx, repoPath, pull) {
+    const created = (await api(
+      ctx,
+      `${repoUrl(repoPath)}/pullrequests`,
+      jsonBody(
+        'POST',
+        {},
+        {
+          title: pull.title,
+          description: pull.body,
+          source: {
+            branch: { name: pull.sourceBranch },
+            repository: { full_name: pull.sourceRepo }
+          },
+          destination: { branch: { name: pull.targetBranch } },
+          reviewers: pull.reviewers.map((r) => ({ uuid: r.id })),
+          draft: pull.draft
+        }
+      )
+    )) as { id: number; links: { html: { href: string } } }
+    return afterCreate({ number: created.id, url: created.links.html.href }, [])
+  },
+
+  async update(ctx, repoPath, pull, change) {
+    const base = `${repoUrl(repoPath)}/pullrequests/${pull.number}`
+    if (change.state === 'open') throw new Error("Bitbucket can't reopen a declined pull request")
+    if (change.state === 'closed') await api(ctx, `${base}/decline`, jsonBody('POST', {}, {}))
+    const reviewers = change.reviewers?.length
+      ? [
+          ...new Set([
+            ...pull.reviewers.flatMap((r) => (r.user.id ? [r.user.id] : [])),
+            ...change.reviewers.map((r) => r.id)
+          ])
+        ].map((uuid) => ({ uuid }))
+      : undefined
+    if (
+      change.title === undefined &&
+      change.body === undefined &&
+      change.draft === undefined &&
+      !reviewers
+    )
+      return
+    await api(
+      ctx,
+      base,
+      jsonBody(
+        'PUT',
+        {},
+        {
+          // The title always goes: Bitbucket wants it in every update
+          title: change.title ?? pull.title,
+          ...(change.body !== undefined ? { description: change.body } : {}),
+          ...(change.draft !== undefined ? { draft: change.draft } : {}),
+          ...(reviewers ? { reviewers } : {})
+        }
+      )
+    )
+  },
+
+  async merge(ctx, repoPath, pull, options) {
+    if (options.auto) throw new Error("Bitbucket doesn't merge by itself")
+    const branch = (await api(ctx, branchUrl(repoPath, pull.targetBranch)).catch(
+      () => ({})
+    )) as BranchStrategies
+    const strategy = bitbucketMethods(branch).get(options.method) ?? 'merge_commit'
+    const message = options.message.trim()
+    const answer = await request(
+      `${API}${repoUrl(repoPath)}/pullrequests/${pull.number}/merge`,
+      jsonBody('POST', bitbucket.auth(ctx), {
+        type: 'pullrequest',
+        merge_strategy: strategy,
+        close_source_branch: options.deleteBranch,
+        ...(message ? { message } : {})
+      })
+    )
+    // A merge queue, or a merge that takes a while: Bitbucket finishes it by itself
+    return answer.status === 202 ? 'queued' : 'merged'
   }
 }

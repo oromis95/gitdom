@@ -11,6 +11,13 @@ export interface Toast {
   message: string
   /** Full git output, shown on demand */
   details?: string
+  /** A button doing what naturally comes next, e.g. creating a pull request after a push */
+  action?: ToastAction
+}
+
+export interface ToastAction {
+  label: string
+  run: () => void
 }
 
 export interface FormField {
@@ -179,13 +186,20 @@ let nextToastId = 1
 export const fromTerminal = (e: KeyboardEvent): boolean =>
   e.target instanceof Element && e.target.closest('.terminal-dock') !== null
 
-export function notify(kind: ToastKind, message: string, details?: string): void {
+export function notify(
+  kind: ToastKind,
+  message: string,
+  details?: string,
+  action?: ToastAction
+): void {
   const id = nextToastId++
-  useUi.setState((s) => ({ toasts: [...s.toasts.slice(-4), { id, kind, message, details }] }))
-  // Errors and warnings stay longer: they usually need reading
+  useUi.setState((s) => ({
+    toasts: [...s.toasts.slice(-4), { id, kind, message, details, action }]
+  }))
+  // Errors and warnings stay longer: they usually need reading; so does a toast with a button
   setTimeout(
     () => useUi.getState().dismiss(id),
-    kind === 'error' || kind === 'warning' ? 15000 : 4000
+    kind === 'error' || kind === 'warning' ? 15000 : action ? 12000 : 4000
   )
 }
 

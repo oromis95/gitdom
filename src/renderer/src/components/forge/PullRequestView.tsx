@@ -2,8 +2,12 @@
 // Its changes are fetched and listed in the detail panel, read with GitDom's own diff.
 import { useEffect, useState } from 'react'
 import {
+  ChevronDown,
   ExternalLink,
   FileDiff,
+  FolderGit2,
+  GitBranch,
+  UserPlus,
   GitCommitHorizontal,
   GitMerge,
   MessageSquare,
@@ -21,6 +25,7 @@ import {
 import type { ReleaseCommit } from '../../../../shared/releaseNotes'
 import type { RepoSnapshot } from '../../../../shared/types'
 import {
+  endedKey,
   isReady,
   openInBrowser,
   pullLabel,
@@ -28,8 +33,10 @@ import {
   useForge,
   useForgeStatus
 } from '../../forge'
+import { checkoutPull, closePull, editPull, reopenPull, setDraft } from '../../pullActions'
+import * as actions from '../../actions'
 import { useApp } from '../../store'
-import { fromTerminal } from '../../ui'
+import { fromTerminal, openMenu } from '../../ui'
 import { relativeTime } from '../../time'
 import Markdown from './Markdown'
 import { Avatar, CheckIcon, Labels, PullIcon, VoteIcon } from './PullBits'
@@ -241,6 +248,65 @@ function Conversation({ detail }: { detail: Load<PullDetail> }): React.JSX.Eleme
   )
 }
 
+/** What can be done with the pull request: merge, check out, ask for reviews, and the rest. */
+function PullActions({
+  repo,
+  pull,
+  body
+}: {
+  repo: string
+  pull: PullRequest
+  body: string
+}): React.JSX.Element {
+  const number = pull.number
+  const more = (e: React.MouseEvent): void =>
+    openMenu(e, [
+      { label: 'Edit title and description…', onClick: () => void editPull(repo, pull, body) },
+      pull.state === 'draft'
+        ? { label: 'Ready for review', onClick: () => void setDraft(repo, pull, false) }
+        : { label: 'Convert to draft', onClick: () => void setDraft(repo, pull, true) },
+      'separator',
+      { label: 'Copy link', onClick: () => actions.copy(pull.url) },
+      { label: 'Copy source branch name', onClick: () => actions.copy(pull.sourceBranch) },
+      'separator',
+      { label: 'Close without merging…', danger: true, onClick: () => void closePull(repo, pull) }
+    ])
+  return (
+    <div className="pull-actions">
+      <button
+        className="btn btn-primary btn-small"
+        title="Choose how, then merge"
+        onClick={() => useForge.setState({ merge: { repo, number } })}
+      >
+        <GitMerge size={13} /> Merge…
+      </button>
+      <button
+        className="btn btn-small"
+        title="A local branch following it"
+        onClick={() => void checkoutPull(repo, pull, false)}
+      >
+        <GitBranch size={13} /> Check out
+      </button>
+      <button
+        className="btn btn-small"
+        title="In a folder of its own, without touching the work in progress"
+        onClick={() => void checkoutPull(repo, pull, true)}
+      >
+        <FolderGit2 size={13} /> Worktree
+      </button>
+      <button
+        className="btn btn-small"
+        onClick={() => useForge.setState({ review: { repo, number } })}
+      >
+        <UserPlus size={13} /> Ask to review
+      </button>
+      <button className="btn btn-small" onClick={more}>
+        More <ChevronDown size={13} />
+      </button>
+    </div>
+  )
+}
+
 function PullPage({
   snapshot,
   pull,
@@ -278,6 +344,7 @@ function PullPage({
         <span className="muted">· opened {relativeTime(pull.createdAt / 1000)}</span>
       </div>
       <Labels pull={pull} />
+      <PullActions repo={repo} pull={pull} body={detail.value?.body ?? ''} />
 
       <div className="pull-columns">
         <div className="pull-main">
@@ -347,6 +414,9 @@ export default function PullRequestView({
   const openPullRequest = useApp((s) => s.openPullRequest)
   const pull = isReady(status) ? status.pulls.find((p) => p.number === number) : undefined
   const kind = status && status.state !== 'none' ? status.repo.kind : 'github'
+  // Closed or merged here this session: a closed one can be opened again
+  const ended = useForge((s) => s.ended[endedKey(snapshot.path, number)])
+  const reopen = isReady(status) && status.info?.reopen !== false
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -391,11 +461,25 @@ export default function PullRequestView({
         />
       ) : (
         <div className="center-message">
-          {isReady(status)
-            ? `${pullLabel(kind, number)} is no longer open`
-            : loading
-              ? 'Loading…'
-              : 'Connect the account to see it'}
+          {ended ? (
+            <>
+              <div>
+                {pullLabel(kind, number)} {ended.pull.title}{' '}
+                {ended.how === 'merged' ? 'was merged' : 'is closed'}
+              </div>
+              {ended.how === 'closed' && reopen && (
+                <button className="btn" onClick={() => void reopenPull(snapshot.path, ended.pull)}>
+                  Reopen
+                </button>
+              )}
+            </>
+          ) : isReady(status) ? (
+            `${pullLabel(kind, number)} is no longer open`
+          ) : loading ? (
+            'Loading…'
+          ) : (
+            'Connect the account to see it'
+          )}
         </div>
       )}
     </div>

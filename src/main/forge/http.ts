@@ -47,6 +47,15 @@ export async function send(url: string, init: RequestInit = {}): Promise<Respons
 function errorText(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null
   const b = body as Record<string, unknown>
+  // GitHub's validation errors: { message: 'Validation Failed', errors: [{ message }] }
+  const first = Array.isArray(b.errors) ? (b.errors[0] as { message?: unknown } | undefined) : null
+  if (first && typeof first.message === 'string') return first.message
+  // GitLab: { message: ['…'] } or { message: { field: ['…'] } }
+  if (Array.isArray(b.message) && typeof b.message[0] === 'string') return b.message.join(', ')
+  if (b.message && typeof b.message === 'object' && !Array.isArray(b.message)) {
+    const values = Object.values(b.message as Record<string, unknown>).flat()
+    if (typeof values[0] === 'string') return values.join(', ')
+  }
   for (const key of ['message', 'error_description', 'error', 'errorMessage']) {
     const value = b[key]
     if (typeof value === 'string' && value) return value
@@ -60,8 +69,14 @@ function errorText(body: unknown): string | null {
   return null
 }
 
-/** Sends a request and reads its JSON, turning statuses other than 2xx into a ForgeError. */
-export async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
+/**
+ * Sends a request and reads its JSON answer and status, turning statuses other than 2xx into a
+ * ForgeError.
+ */
+export async function request(
+  url: string,
+  init: RequestInit = {}
+): Promise<{ status: number; body: unknown }> {
   const response = await send(url, init)
   const text = await response.text()
   let body: unknown = null
@@ -76,7 +91,7 @@ export async function requestJson<T>(url: string, init: RequestInit = {}): Promi
   if (response.ok) {
     if (body === null && text)
       throw new ForgeError('The service sent an unreadable answer', response.status)
-    return body as T
+    return { status: response.status, body }
   }
   const host = new URL(url).host
   const detail = errorText(body)
@@ -103,6 +118,24 @@ export async function requestJson<T>(url: string, init: RequestInit = {}): Promi
     false,
     body
   )
+}
+
+/** Sends a request and reads its JSON, turning statuses other than 2xx into a ForgeError. */
+export async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
+  return (await request(url, init)).body as T
+}
+
+/** A request with a JSON body, to change something on the service. */
+export function jsonBody(
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  headers: Record<string, string>,
+  body?: unknown
+): RequestInit {
+  return {
+    method,
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...headers },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) })
+  }
 }
 
 interface GraphQlAnswer<T> {

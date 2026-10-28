@@ -70,3 +70,9 @@ export function mergeText(merge: Mergeability): {
 /** How a person is named: the login, unless it's an email (Azure DevOps), then the name. */
 export const who = (user: ForgeUser): string =>
   user.login.includes('@') ? (user.name ?? user.login) : user.login
+
+/** A branch name as a title: "feature/login-form" gives "Login form". */
+export function titleOfBranch(branch: string): string {
+  const words = (branch.split('/').pop() ?? branch).replace(/[-_]+/g, ' ').trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}

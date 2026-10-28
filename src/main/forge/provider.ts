@@ -1,5 +1,18 @@
 // What every service's module offers, in the shapes of shared/forge.ts.
-import type { CheckState, ForgeUser, PullDetail, PullRequest } from '../../shared/forge'
+import type {
+  Candidate,
+  CheckState,
+  CreatedPull,
+  ForgeRepoInfo,
+  ForgeUser,
+  MergeOptions,
+  MergeOutcome,
+  NewPull,
+  PullChange,
+  PullDetail,
+  PullLabel,
+  PullRequest
+} from '../../shared/forge'
 
 export interface ProviderContext {
   host: string
@@ -24,6 +37,59 @@ export interface ForgeProvider {
   headRef(number: number): string | null
   /** Headers authenticating a request with the account's token. */
   auth(ctx: ProviderContext): Record<string, string>
+  /**
+   * What the repository allows; `target` is the branch a pull request goes into, for services
+   * whose merge methods depend on it (Bitbucket).
+   */
+  info(ctx: ProviderContext, repoPath: string, target?: string): Promise<ForgeRepoInfo>
+  /** People who can be asked to review, matching what was typed. */
+  candidates(ctx: ProviderContext, repoPath: string, query: string): Promise<Candidate[]>
+  /** The repository's labels, empty where the service has none to pick from. */
+  labels(ctx: ProviderContext, repoPath: string): Promise<PullLabel[]>
+  /** Opens a pull request from a branch already on the service, in `sourceRepo` (a fork too). */
+  create(ctx: ProviderContext, repoPath: string, pull: CreatePull): Promise<Created>
+  update(
+    ctx: ProviderContext,
+    repoPath: string,
+    pull: PullRequest,
+    change: PullChange
+  ): Promise<void>
+  merge(
+    ctx: ProviderContext,
+    repoPath: string,
+    pull: PullRequest,
+    options: MergeOptions
+  ): Promise<MergeOutcome>
+}
+
+/** A new pull request, with where its branch is on the service. */
+export interface CreatePull extends Omit<NewPull, 'branch'> {
+  sourceRepo: string
+  sourceBranch: string
+}
+
+export type Created = CreatedPull
+
+/** Runs the steps after a pull request was created; what fails becomes the warning. */
+export async function afterCreate(
+  created: Omit<Created, 'warning'>,
+  steps: (() => Promise<unknown>)[]
+): Promise<Created> {
+  const failures: string[] = []
+  for (const step of steps) {
+    try {
+      await step()
+    } catch (e) {
+      failures.push(e instanceof Error ? e.message : String(e))
+    }
+  }
+  return failures.length ? { ...created, warning: failures.join('; ') } : created
+}
+
+/** A commit message as its first line and the rest. */
+export function splitMessage(message: string): { title: string; body: string } {
+  const [title, ...rest] = message.trim().split('\n')
+  return { title: title?.trim() ?? '', body: rest.join('\n').trim() }
 }
 
 export const bearer = (ctx: ProviderContext): Record<string, string> => ({

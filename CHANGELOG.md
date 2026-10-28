@@ -2,6 +2,16 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- Create pull requests (merge requests on GitLab) on GitHub, GitLab, Bitbucket and Azure DevOps: from the **+** of the Pull Requests section, a branch's menu, the command palette, or the toast after pushing a branch without one. The target branch, the title, the repository's description template, reviewers, labels and draft are proposed, with the commits it brings; an unpublished branch is pushed first
+- Merge a pull request with the methods the repository allows, a commit message, deleting the source branch, or merging by itself once it can; GitDom then offers to switch to the target branch, pull it, and delete the local branch
+- Check out a pull request, or open it in a worktree: a branch following its branch, or from a fork the fork added as a remote, or its commits on a branch of their own
+- Ask for reviews, edit the title and description, mark ready for review or back to draft, close and reopen, from the pull request's view
+- The toasts can have a button, like **Create pull request** after a push
+
 ## 1.14.0 — 2026-10-28
 
 ### Added

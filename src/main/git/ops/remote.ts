@@ -46,8 +46,9 @@ export const remoteOps: Pick<
     return withConflicts(repo, ['pull', '--autostash', flag])
   },
 
-  async push(repo, forceWithLease) {
-    const branch = await currentBranch(repo)
+  async push(repo, forceWithLease, name) {
+    if (name !== undefined) assertArg(name, 'branch name')
+    const branch = name ?? (await currentBranch(repo))
     const remote = await getConfig(repo, `branch.${branch}.remote`)
     const merge = await getConfig(repo, `branch.${branch}.merge`)
     // --progress: git only reports it to a terminal otherwise

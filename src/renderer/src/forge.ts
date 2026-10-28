@@ -26,19 +26,41 @@ export interface ConnectRequest {
   device: boolean
 }
 
+/** A pull request of a repository, for the dialogs acting on it */
+export interface PullTarget {
+  repo: string
+  number: number
+}
+
 interface ForgeState {
   byRepo: Record<string, ForgeStatus>
   /** Repositories whose pull requests are being read */
   loading: Record<string, boolean>
   accounts: ForgeAccount[]
   connect: ConnectRequest | null
+  /** The new pull request dialog: the repository and the branch it starts from */
+  create: { repo: string; branch: string } | null
+  merge: PullTarget | null
+  /** The dialog asking reviewers */
+  review: PullTarget | null
+  /** Pull requests closed or merged in GitDom this session, by endedKey() */
+  ended: Record<string, EndedPull>
+}
+
+export interface EndedPull {
+  pull: PullRequest
+  how: 'closed' | 'merged'
 }
 
 export const useForge = create<ForgeState>(() => ({
   byRepo: {},
   loading: {},
   accounts: [],
-  connect: null
+  connect: null,
+  create: null,
+  merge: null,
+  review: null,
+  ended: {}
 }))
 
 // The service is asked at most this often for a repository, unless the user asks
@@ -223,6 +245,56 @@ export async function disconnectForge(host: string): Promise<void> {
 }
 
 export const openInBrowser = (url: string): void => window.api.forge.openUrl(url)
+
+export const endedKey = (repo: string, number: number): string => `${repo}\n${number}`
+
+/** Remembers how a pull request ended in GitDom, or forgets it once it's open again. */
+export function setEnded(repo: string, pull: PullRequest, how: EndedPull['how'] | null): void {
+  useForge.setState((s) => {
+    const ended = { ...s.ended }
+    if (how) ended[endedKey(repo, pull.number)] = { pull, how }
+    else delete ended[endedKey(repo, pull.number)]
+    return { ended }
+  })
+}
+
+/** Opens the new pull request dialog, from a branch or the checked-out one. */
+export function openCreatePull(repo: string, branch?: string): void {
+  const snapshot = useApp.getState().tabs.find((t) => t.path === repo)?.snapshot
+  const from = branch ?? snapshot?.head.branch
+  if (!from) return notify('warning', 'Check out a branch to open a pull request from it')
+  useForge.setState({ create: { repo, branch: from } })
+}
+
+/**
+ * Whether a pull request can be opened from a branch: the repository is on a connected service,
+ * the branch isn't the default one and has no open pull request yet.
+ */
+export function canOpenPull(repo: string, branch: string): boolean {
+  const status = useForge.getState().byRepo[repo]
+  const snapshot = useApp.getState().tabs.find((t) => t.path === repo)?.snapshot
+  if (!isReady(status) || !snapshot) return false
+  if (branch === (status.info?.defaultBranch ?? '')) return false
+  return !pullsByRef(status, snapshot).has(`refs/heads/${branch}`)
+}
+
+/** After a push: says so, offering to open a pull request when the branch has none. */
+export function notifyPushed(repo: string, output: string): void {
+  const branch = useApp.getState().tabs.find((t) => t.path === repo)?.snapshot?.head.branch
+  const status = useForge.getState().byRepo[repo]
+  const offer = branch && canOpenPull(repo, branch) && isReady(status)
+  notify(
+    'success',
+    'Pushed',
+    output,
+    offer
+      ? {
+          label: `Create ${PULL_NOUN[status.repo.kind].name}`,
+          run: () => openCreatePull(repo, branch)
+        }
+      : undefined
+  )
+}
 
 const avatars = new Map<string, string | null>()
 const waiting = new Map<string, Promise<string | null>>()

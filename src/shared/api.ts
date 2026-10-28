@@ -29,12 +29,21 @@ import type { CommitWarning } from './commitChecks'
 import type { ReleaseCommit } from './releaseNotes'
 import type { IgnoreRule } from './ignore'
 import type {
+  Candidate,
+  CreatedPull,
   DeviceLogin,
   ForgeAccount,
   ForgeKind,
+  ForgeRepoInfo,
   ForgeStatus,
+  MergeOptions,
+  MergeOutcome,
+  NewPull,
+  PullChange,
   PullDetail,
-  PullRange
+  PullLabel,
+  PullRange,
+  PullSource
 } from './forge'
 import type { Remote } from './types'
 
@@ -511,8 +520,8 @@ export interface RepoOps {
   fetch(background?: boolean): void
   /** Local changes are stashed around the pull. */
   pull(mode: PullMode): OpOutcome
-  /** Pushes the current branch, setting the upstream on the first push. */
-  push(forceWithLease: boolean): string
+  /** Pushes the current branch, or `branch`, setting the upstream on the first push. */
+  push(forceWithLease: boolean, branch?: string): string
 
   addRemote(name: string, url: string): void
   removeRemote(name: string): void
@@ -874,6 +883,19 @@ export interface ForgeApi {
   openUrl(url: string): void
   /** The page where a token with the right permissions is created. */
   tokenPage(host: string, kind: ForgeKind, path: string): Promise<string>
+  /** What the repository allows; `target` is the branch a pull request goes into. */
+  repoInfo(repo: string, target?: string): Promise<Result<ForgeRepoInfo>>
+  /** People who can be asked to review, matching what was typed. */
+  candidates(repo: string, query: string): Promise<Result<Candidate[]>>
+  labels(repo: string): Promise<Result<PullLabel[]>>
+  /** The description template in the working tree, empty when there's none. */
+  template(repo: string): Promise<Result<string>>
+  /** Opens a pull request from a published local branch. */
+  createPull(repo: string, pull: NewPull): Promise<Result<CreatedPull>>
+  updatePull(repo: string, number: number, change: PullChange): Promise<Result<void>>
+  mergePull(repo: string, number: number, options: MergeOptions): Promise<Result<MergeOutcome>>
+  /** Where a pull request's branch is, to check it out. */
+  checkoutSource(repo: string, number: number): Promise<Result<PullSource>>
 }
 
 /**
@@ -1034,5 +1056,13 @@ export const IPC = {
   forgeCanSave: 'forge:can-save',
   forgeAvatar: 'forge:avatar',
   forgeOpenUrl: 'forge:open-url',
-  forgeTokenPage: 'forge:token-page'
+  forgeTokenPage: 'forge:token-page',
+  forgeRepoInfo: 'forge:repo-info',
+  forgeCandidates: 'forge:candidates',
+  forgeLabels: 'forge:labels',
+  forgeTemplate: 'forge:template',
+  forgeCreatePull: 'forge:create-pull',
+  forgeUpdatePull: 'forge:update-pull',
+  forgeMergePull: 'forge:merge-pull',
+  forgeCheckoutSource: 'forge:checkout-source'
 } as const

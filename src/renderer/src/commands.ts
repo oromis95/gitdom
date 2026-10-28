@@ -31,8 +31,10 @@ import {
 import { FILE_MANAGER, TRASH } from './platform'
 import { FORGE_NAMES, PULL_NOUN } from '../../shared/forge'
 import {
+  canOpenPull,
   connectForge,
   currentPull,
+  openCreatePull,
   openInBrowser,
   pullLabel,
   refreshForge,
@@ -99,6 +101,8 @@ export function buildCommands(): Command[] {
       const noun = PULL_NOUN[kind].name
       const group = noun === 'merge request' ? 'Merge requests' : 'Pull requests'
       if (forge.state === 'ready') {
+        if (current && canOpenPull(repo, current))
+          add(group, `Create ${noun} from ${current}…`, () => openCreatePull(repo, current))
         const own = currentPull(forge, snapshot)
         if (own) {
           add(group, `Open ${pullLabel(kind, own.number)} of ${current}`, () =>

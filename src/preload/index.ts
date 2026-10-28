@@ -171,7 +171,17 @@ const api: GitDomApi = {
     canSaveTokens: () => ipcRenderer.invoke(IPC.forgeCanSave),
     avatar: (url) => ipcRenderer.invoke(IPC.forgeAvatar, url),
     openUrl: (url) => ipcRenderer.send(IPC.forgeOpenUrl, url),
-    tokenPage: (host, kind, path) => ipcRenderer.invoke(IPC.forgeTokenPage, host, kind, path)
+    tokenPage: (host, kind, path) => ipcRenderer.invoke(IPC.forgeTokenPage, host, kind, path),
+    repoInfo: (repo, target) => ipcRenderer.invoke(IPC.forgeRepoInfo, repo, target),
+    candidates: (repo, query) => ipcRenderer.invoke(IPC.forgeCandidates, repo, query),
+    labels: (repo) => ipcRenderer.invoke(IPC.forgeLabels, repo),
+    template: (repo) => ipcRenderer.invoke(IPC.forgeTemplate, repo),
+    createPull: (repo, pull) => ipcRenderer.invoke(IPC.forgeCreatePull, repo, pull),
+    updatePull: (repo, number, change) =>
+      ipcRenderer.invoke(IPC.forgeUpdatePull, repo, number, change),
+    mergePull: (repo, number, options) =>
+      ipcRenderer.invoke(IPC.forgeMergePull, repo, number, options),
+    checkoutSource: (repo, number) => ipcRenderer.invoke(IPC.forgeCheckoutSource, repo, number)
   }
 }
 

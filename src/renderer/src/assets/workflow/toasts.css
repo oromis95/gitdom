@@ -39,6 +39,10 @@
 .toast-toggle {
   font-size: 12px;
 }
+.toast-action {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 .toast-details {
   margin: 8px 0 0;
   max-height: 240px;

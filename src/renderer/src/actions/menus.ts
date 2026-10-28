@@ -2,6 +2,8 @@
 import type { Ref, RepoSnapshot, Stash, Submodule } from '../../../shared/types'
 import { NO_GRAPH_FILTER, useApp } from '../store'
 import type { MenuItem } from '../ui'
+import { PULL_NOUN } from '../../../shared/forge'
+import { canOpenPull, isReady, openCreatePull, pullLabel, pullsByRef, useForge } from '../forge'
 import { checkoutInWorktree, createWorktree, worktreeOf } from '../worktrees'
 import { copy, run } from './core'
 import {
@@ -212,9 +214,35 @@ export function tagMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
 }
 
 export function refMenu(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
-  if (ref.type === 'local') return localBranchMenu(snapshot, ref)
-  if (ref.type === 'remote') return remoteBranchMenu(snapshot, ref)
+  if (ref.type === 'local') return [...pullItems(snapshot, ref), ...localBranchMenu(snapshot, ref)]
+  if (ref.type === 'remote')
+    return [...pullItems(snapshot, ref), ...remoteBranchMenu(snapshot, ref)]
   return tagMenu(snapshot, ref)
+}
+
+/** The branch's pull request to open, or one to create from a local branch without one. */
+function pullItems(snapshot: RepoSnapshot, ref: Ref): MenuItem[] {
+  const status = useForge.getState().byRepo[snapshot.path]
+  if (!isReady(status)) return []
+  const pull = pullsByRef(status, snapshot).get(ref.fullName)
+  const { kind } = status.repo
+  if (pull)
+    return [
+      {
+        label: `Open ${pullLabel(kind, pull.number)} ${pull.title}`,
+        onClick: () => useApp.getState().openPullRequest(pull.number)
+      },
+      'separator'
+    ]
+  if (ref.type === 'local' && canOpenPull(snapshot.path, ref.name))
+    return [
+      {
+        label: `Create ${PULL_NOUN[kind].name}…`,
+        onClick: () => openCreatePull(snapshot.path, ref.name)
+      },
+      'separator'
+    ]
+  return []
 }
 
 export function stashMenu(snapshot: RepoSnapshot, entry: Stash): MenuItem[] {

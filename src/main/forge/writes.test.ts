@@ -1,0 +1,451 @@
+import { execFileSync } from 'child_process'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { PullRequest } from '../../shared/forge'
+import { AccountStore, type Cipher } from './accounts'
+import { azure } from './azure'
+import { bitbucket, bitbucketMethods } from './bitbucket'
+import { github } from './github'
+import { draftTitle, gitlab } from './gitlab'
+import { setFetcher } from './http'
+import { ForgeService, readTemplate } from './service'
+
+vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })
+
+interface Sent {
+  method: string
+  url: string
+  body: Record<string, unknown> | null
+  auth?: string
+}
+
+/** Records the requests and answers each with `answer(url, method)`, or {} */
+function recorder(answer: (url: string, method: string) => unknown = () => ({})): Sent[] {
+  const sent: Sent[] = []
+  setFetcher(async (url, init) => {
+    const method = init.method ?? 'GET'
+    sent.push({
+      method,
+      url,
+      body: init.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : null,
+      auth: (init.headers as Record<string, string>).Authorization
+    })
+    const value = answer(url, method)
+    if (value instanceof Response) return value
+    return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } })
+  })
+  return sent
+}
+
+afterEach(() => setFetcher(() => Promise.reject(new Error('no network in tests'))))
+
+const ctx = { host: 'github.com', token: 'tok' }
+
+function pull(overrides: Partial<PullRequest> = {}): PullRequest {
+  return {
+    number: 7,
+    title: 'Add login',
+    url: 'https://x/7',
+    state: 'open',
+    author: { login: 'ann', name: null, avatarUrl: null },
+    sourceBranch: 'feature/login',
+    sourceRepo: 'acme/app',
+    targetBranch: 'main',
+    headSha: 'f'.repeat(40),
+    createdAt: 0,
+    updatedAt: 0,
+    review: null,
+    reviewers: [],
+    checks: null,
+    merge: { state: 'clean', reason: null },
+    comments: 0,
+    labels: [],
+    ...overrides
+  }
+}
+
+const newPull = {
+  targetBranch: 'main',
+  title: 'Add login',
+  body: 'Body',
+  draft: true,
+  reviewers: [{ id: 'bob', user: { login: 'bob', name: null, avatarUrl: null } }],
+  labels: ['auth']
+}
+
+describe('GitHub changes', () => {
+  it('reads the merge methods the repository allows', async () => {
+    recorder(() => ({
+      default_branch: 'trunk',
+      allow_merge_commit: false,
+      allow_squash_merge: true,
+      allow_rebase_merge: true,
+      allow_auto_merge: true,
+      delete_branch_on_merge: true
+    }))
+    expect(await github.info(ctx, 'acme/app')).toEqual({
+      defaultBranch: 'trunk',
+      methods: ['squash', 'rebase'],
+      deleteBranch: true,
+      autoMerge: true,
+      labels: true,
+      reopen: true
+    })
+  })
+
+  it("opens a fork's pull request with its owner, then asks reviewers and adds labels", async () => {
+    const sent = recorder((url) =>
+      url.endsWith('/pulls')
+        ? { number: 9, html_url: 'https://github.com/acme/app/pull/9' }
+        : url.includes('requested_reviewers')
+          ? new Response(
+              JSON.stringify({ message: 'Reviews may only be requested from collaborators' }),
+              {
+                status: 422
+              }
+            )
+          : {}
+    )
+    const created = await github.create(ctx, 'acme/app', {
+      ...newPull,
+      sourceRepo: 'ann/app',
+      sourceBranch: 'feature/login'
+    })
+    expect(sent[0]).toMatchObject({
+      method: 'POST',
+      url: 'https://api.github.com/repos/acme/app/pulls',
+      body: { head: 'ann:feature/login', base: 'main', draft: true, title: 'Add login' }
+    })
+    expect(sent.map((s) => s.url.replace('https://api.github.com/repos/acme/app', ''))).toEqual([
+      '/pulls',
+      '/pulls/9/requested_reviewers',
+      '/issues/9/labels'
+    ])
+    // The pull request is open; what failed after is told
+    expect(created).toEqual({
+      number: 9,
+      url: 'https://github.com/acme/app/pull/9',
+      warning: 'Reviews may only be requested from collaborators'
+    })
+  })
+
+  it('turns a pull request into a draft through GraphQL', async () => {
+    const sent = recorder((url) =>
+      url.endsWith('/graphql') ? { data: { x: 1 } } : { node_id: 'PR_1' }
+    )
+    await github.update(ctx, 'acme/app', pull(), { draft: true })
+    expect(sent[1]).toMatchObject({
+      url: 'https://api.github.com/graphql',
+      body: { variables: { id: 'PR_1' } }
+    })
+    expect(String(sent[1].body?.query)).toContain('convertPullRequestToDraft')
+  })
+
+  it('merges what was reviewed, and deletes only its own branches', async () => {
+    const sent = recorder()
+    expect(
+      await github.merge(ctx, 'acme/app', pull(), {
+        method: 'squash',
+        message: 'Add login (#7)\n\nWith tests',
+        deleteBranch: true,
+        auto: false
+      })
+    ).toBe('merged')
+    expect(sent[0]).toMatchObject({
+      method: 'PUT',
+      body: {
+        merge_method: 'squash',
+        sha: 'f'.repeat(40),
+        commit_title: 'Add login (#7)',
+        commit_message: 'With tests'
+      }
+    })
+    expect(sent[1]).toMatchObject({
+      method: 'DELETE',
+      url: 'https://api.github.com/repos/acme/app/git/refs/heads/feature/login'
+    })
+    const fork = recorder()
+    await github.merge(ctx, 'acme/app', pull({ sourceRepo: 'ann/app' }), {
+      method: 'merge',
+      message: '',
+      deleteBranch: true,
+      auto: false
+    })
+    expect(fork.map((s) => s.method)).toEqual(['PUT'])
+  })
+
+  it('asks GitHub Enterprise on its own API address', async () => {
+    const sent = recorder(() => ({ default_branch: 'main' }))
+    await github.info({ host: 'git.example.com', token: 't' }, 'acme/app')
+    expect(sent[0].url).toBe('https://git.example.com/api/v3/repos/acme/app')
+  })
+})
+
+describe('GitLab changes', () => {
+  const gl = { host: 'gitlab.com', token: 'tok' }
+
+  it('tells drafts by the title', () => {
+    expect(draftTitle('Add login', true)).toBe('Draft: Add login')
+    expect(draftTitle('Draft: Add login', false)).toBe('Add login')
+    expect(draftTitle('WIP: Add login', true)).toBe('Draft: Add login')
+  })
+
+  it("offers the project's merge method, and squashing as it allows", async () => {
+    recorder(() => ({ default_branch: 'main', merge_method: 'ff', squash_option: 'default_on' }))
+    expect((await gitlab.info(gl, 'group/app')).methods).toEqual(['squash', 'fastForward'])
+    recorder(() => ({
+      default_branch: 'main',
+      merge_method: 'rebase_merge',
+      squash_option: 'never'
+    }))
+    expect((await gitlab.info(gl, 'group/app')).methods).toEqual(['rebaseMerge'])
+  })
+
+  it("opens a fork's merge request on the fork, pointing at the project", async () => {
+    const sent = recorder((_url, method) =>
+      method === 'POST'
+        ? { iid: 4, web_url: 'https://gitlab.com/group/app/-/merge_requests/4' }
+        : { id: 99 }
+    )
+    await gitlab.create(gl, 'group/app', {
+      ...newPull,
+      reviewers: [{ id: '12', user: { login: 'bob', name: null, avatarUrl: null } }],
+      sourceRepo: 'ann/app',
+      sourceBranch: 'feature/login'
+    })
+    expect(sent[1]).toMatchObject({
+      method: 'POST',
+      url: 'https://gitlab.com/api/v4/projects/ann%2Fapp/merge_requests',
+      body: { target_project_id: 99, title: 'Draft: Add login', reviewer_ids: [12], labels: 'auth' }
+    })
+  })
+
+  it('keeps the reviewers already asked when asking more', async () => {
+    const sent = recorder()
+    await gitlab.update(
+      gl,
+      'group/app',
+      pull({
+        reviewers: [
+          { user: { login: 'cy', name: null, avatarUrl: null, id: '5' }, vote: 'requested' }
+        ]
+      }),
+      {
+        reviewers: [{ id: '12', user: { login: 'bob', name: null, avatarUrl: null } }],
+        state: 'closed'
+      }
+    )
+    expect(sent[0].body).toEqual({ state_event: 'close', reviewer_ids: [5, 12] })
+  })
+
+  it('merges by itself when asked, with both names of the option', async () => {
+    const sent = recorder(() => ({ state: 'opened' }))
+    expect(
+      await gitlab.merge(gl, 'group/app', pull(), {
+        method: 'squash',
+        message: '',
+        deleteBranch: true,
+        auto: true
+      })
+    ).toBe('auto')
+    expect(sent[0].body).toEqual({
+      squash: true,
+      should_remove_source_branch: true,
+      sha: 'f'.repeat(40),
+      auto_merge: true,
+      merge_when_pipeline_succeeds: true
+    })
+  })
+})
+
+describe('Bitbucket changes', () => {
+  const bb = { host: 'bitbucket.org', token: 'tok' }
+
+  it("maps the target branch's strategies, its default first", () => {
+    const methods = bitbucketMethods({
+      merge_strategies: ['merge_commit', 'squash_fast_forward', 'rebase_merge'],
+      default_merge_strategy: 'rebase_merge'
+    })
+    expect([...methods.entries()]).toEqual([
+      ['rebaseMerge', 'rebase_merge'],
+      ['merge', 'merge_commit'],
+      ['squash', 'squash_fast_forward']
+    ])
+  })
+
+  it('says a merge waiting in the queue is queued', async () => {
+    const sent = recorder((url) =>
+      url.endsWith('/merge')
+        ? new Response('{}', { status: 202, headers: { 'content-type': 'application/json' } })
+        : { merge_strategies: ['merge_commit', 'squash'] }
+    )
+    expect(
+      await bitbucket.merge(bb, 'team/app', pull(), {
+        method: 'squash',
+        message: 'Squashed',
+        deleteBranch: true,
+        auto: false
+      })
+    ).toBe('queued')
+    expect(sent[1].body).toEqual({
+      type: 'pullrequest',
+      merge_strategy: 'squash',
+      close_source_branch: true,
+      message: 'Squashed'
+    })
+  })
+
+  it('declines, and refuses to reopen', async () => {
+    const sent = recorder()
+    await bitbucket.update(bb, 'team/app', pull(), { state: 'closed' })
+    expect(sent.map((s) => `${s.method} ${s.url.split('/2.0')[1]}`)).toEqual([
+      'POST /repositories/team/app/pullrequests/7/decline'
+    ])
+    await expect(bitbucket.update(bb, 'team/app', pull(), { state: 'open' })).rejects.toThrow(
+      "can't reopen"
+    )
+  })
+})
+
+describe('Azure DevOps changes', () => {
+  const az = { host: 'dev.azure.com', token: 'pat' }
+
+  it('completes a pull request, and says when Azure DevOps is still at it', async () => {
+    const sent = recorder(() => ({ status: 'active' }))
+    expect(
+      await azure.merge(az, 'contoso/Shop/web', pull(), {
+        method: 'squash',
+        message: '',
+        deleteBranch: true,
+        auto: false
+      })
+    ).toBe('queued')
+    expect(sent[0]).toMatchObject({
+      method: 'PATCH',
+      url: 'https://dev.azure.com/contoso/Shop/_apis/git/repositories/web/pullrequests/7?api-version=7.1',
+      body: {
+        status: 'completed',
+        lastMergeSourceCommit: { commitId: 'f'.repeat(40) },
+        completionOptions: { mergeStrategy: 'squash', deleteSourceBranch: true }
+      }
+    })
+  })
+
+  it('sets auto-complete in the name of the account', async () => {
+    const sent = recorder((url) =>
+      url.includes('connectionData')
+        ? {
+            authenticatedUser: {
+              id: 'me-1',
+              properties: { Account: { $value: 'ann@contoso.com' } }
+            }
+          }
+        : {}
+    )
+    expect(
+      await azure.merge(az, 'contoso/Shop/web', pull(), {
+        method: 'merge',
+        message: '',
+        deleteBranch: false,
+        auto: true
+      })
+    ).toBe('auto')
+    expect(sent[1].body).toMatchObject({
+      autoCompleteSetBy: { id: 'me-1' },
+      completionOptions: { mergeStrategy: 'noFastForward' }
+    })
+  })
+
+  it('searches people in the organization’s directory', async () => {
+    const sent = recorder(() => ({
+      value: [
+        {
+          id: 'u1',
+          providerDisplayName: 'Bob',
+          properties: { Mail: { $value: 'bob@contoso.com' } }
+        }
+      ]
+    }))
+    const found = await azure.candidates(az, 'contoso/Shop/web', 'bo')
+    expect(sent[0].url).toMatch(
+      /^https:\/\/vssps\.dev\.azure\.com\/contoso\/_apis\/identities\?searchFilter=General&filterValue=bo/
+    )
+    expect(found).toEqual([
+      { id: 'u1', user: { login: 'bob@contoso.com', name: 'Bob', avatarUrl: null, id: 'u1' } }
+    ])
+  })
+})
+
+describe('creating from a local branch', () => {
+  let dir: string
+  let repo: string
+  const git = (cwd: string, ...args: string[]): string =>
+    execFileSync('git', args, { cwd, encoding: 'utf8', input: '' }).trim()
+  const cipher: Cipher = {
+    available: () => true,
+    encrypt: (text) => `enc:${text}`,
+    decrypt: (text) => text.slice(4)
+  }
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gitdom-forge21-'))
+    repo = join(dir, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-q', '-b', 'main')
+    git(repo, 'config', 'user.email', 't@t.it')
+    git(repo, 'config', 'user.name', 'T')
+    writeFileSync(join(repo, 'a.txt'), '1\n')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-q', '-m', 'base')
+    git(dir, 'init', '-q', '--bare', '-b', 'main', join(dir, 'origin.git'))
+    git(repo, 'remote', 'add', 'origin', join(dir, 'origin.git'))
+    git(repo, 'push', '-q', 'origin', 'main')
+  })
+  afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+  it('opens it from the remote branch the local one follows', async () => {
+    const service = new ForgeService(
+      new AccountStore(join(dir, 'accounts.json'), cipher),
+      async () => null
+    )
+    recorder(() => ({ data: { viewer: { login: 'ann', avatarUrl: null } } }))
+    await service.connect('github.com', 'github', 'token', { token: 't' }, 'acme/app')
+    recorder((url) =>
+      url.endsWith('/graphql')
+        ? {
+            data: {
+              viewer: { login: 'ann', avatarUrl: null },
+              repository: { pullRequests: { nodes: [] } }
+            }
+          }
+        : { default_branch: 'main' }
+    )
+    const remotes = [{ name: 'origin', fetchUrl: 'https://github.com/acme/app.git', pushUrl: '' }]
+    await service.status(repo, remotes)
+    const draft = { ...newPull, branch: 'local-name', reviewers: [], labels: [] }
+
+    git(repo, 'checkout', '-q', '-b', 'local-name')
+    await expect(service.createPull(repo, draft)).rejects.toThrow('Push local-name first')
+
+    // Published under another name: the pull request comes from that one
+    git(repo, 'push', '-q', '-u', 'origin', 'local-name:feature/remote-name')
+    const sent = recorder(() => ({ number: 3, html_url: 'https://github.com/acme/app/pull/3' }))
+    expect(await service.createPull(repo, draft)).toEqual({
+      number: 3,
+      url: 'https://github.com/acme/app/pull/3'
+    })
+    expect(sent[0].body).toMatchObject({ head: 'feature/remote-name', base: 'main' })
+  })
+
+  it("reads the repository's description template, whatever the case of its name", () => {
+    mkdirSync(join(repo, '.github'))
+    writeFileSync(join(repo, '.github', 'PULL_REQUEST_TEMPLATE.md'), '## What\n')
+    expect(readTemplate(repo, 'github')).toBe('## What\n')
+    mkdirSync(join(repo, '.gitlab', 'merge_request_templates'), { recursive: true })
+    writeFileSync(join(repo, '.gitlab', 'merge_request_templates', 'Bug.md'), '## Bug\n')
+    expect(readTemplate(repo, 'gitlab')).toBe('## Bug\n')
+    expect(readTemplate(repo, 'bitbucket')).toBe('')
+  })
+})

@@ -480,11 +480,13 @@ describe('ForgeService', () => {
       return json({ message: 'Bad credentials' }, 401)
     })
     expect(await s.status(repo, remotes)).toMatchObject({ state: 'error', auth: true })
-    expect(tokens).toEqual(['Bearer gcm-token'])
+    // The list and the repository's settings, both with GCM's token
+    expect(new Set(tokens)).toEqual(new Set(['Bearer gcm-token']))
+    const sent = tokens.length
     expect(await s.status(repo, remotes)).toMatchObject({ state: 'error', auth: true })
     // Asked once to connect; after the refusal it isn't asked again
     expect(fill).toHaveBeenCalledTimes(1)
-    expect(tokens).toHaveLength(1)
+    expect(tokens).toHaveLength(sent)
   })
 
   it("leaves teams out when the token can't read them, as Git Credential Manager's can't", async () => {

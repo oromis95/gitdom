@@ -2,9 +2,19 @@
 import { join } from 'path'
 import { app, ipcMain, net, safeStorage, shell } from 'electron'
 import { IPC, type Result } from '../../shared/api'
-import { parseForgeHosts, type ForgeKind } from '../../shared/forge'
+import {
+  MERGE_METHODS,
+  parseForgeHosts,
+  type Candidate,
+  type ForgeKind,
+  type MergeMethod,
+  type MergeOptions,
+  type NewPull,
+  type PullChange
+} from '../../shared/forge'
 import type { Remote } from '../../shared/types'
 import { GitError } from '../git/exec'
+import { inAction } from '../git/activity'
 import { AccountStore } from './accounts'
 import { credentialFill } from './credential'
 import { setFetcher } from './http'
@@ -24,6 +34,58 @@ const KINDS = new Set<ForgeKind>(['github', 'gitlab', 'bitbucket', 'azure'])
 const kindOf = (kind: unknown): ForgeKind => {
   if (!KINDS.has(kind as ForgeKind)) throw new Error(`Unknown service: ${String(kind)}`)
   return kind as ForgeKind
+}
+
+// What the interface sends is checked before it reaches a service
+
+const text = (value: unknown): string => (typeof value === 'string' ? value : '')
+
+function candidates(value: unknown): Candidate[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((c) => {
+    const id = text((c as Candidate)?.id)
+    const login = text((c as Candidate)?.user?.login)
+    return id ? [{ id, user: { login: login || id, name: null, avatarUrl: null } }] : []
+  })
+}
+
+function newPull(value: unknown): NewPull {
+  const v = (value ?? {}) as Record<string, unknown>
+  const pull: NewPull = {
+    branch: text(v.branch).trim(),
+    targetBranch: text(v.targetBranch).trim(),
+    title: text(v.title).trim(),
+    body: text(v.body),
+    draft: v.draft === true,
+    reviewers: candidates(v.reviewers),
+    labels: Array.isArray(v.labels) ? v.labels.map(text).filter(Boolean) : []
+  }
+  if (!pull.branch || !pull.targetBranch) throw new Error('Choose the branches')
+  if (!pull.title) throw new Error('The title is empty')
+  return pull
+}
+
+function pullChange(value: unknown): PullChange {
+  const v = (value ?? {}) as Record<string, unknown>
+  return {
+    ...(typeof v.title === 'string' ? { title: v.title.trim() } : {}),
+    ...(typeof v.body === 'string' ? { body: v.body } : {}),
+    ...(typeof v.draft === 'boolean' ? { draft: v.draft } : {}),
+    ...(v.state === 'open' || v.state === 'closed' ? { state: v.state } : {}),
+    ...(Array.isArray(v.reviewers) ? { reviewers: candidates(v.reviewers) } : {})
+  }
+}
+
+function mergeOptions(value: unknown): MergeOptions {
+  const v = (value ?? {}) as Record<string, unknown>
+  const method = text(v.method) as MergeMethod
+  if (!(method in MERGE_METHODS)) throw new Error(`Unknown merge method: ${method}`)
+  return {
+    method,
+    message: text(v.message),
+    deleteBranch: v.deleteBranch === true,
+    auto: v.auto === true
+  }
 }
 
 /**
@@ -106,5 +168,31 @@ export function registerForgeHandlers(): void {
   })
   ipcMain.handle(IPC.forgeTokenPage, (_event, host: string, kind: unknown, path: string) =>
     tokenPage(kindOf(kind), String(host), String(path ?? ''))
+  )
+  ipcMain.handle(IPC.forgeRepoInfo, (_event, repo: string, target: unknown) =>
+    toResult(() => service.repoInfo(String(repo), typeof target === 'string' ? target : undefined))
+  )
+  ipcMain.handle(IPC.forgeCandidates, (_event, repo: string, query: unknown) =>
+    toResult(() => service.candidates(String(repo), text(query)))
+  )
+  ipcMain.handle(IPC.forgeLabels, (_event, repo: string) =>
+    toResult(() => service.labels(String(repo)))
+  )
+  ipcMain.handle(IPC.forgeTemplate, (_event, repo: string) =>
+    toResult(async () => service.template(String(repo)))
+  )
+  ipcMain.handle(IPC.forgeCreatePull, (_event, repo: string, pull: unknown) =>
+    toResult(() =>
+      inAction('Create pull request', () => service.createPull(String(repo), newPull(pull)))
+    )
+  )
+  ipcMain.handle(IPC.forgeUpdatePull, (_event, repo: string, number: number, change: unknown) =>
+    toResult(() => service.updatePull(String(repo), Number(number), pullChange(change)))
+  )
+  ipcMain.handle(IPC.forgeMergePull, (_event, repo: string, number: number, options: unknown) =>
+    toResult(() => service.mergePull(String(repo), Number(number), mergeOptions(options)))
+  )
+  ipcMain.handle(IPC.forgeCheckoutSource, (_event, repo: string, number: number) =>
+    toResult(() => service.checkoutSource(String(repo), Number(number)))
   )
 }

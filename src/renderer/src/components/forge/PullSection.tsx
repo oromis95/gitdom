@@ -13,6 +13,7 @@ import type { RepoSnapshot } from '../../../../shared/types'
 import {
   connectForge,
   groupPulls,
+  openCreatePull,
   openInBrowser,
   pullLabel,
   refreshForge,
@@ -23,6 +24,7 @@ import { useApp } from '../../store'
 import { openMenu, type MenuItem } from '../../ui'
 import * as actions from '../../actions'
 import Section from '../SidebarSection'
+import { checkoutPull } from '../../pullActions'
 import PullCard from './PullCard'
 import { CheckIcon, PullIcon, VoteIcon } from './PullBits'
 
@@ -51,6 +53,19 @@ function pullMenu(snapshot: RepoSnapshot, pull: PullRequest, kind: ForgeKind): M
           }
         ]
       : []),
+    'separator' as const,
+    {
+      label: 'Check out',
+      onClick: () => void checkoutPull(snapshot.path, pull, false)
+    },
+    {
+      label: 'Open in a worktree',
+      onClick: () => void checkoutPull(snapshot.path, pull, true)
+    },
+    {
+      label: 'Merge…',
+      onClick: () => useForge.setState({ merge: { repo: snapshot.path, number: pull.number } })
+    },
     'separator' as const,
     { label: 'Copy link', onClick: () => actions.copy(pull.url) },
     { label: 'Copy source branch name', onClick: () => actions.copy(pull.sourceBranch) }
@@ -153,7 +168,13 @@ export default function PullSection({
   ]
   const count = lists.reduce((n, [, list]) => n + list.length, 0)
   return (
-    <Section title={title} icon={<GitPullRequest size={15} />} count={count} onRefresh={refresh}>
+    <Section
+      title={title}
+      icon={<GitPullRequest size={15} />}
+      count={count}
+      onRefresh={refresh}
+      onAdd={{ title: `New ${PULL_NOUN[kind].name}`, run: () => openCreatePull(snapshot.path) }}
+    >
       {count === 0 && (
         <div className="tree-item muted" style={{ paddingLeft: 12 }}>
           {query ? 'None match the filter' : `No open ${PULL_NOUN[kind].name}s`}

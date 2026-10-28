@@ -5,6 +5,7 @@ import type { RepoSnapshot, Submodule } from '../../../shared/types'
 import { confirm, notify, prompt, showForm } from '../ui'
 import { fail, reportOutcome, run, runBusy } from './core'
 import { storage } from '../storage'
+import { notifyPushed } from '../forge'
 
 // --- Sync -----------------------------------------------------------------------------------
 
@@ -71,7 +72,7 @@ export async function push(repo: string): Promise<void> {
     if (!force) return
     result = await runBusy(repo, 'Pushing', 'push', true)
   }
-  if (result.ok) notify('success', 'Pushed', result.value)
+  if (result.ok) notifyPushed(repo, result.value)
   else fail(result)
 }
 

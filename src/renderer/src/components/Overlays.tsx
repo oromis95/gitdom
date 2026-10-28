@@ -5,6 +5,9 @@ import { useUi, type FormValues } from '../ui'
 import CommandPalette from './CommandPalette'
 import CredentialDialog from './CredentialDialog'
 import ConnectDialog from './forge/ConnectDialog'
+import CreatePullDialog from './forge/CreatePullDialog'
+import MergeDialog from './forge/MergeDialog'
+import ReviewersDialog from './forge/ReviewersDialog'
 import RepoDialogs from './RepoDialogs'
 
 // Loaded on first use, to keep the startup bundle small
@@ -41,6 +44,17 @@ function Toasts(): React.JSX.Element {
               <Info size={16} />
             )}
             <span className="toast-message">{t.message}</span>
+            {t.action && (
+              <button
+                className="btn btn-small toast-action"
+                onClick={() => {
+                  dismiss(t.id)
+                  t.action!.run()
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             {t.details && t.details !== t.message && (
               <button
                 className="link toast-toggle"
@@ -300,6 +314,9 @@ export default function Overlays(): React.JSX.Element {
       <RepoDialogs />
       <FormDialog />
       <ConnectDialog />
+      <CreatePullDialog />
+      <MergeDialog />
+      <ReviewersDialog />
       {/* Above any other dialog: a command that asks waits on it */}
       <CredentialDialog />
       <Toasts />

@@ -1,8 +1,9 @@
 // GitLab.com and self-managed GitLab, through the GraphQL API: like GitHub's, one query brings the
-// merge requests with their approvals, pipeline and mergeability.
+// merge requests with their approvals, pipeline and mergeability. Changes go through the REST API.
 import type {
   CheckState,
   ForgeUser,
+  MergeMethod,
   Mergeability,
   PullComment,
   PullRequest,
@@ -10,18 +11,27 @@ import type {
   ReviewDecision,
   ReviewVote
 } from '../../shared/forge'
-import { ForgeError, graphql } from './http'
-import { PULL_LIMIT, bearer, toMillis, type ForgeProvider, type ProviderContext } from './provider'
+import { ForgeError, graphql, jsonBody, requestJson } from './http'
+import {
+  PULL_LIMIT,
+  afterCreate,
+  bearer,
+  toMillis,
+  type ForgeProvider,
+  type ProviderContext
+} from './provider'
 
 export const gitlabEndpoint = (host: string): string => `https://${host}/api/graphql`
 
 interface Person {
+  /** gid://gitlab/User/123 */
+  id?: string
   username: string
   name: string | null
   avatarUrl: string | null
 }
 
-const PERSON = 'username name avatarUrl'
+const PERSON = 'id username name avatarUrl'
 
 export const PULLS_QUERY = `query($path: ID!, $limit: Int!) {
   currentUser { ${PERSON} }
@@ -95,7 +105,13 @@ const absolute = (host: string, url: string | null): string | null =>
 
 export const gitlabUser = (host: string, person: Person | null): ForgeUser =>
   person
-    ? { login: person.username, name: person.name, avatarUrl: absolute(host, person.avatarUrl) }
+    ? {
+        login: person.username,
+        name: person.name,
+        avatarUrl: absolute(host, person.avatarUrl),
+        // The REST API takes the number of the global id
+        ...(person.id ? { id: person.id.replace(/^gid:\/\/gitlab\/User\//, '') } : {})
+      }
     : GHOST
 
 function pipelineState(status: string): CheckState {
@@ -215,6 +231,34 @@ interface DetailNode {
   }
 }
 
+/** A REST request on a project, e.g. rest(ctx, 'group/app', '/merge_requests'). */
+function rest<T>(
+  ctx: ProviderContext,
+  repoPath: string,
+  path: string,
+  init?: RequestInit
+): Promise<T> {
+  return requestJson<T>(
+    `https://${ctx.host}/api/v4/projects/${encodeURIComponent(repoPath)}${path}`,
+    { ...init, headers: { ...(init?.headers as Record<string, string>), ...bearer(ctx) } }
+  )
+}
+
+const DRAFT = /^\s*(\[draft\]|\(draft\)|draft:|draft\s*-|wip:)\s*/i
+
+/** A merge request's title as a draft or not: GitLab tells drafts by the title. */
+export function draftTitle(title: string, draft: boolean): string {
+  const bare = title.replace(DRAFT, '')
+  return draft ? `Draft: ${bare}` : bare
+}
+
+// The project's merge method; squashing is chosen per merge request
+const PROJECT_METHODS: Record<string, MergeMethod> = {
+  merge: 'merge',
+  rebase_merge: 'rebaseMerge',
+  ff: 'fastForward'
+}
+
 export const gitlab: ForgeProvider = {
   async viewer(ctx: ProviderContext) {
     const data = await graphql<{ currentUser: Person | null }>(
@@ -276,5 +320,133 @@ export const gitlab: ForgeProvider = {
 
   headRef: (number) => `refs/merge-requests/${number}/head`,
 
-  auth: bearer
+  auth: bearer,
+
+  async info(ctx, repoPath) {
+    const project = await rest<{
+      default_branch: string
+      merge_method?: string
+      squash_option?: 'never' | 'always' | 'default_on' | 'default_off'
+      remove_source_branch_after_merge?: boolean
+    }>(ctx, repoPath, '')
+    const method = PROJECT_METHODS[project.merge_method ?? 'merge'] ?? 'merge'
+    const methods: MergeMethod[] =
+      project.squash_option === 'always'
+        ? ['squash']
+        : project.squash_option === 'never'
+          ? [method]
+          : project.squash_option === 'default_on'
+            ? ['squash', method]
+            : [method, 'squash']
+    return {
+      defaultBranch: project.default_branch,
+      methods,
+      deleteBranch: project.remove_source_branch_after_merge ?? true,
+      autoMerge: true,
+      labels: true,
+      reopen: true
+    }
+  },
+
+  async candidates(ctx, repoPath, query) {
+    const people = await rest<
+      { id: number; username: string; name: string; avatar_url: string | null }[]
+    >(ctx, repoPath, `/users?per_page=20&search=${encodeURIComponent(query.trim())}`)
+    return people.map((p) => ({
+      id: String(p.id),
+      user: { login: p.username, name: p.name, avatarUrl: p.avatar_url, id: String(p.id) }
+    }))
+  },
+
+  async labels(ctx, repoPath) {
+    const labels = await rest<{ name: string; color: string }[]>(
+      ctx,
+      repoPath,
+      '/labels?per_page=100'
+    )
+    return labels.map((l) => ({ name: l.name, color: l.color }))
+  },
+
+  async create(ctx, repoPath, pull) {
+    const fork = pull.sourceRepo.toLowerCase() !== repoPath.toLowerCase()
+    // From a fork, the merge request is opened on the fork and points at the project
+    const target = fork ? (await rest<{ id: number }>(ctx, repoPath, '')).id : undefined
+    const created = await rest<{ iid: number; web_url: string }>(
+      ctx,
+      pull.sourceRepo,
+      '/merge_requests',
+      jsonBody(
+        'POST',
+        {},
+        {
+          source_branch: pull.sourceBranch,
+          target_branch: pull.targetBranch,
+          title: draftTitle(pull.title, pull.draft),
+          description: pull.body,
+          ...(target ? { target_project_id: target } : {}),
+          ...(pull.reviewers.length
+            ? { reviewer_ids: pull.reviewers.map((r) => Number(r.id)) }
+            : {}),
+          ...(pull.labels.length ? { labels: pull.labels.join(',') } : {})
+        }
+      )
+    )
+    return afterCreate({ number: created.iid, url: created.web_url }, [])
+  },
+
+  async update(ctx, repoPath, pull, change) {
+    const reviewers = change.reviewers?.length
+      ? [
+          ...new Set([
+            ...pull.reviewers.flatMap((r) => (r.user.id ? [Number(r.user.id)] : [])),
+            ...change.reviewers.map((r) => Number(r.id))
+          ])
+        ]
+      : undefined
+    const title = change.title ?? (change.draft !== undefined ? pull.title : undefined)
+    await rest(
+      ctx,
+      repoPath,
+      `/merge_requests/${pull.number}`,
+      jsonBody(
+        'PUT',
+        {},
+        {
+          ...(title !== undefined
+            ? { title: draftTitle(title, change.draft ?? pull.state === 'draft') }
+            : {}),
+          ...(change.body !== undefined ? { description: change.body } : {}),
+          ...(change.state ? { state_event: change.state === 'closed' ? 'close' : 'reopen' } : {}),
+          ...(reviewers ? { reviewer_ids: reviewers } : {})
+        }
+      )
+    )
+  },
+
+  async merge(ctx, repoPath, pull, options) {
+    const squash = options.method === 'squash'
+    const message = options.message.trim()
+    const merged = await rest<{ state: string }>(
+      ctx,
+      repoPath,
+      `/merge_requests/${pull.number}/merge`,
+      jsonBody(
+        'PUT',
+        {},
+        {
+          squash,
+          should_remove_source_branch: options.deleteBranch,
+          // Refused if someone pushed since: what was reviewed is what gets merged
+          sha: pull.headSha,
+          ...(message
+            ? { [squash ? 'squash_commit_message' : 'merge_commit_message']: message }
+            : {}),
+          // auto_merge since GitLab 17.11; older servers know the other name
+          ...(options.auto ? { auto_merge: true, merge_when_pipeline_succeeds: true } : {})
+        }
+      )
+    )
+    if (merged.state === 'merged') return 'merged'
+    return options.auto ? 'auto' : 'queued'
+  }
 }

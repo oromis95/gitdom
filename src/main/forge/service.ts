@@ -1,16 +1,26 @@
 // Pull requests of the open repositories: which account to use for a host, the last list read
 // for each repository, and the commits of a pull request fetched to show its changes.
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import { join } from 'path'
 import {
   sameRepoPath,
+  type Candidate,
   type DeviceLogin,
   type ForgeAccount,
   type ForgeHost,
   type ForgeKind,
   type ForgeRepo,
+  type ForgeRepoInfo,
   type ForgeStatus,
+  type MergeOptions,
+  type MergeOutcome,
+  type NewPull,
+  type PullChange,
   type PullDetail,
+  type PullLabel,
   type PullRange,
-  type PullRequest
+  type PullRequest,
+  type PullSource
 } from '../../shared/forge'
 import type { Remote } from '../../shared/types'
 import { runGit } from '../git/exec'
@@ -31,7 +41,7 @@ import {
 import { github } from './github'
 import { gitlab } from './gitlab'
 import { ForgeError, send } from './http'
-import type { ForgeProvider, ProviderContext } from './provider'
+import type { Created, ForgeProvider, ProviderContext } from './provider'
 
 const PROVIDERS: Record<ForgeKind, ForgeProvider> = { github, gitlab, bitbucket, azure }
 
@@ -62,6 +72,55 @@ const safeRepoPath = (path: string): boolean => /^[\w.-]+(\/[\w. -]+)+$/.test(pa
 
 const MAX_AVATAR = 512 * 1024
 
+/**
+ * Where each service looks for the description template of a new pull request, folders ending
+ * with a slash (their first Markdown file); names are matched whatever their case.
+ */
+const TEMPLATES: Record<ForgeKind, string[]> = {
+  github: [
+    '.github/pull_request_template.md',
+    'pull_request_template.md',
+    'docs/pull_request_template.md',
+    '.github/pull_request_template/'
+  ],
+  gitlab: ['.gitlab/merge_request_templates/default.md', '.gitlab/merge_request_templates/'],
+  bitbucket: [],
+  azure: [
+    '.azuredevops/pull_request_template.md',
+    '.vsts/pull_request_template.md',
+    'docs/pull_request_template.md',
+    'pull_request_template.md'
+  ]
+}
+
+/** A file or folder of `root` named like `path` but in any case, or null. */
+function findInsensitive(root: string, path: string): string | null {
+  let current = root
+  for (const part of path.split('/').filter(Boolean)) {
+    if (!existsSync(current) || !statSync(current).isDirectory()) return null
+    const match = readdirSync(current).find((name) => name.toLowerCase() === part.toLowerCase())
+    if (!match) return null
+    current = join(current, match)
+  }
+  return current
+}
+
+/** The description template of the repository in the working tree, empty when it has none. */
+export function readTemplate(root: string, kind: ForgeKind): string {
+  for (const candidate of TEMPLATES[kind]) {
+    const found = findInsensitive(root, candidate)
+    if (!found) continue
+    if (candidate.endsWith('/')) {
+      if (!statSync(found).isDirectory()) continue
+      const first = readdirSync(found)
+        .filter((n) => n.toLowerCase().endsWith('.md'))
+        .sort()[0]
+      if (first) return readFileSync(join(found, first), 'utf8')
+    } else if (statSync(found).isFile()) return readFileSync(found, 'utf8')
+  }
+  return ''
+}
+
 interface Login {
   endpoints: DeviceEndpoints
   code: DeviceCode
@@ -79,6 +138,10 @@ export class ForgeService {
   private logins = new Map<number, Login>()
   private lastLogin = 0
   private avatars = new Map<string, Promise<string | null>>()
+  /** What each repository allows, read once a session */
+  private infos = new Map<string, Promise<ForgeRepoInfo | null>>()
+  /** Pull requests closed in GitDom, by repository and number, to open them again */
+  private closed = new Map<string, PullRequest>()
 
   constructor(
     private readonly accounts: AccountStore,
@@ -141,7 +204,10 @@ export class ForgeService {
       return this.remember(repoPath, { state: 'signedOut', repo, device })
     try {
       const ctx = await this.requireContext(repo)
-      const { viewer, pulls } = await PROVIDERS[repo.kind].load(ctx, repo.path)
+      const [{ viewer, pulls }, info] = await Promise.all([
+        PROVIDERS[repo.kind].load(ctx, repo.path),
+        this.cachedInfo(ctx, repo)
+      ])
       await this.pruneRefs(repoPath, pulls).catch(() => undefined)
       return this.remember(repoPath, {
         state: 'ready',
@@ -149,6 +215,7 @@ export class ForgeService {
         viewer,
         pulls,
         remotes: remotesOn(remotes, repo),
+        info,
         fetchedAt: Date.now()
       })
     } catch (e) {
@@ -162,6 +229,18 @@ export class ForgeService {
         device
       })
     }
+  }
+
+  private cachedInfo(ctx: ProviderContext, repo: ForgeRepo): Promise<ForgeRepoInfo | null> {
+    const key = `${repo.host}/${repo.path}`
+    let info = this.infos.get(key)
+    if (!info) {
+      // A token that can read but not see the settings still lists the pull requests
+      info = PROVIDERS[repo.kind].info(ctx, repo.path).catch(() => null)
+      this.infos.set(key, info)
+      void info.then((value) => value ?? this.infos.delete(key))
+    }
+    return info
   }
 
   private remember(repoPath: string, status: ForgeStatus): ForgeStatus {
@@ -192,6 +271,89 @@ export class ForgeService {
     return { status, pull }
   }
 
+  /** What the repository allows; `target` is the branch a pull request goes into. */
+  async repoInfo(repoPath: string, target?: string): Promise<ForgeRepoInfo> {
+    const { repo } = this.ready(repoPath)
+    return PROVIDERS[repo.kind].info(await this.requireContext(repo), repo.path, target)
+  }
+
+  async candidates(repoPath: string, query: string): Promise<Candidate[]> {
+    const { repo } = this.ready(repoPath)
+    return PROVIDERS[repo.kind].candidates(await this.requireContext(repo), repo.path, query)
+  }
+
+  async labels(repoPath: string): Promise<PullLabel[]> {
+    const { repo } = this.ready(repoPath)
+    return PROVIDERS[repo.kind].labels(await this.requireContext(repo), repo.path)
+  }
+
+  /** The description template of the repository, as the service would offer it. */
+  template(repoPath: string): string {
+    return readTemplate(repoPath, this.ready(repoPath).repo.kind)
+  }
+
+  /**
+   * Opens a pull request from a local branch, already published: GitDom reads the remote and
+   * branch it follows, which may be a fork's.
+   */
+  async createPull(repoPath: string, pull: NewPull): Promise<Created> {
+    const status = this.ready(repoPath)
+    const { repo } = status
+    const config = async (key: string): Promise<string> =>
+      (await runGit(repoPath, ['config', '--get', key], { okExitCodes: [1] })).trim()
+    const remote = await config(`branch.${pull.branch}.remote`)
+    const merge = await config(`branch.${pull.branch}.merge`)
+    if (!remote || !merge) throw new Error(`Push ${pull.branch} first: it isn't on the remote yet`)
+    const sourceRepo = status.remotes[remote]
+    if (!sourceRepo)
+      throw new Error(`${pull.branch} follows ${remote}, which isn't on ${repo.host}`)
+    const sourceBranch = merge.replace(/^refs\/heads\//, '')
+    for (const name of [sourceBranch, pull.targetBranch])
+      if (!safeBranch(name)) throw new Error(`Unexpected branch name: ${name}`)
+    const { branch: _branch, ...rest } = pull
+    void _branch
+    return PROVIDERS[repo.kind].create(await this.requireContext(repo), repo.path, {
+      ...rest,
+      sourceRepo,
+      sourceBranch
+    })
+  }
+
+  async updatePull(repoPath: string, number: number, change: PullChange): Promise<void> {
+    const status = this.ready(repoPath)
+    const key = `${repoPath}\n${number}`
+    // A closed pull request isn't in the list any more: the one closed here can be opened again
+    const pull =
+      status.pulls.find((p) => p.number === number) ??
+      (change.state === 'open' ? this.closed.get(key) : undefined)
+    if (!pull) throw new Error(`#${number} is no longer open`)
+    const ctx = await this.requireContext(status.repo)
+    await PROVIDERS[status.repo.kind].update(ctx, status.repo.path, pull, change)
+    if (change.state === 'closed') this.closed.set(key, pull)
+    if (change.state === 'open') this.closed.delete(key)
+  }
+
+  async mergePull(repoPath: string, number: number, options: MergeOptions): Promise<MergeOutcome> {
+    const { status, pull } = this.pull(repoPath, number)
+    const ctx = await this.requireContext(status.repo)
+    return PROVIDERS[status.repo.kind].merge(ctx, status.repo.path, pull, options)
+  }
+
+  /**
+   * Where a pull request's branch is, to check it out: a remote of the repository (origin, or a
+   * fork already added), or the fork's address, to add it as a remote or take its commits once.
+   */
+  async checkoutSource(repoPath: string, number: number): Promise<PullSource> {
+    const { status, pull } = this.pull(repoPath, number)
+    const owner = pull.sourceRepo.split('/')[status.repo.kind === 'azure' ? 1 : 0]
+    const remote = sameRepoPath(pull.sourceRepo, status.repo.path)
+      ? status.repo.remote
+      : Object.entries(status.remotes).find(([, path]) => sameRepoPath(path, pull.sourceRepo))?.[0]
+    if (remote) return { remote, url: null, branch: pull.sourceBranch, owner }
+    const url = await this.forkUrl(repoPath, status.repo, pull).catch(() => null)
+    return { remote: null, url, branch: pull.sourceBranch, owner }
+  }
+
   async detail(repoPath: string, number: number): Promise<PullDetail> {
     const { repo } = this.pull(repoPath, number).status
     const ctx = await this.requireContext(repo)
@@ -219,8 +381,15 @@ export class ForgeService {
       sameRepoPath(path, pull.sourceRepo)
     )?.[0]
     if (remote) return { from: remote, ref }
-    if (pull.sourceUrl && /^https:\/\//.test(pull.sourceUrl)) return { from: pull.sourceUrl, ref }
-    // The fork's address: the remote's, with the fork's path in place of the repository's
+    return { from: await this.forkUrl(repoPath, repo, pull), ref }
+  }
+
+  /**
+   * The address of the fork a pull request comes from: the one the service gives (Azure DevOps),
+   * or the remote's, with the fork's path in place of the repository's.
+   */
+  private async forkUrl(repoPath: string, repo: ForgeRepo, pull: PullRequest): Promise<string> {
+    if (pull.sourceUrl && /^https:\/\//.test(pull.sourceUrl)) return pull.sourceUrl
     if (!safeRepoPath(pull.sourceRepo)) throw new Error(`Unexpected fork name: ${pull.sourceRepo}`)
     // A folder on Windows has backslashes; git takes forward slashes there too
     const url = (await runGit(repoPath, ['remote', 'get-url', repo.remote]))
@@ -228,7 +397,7 @@ export class ForgeService {
       .replaceAll('\\', '/')
     const at = url.toLowerCase().lastIndexOf(repo.path.toLowerCase())
     if (at < 0) throw new Error(`Can't tell where the fork ${pull.sourceRepo} is`)
-    return { from: url.slice(0, at) + pull.sourceRepo + url.slice(at + repo.path.length), ref }
+    return url.slice(0, at) + pull.sourceRepo + url.slice(at + repo.path.length)
   }
 
   /**

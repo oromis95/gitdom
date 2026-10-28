@@ -357,13 +357,21 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
 - ✅ **Commit della PR senza ref dedicato**: GitDom scarica il branch sorgente dal remoto, da un altro remoto che punta al fork, dall'URL del fork che Azure DevOps dà, oppure dall'URL del remoto con il percorso del fork al posto di quello del repository.
 - ✅ In tutti e quattro i provider, le PR in bozza compaiono come bozze.
 
-### Step 21 — v1.15: Lavorare su una pull request
+### Step 21 — v1.15: Lavorare su una pull request ✅
 
-- **Checkout della PR**:
+> Completato il 2026-10-28, non ancora pubblicato. Le chiamate che cambiano le PR (creare, unire, chiudere) non si possono provare sui servizi veri senza creare PR vere: sono verificate sulla documentazione e sugli schemi ufficiali (GitHub: OpenAPI e schema GraphQL; GitLab: documentazione dell'API; Bitbucket: swagger; Azure DevOps: documentazione REST), con test che controllano richiesta per richiesta, e con un finto GitHub negli end-to-end. Differenze dal piano:
+>
+> - l'anteprima della creazione mostra i commit, non i file;
+> - si riapre una PR chiusa in GitDom nella stessa sessione: le PR chiuse non sono nell'elenco;
+> - Bitbucket non ha l'auto-merge, la riapertura di una PR rifiutata e le label; su Azure DevOps le label si scrivono (non c'è un elenco da cui sceglierle) e le policy del branch possono permettere meno metodi di merge di quelli offerti: Azure DevOps rifiuta gli altri;
+> - su GitLab il metodo di merge è un'impostazione del progetto (merge, rebase poi merge, fast-forward) e lo squash si sceglie per la singola MR; una bozza si riconosce dal titolo ("Draft: ");
+> - su GitHub l'auto-merge si offre solo se il repository lo permette.
+
+- ✅ **Checkout della PR**:
   - se la PR è nella stessa repository, crea un branch locale che segue il branch sorgente, così un push aggiorna la PR;
   - se viene da un fork, crea un branch dalla testa della PR, con l'opzione di aggiungere il fork come remoto.
-- **Apri in un worktree**: la PR si apre in una cartella accanto alla repository e in una nuova scheda, senza toccare il lavoro in corso. Riusa i worktree dello Step 7.
-- **Creare una PR**:
+- ✅ **Apri in un worktree**: la PR si apre in una cartella accanto alla repository e in una nuova scheda, senza toccare il lavoro in corso. Riusa i worktree dello Step 7.
+- ✅ **Creare una PR**:
   - dopo un push su un branch senza PR compare la notifica "Create pull request";
   - si apre anche dal menu del branch e dalla palette;
   - nella finestra:
@@ -371,18 +379,18 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
     - il titolo viene dal nome del branch o dall'unico commit;
     - la descrizione usa il template del repository (`.github/pull_request_template.md`, `.gitlab/merge_request_templates/`, `.azuredevops/pull_request_template.md`), altrimenti l'elenco dei commit;
     - si scelgono bozza, reviewer con ricerca, e label dove esistono;
-    - un'anteprima mostra commit e file che entrano.
+    - un'anteprima mostra i commit che entrano.
 
     Se il branch non è pubblicato, fa prima il push, con la barra di progresso.
-- **Modificare una PR**: titolo, descrizione, reviewer, passaggio da bozza a pronta.
-- **Merge**:
+- ✅ **Modificare una PR**: titolo, descrizione, reviewer, passaggio da bozza a pronta.
+- ✅ **Merge**:
   - si sceglie tra i metodi che il repository permette: merge, squash, rebase o fast-forward, secondo il provider;
   - messaggio del commit modificabile;
   - opzione per cancellare il branch sorgente;
   - auto-merge quando i check passano, dove esiste: GitHub, GitLab "merge when pipeline succeeds", Azure DevOps auto-complete;
-  - se il merge è bloccato, il pulsante dice perché.
-- **Pulizia dopo il merge**: GitDom propone di tornare sul branch di destinazione, aggiornarlo e cancellare il branch locale, collegandosi a "Upstream gone" e a Clean Up.
-- Chiudere e riaprire una PR.
+  - se il merge è bloccato, la finestra dice perché.
+- ✅ **Pulizia dopo il merge**: GitDom propone di tornare sul branch di destinazione, aggiornarlo e cancellare il branch locale: una finestra con le due scelte, e il branch locale si cancella anche dopo uno squash, che git non vede come unito.
+- ✅ Chiudere e riaprire una PR.
 
 ### Step 22 — v1.16: Review nell'app
 

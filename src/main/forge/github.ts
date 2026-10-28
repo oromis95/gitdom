@@ -1,8 +1,10 @@
 // GitHub and GitHub Enterprise, through the GraphQL API: one query brings the pull requests with
-// their reviews, checks and mergeability.
+// their reviews, checks and mergeability. Changes go through the REST API, except what only
+// GraphQL does (draft or ready, merging by itself).
 import type {
   CheckState,
   ForgeUser,
+  MergeMethod,
   Mergeability,
   PullCheck,
   PullComment,
@@ -11,11 +13,62 @@ import type {
   ReviewDecision,
   ReviewVote
 } from '../../shared/forge'
-import { ForgeError, graphql } from './http'
-import { bearer, toMillis, type ForgeProvider, type ProviderContext } from './provider'
+import { ForgeError, graphql, jsonBody, requestJson } from './http'
+import {
+  afterCreate,
+  bearer,
+  splitMessage,
+  toMillis,
+  type ForgeProvider,
+  type ProviderContext
+} from './provider'
 
 export const githubEndpoint = (host: string): string =>
   host === 'github.com' ? 'https://api.github.com/graphql' : `https://${host}/api/graphql`
+
+const restBase = (host: string): string =>
+  host === 'github.com' ? 'https://api.github.com' : `https://${host}/api/v3`
+
+/** A REST request on a repository, e.g. rest(ctx, 'acme/app', '/pulls'). */
+function rest<T>(
+  ctx: ProviderContext,
+  repoPath: string,
+  path: string,
+  init?: RequestInit
+): Promise<T> {
+  const [owner, name] = repoPath.split('/').map(encodeURIComponent)
+  return requestJson<T>(`${restBase(ctx.host)}/repos/${owner}/${name}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.headers as Record<string, string>),
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...bearer(ctx)
+    }
+  })
+}
+
+const sameRepo = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase()
+
+export const READY_MUTATION = `mutation($id: ID!) {
+  markPullRequestReadyForReview(input: { pullRequestId: $id }) { pullRequest { id } }
+}`
+
+export const DRAFT_MUTATION = `mutation($id: ID!) {
+  convertPullRequestToDraft(input: { pullRequestId: $id }) { pullRequest { id } }
+}`
+
+export const AUTO_MERGE_MUTATION = `mutation($id: ID!, $method: PullRequestMergeMethod!, $headline: String, $body: String) {
+  enablePullRequestAutoMerge(
+    input: { pullRequestId: $id, mergeMethod: $method, commitHeadline: $headline, commitBody: $body }
+  ) { pullRequest { id } }
+}`
+
+const GRAPHQL_METHODS: Partial<Record<MergeMethod, string>> = {
+  merge: 'MERGE',
+  squash: 'SQUASH',
+  rebase: 'REBASE'
+}
 
 interface Actor {
   login: string
@@ -404,5 +457,160 @@ export const github: ForgeProvider = {
 
   headRef: (number) => `refs/pull/${number}/head`,
 
-  auth: bearer
+  auth: bearer,
+
+  async info(ctx, repoPath) {
+    const repo = await rest<{
+      default_branch: string
+      allow_merge_commit?: boolean
+      allow_squash_merge?: boolean
+      allow_rebase_merge?: boolean
+      allow_auto_merge?: boolean
+      delete_branch_on_merge?: boolean
+    }>(ctx, repoPath, '')
+    // The allow_* fields come only to those who can push: without them, every method is offered
+    const allowed: [MergeMethod, boolean | undefined][] = [
+      ['merge', repo.allow_merge_commit],
+      ['squash', repo.allow_squash_merge],
+      ['rebase', repo.allow_rebase_merge]
+    ]
+    return {
+      defaultBranch: repo.default_branch,
+      methods: allowed.filter(([, allow]) => allow !== false).map(([method]) => method),
+      deleteBranch: repo.delete_branch_on_merge ?? false,
+      autoMerge: repo.allow_auto_merge ?? false,
+      labels: true,
+      reopen: true
+    }
+  },
+
+  async candidates(ctx, repoPath, query) {
+    // Those who can be assigned can review: the people of the repository
+    const people = await rest<{ login: string; avatar_url: string | null }[]>(
+      ctx,
+      repoPath,
+      '/assignees?per_page=100'
+    )
+    const q = query.trim().toLowerCase()
+    return people
+      .filter((p) => !q || p.login.toLowerCase().includes(q))
+      .slice(0, 20)
+      .map((p) => ({ id: p.login, user: { login: p.login, name: null, avatarUrl: p.avatar_url } }))
+  },
+
+  async labels(ctx, repoPath) {
+    const labels = await rest<{ name: string; color: string }[]>(
+      ctx,
+      repoPath,
+      '/labels?per_page=100'
+    )
+    return labels.map((l) => ({ name: l.name, color: `#${l.color}` }))
+  },
+
+  async create(ctx, repoPath, pull) {
+    const owner = pull.sourceRepo.split('/')[0]
+    const created = await rest<{ number: number; html_url: string }>(
+      ctx,
+      repoPath,
+      '/pulls',
+      jsonBody(
+        'POST',
+        {},
+        {
+          title: pull.title,
+          body: pull.body,
+          // A fork's branch is named with its owner
+          head: sameRepo(pull.sourceRepo, repoPath)
+            ? pull.sourceBranch
+            : `${owner}:${pull.sourceBranch}`,
+          base: pull.targetBranch,
+          draft: pull.draft
+        }
+      )
+    )
+    const steps: (() => Promise<unknown>)[] = []
+    if (pull.reviewers.length)
+      steps.push(() =>
+        rest(
+          ctx,
+          repoPath,
+          `/pulls/${created.number}/requested_reviewers`,
+          jsonBody('POST', {}, { reviewers: pull.reviewers.map((r) => r.id) })
+        )
+      )
+    if (pull.labels.length)
+      steps.push(() =>
+        rest(
+          ctx,
+          repoPath,
+          `/issues/${created.number}/labels`,
+          jsonBody('POST', {}, { labels: pull.labels })
+        )
+      )
+    return afterCreate({ number: created.number, url: created.html_url }, steps)
+  },
+
+  async update(ctx, repoPath, pull, change) {
+    const fields = {
+      ...(change.title !== undefined ? { title: change.title } : {}),
+      ...(change.body !== undefined ? { body: change.body } : {}),
+      ...(change.state ? { state: change.state } : {})
+    }
+    if (Object.keys(fields).length)
+      await rest(ctx, repoPath, `/pulls/${pull.number}`, jsonBody('PATCH', {}, fields))
+    if (change.draft !== undefined) {
+      const { node_id } = await rest<{ node_id: string }>(ctx, repoPath, `/pulls/${pull.number}`)
+      await graphql(
+        githubEndpoint(ctx.host),
+        ctx.token,
+        change.draft ? DRAFT_MUTATION : READY_MUTATION,
+        { id: node_id }
+      )
+    }
+    if (change.reviewers?.length)
+      await rest(
+        ctx,
+        repoPath,
+        `/pulls/${pull.number}/requested_reviewers`,
+        jsonBody('POST', {}, { reviewers: change.reviewers.map((r) => r.id) })
+      )
+  },
+
+  async merge(ctx, repoPath, pull, options) {
+    const { title, body } = splitMessage(options.message)
+    if (options.auto) {
+      const { node_id } = await rest<{ node_id: string }>(ctx, repoPath, `/pulls/${pull.number}`)
+      await graphql(githubEndpoint(ctx.host), ctx.token, AUTO_MERGE_MUTATION, {
+        id: node_id,
+        method: GRAPHQL_METHODS[options.method] ?? 'MERGE',
+        headline: title || null,
+        body: body || null
+      })
+      return 'auto'
+    }
+    await rest(
+      ctx,
+      repoPath,
+      `/pulls/${pull.number}/merge`,
+      jsonBody(
+        'PUT',
+        {},
+        {
+          merge_method: GRAPHQL_METHODS[options.method] ? options.method : 'merge',
+          // Refused if someone pushed since: what was reviewed is what gets merged
+          sha: pull.headSha,
+          ...(title ? { commit_title: title } : {}),
+          ...(body ? { commit_message: body } : {})
+        }
+      )
+    )
+    // Only a branch of the repository itself: a fork's belongs to its owner
+    if (options.deleteBranch && sameRepo(pull.sourceRepo, repoPath)) {
+      const ref = pull.sourceBranch.split('/').map(encodeURIComponent).join('/')
+      await rest(ctx, repoPath, `/git/refs/heads/${ref}`, { method: 'DELETE' }).catch(
+        () => undefined
+      )
+    }
+    return 'merged'
+  }
 }

@@ -5,6 +5,7 @@
 import type {
   CheckState,
   ForgeUser,
+  MergeMethod,
   Mergeability,
   PullCheck,
   PullChecks,
@@ -14,10 +15,11 @@ import type {
   ReviewDecision,
   ReviewVote
 } from '../../shared/forge'
-import { ForgeError, requestJson } from './http'
+import { ForgeError, jsonBody, requestJson } from './http'
 import {
   PULL_LIMIT,
   PerPullCache,
+  afterCreate,
   basic,
   bearer,
   mapLimit,
@@ -64,6 +66,7 @@ export function azureGitPath(repoPath: string): string {
 }
 
 interface Identity {
+  id?: string
   displayName: string
   uniqueName?: string
   imageUrl?: string
@@ -119,7 +122,8 @@ export const azureUser = (identity: Identity | null): ForgeUser =>
     ? {
         login: identity.uniqueName ?? identity.displayName,
         name: identity.displayName,
-        avatarUrl: identity.imageUrl ?? null
+        avatarUrl: identity.imageUrl ?? null,
+        ...(identity.id ? { id: identity.id } : {})
       }
     : GHOST
 
@@ -291,6 +295,28 @@ function get<T>(ctx: ProviderContext, url: string): Promise<T> {
   })
 }
 
+/** A change to the repository's pull requests: its JSON body, with the account's token. */
+function send<T>(
+  ctx: ProviderContext,
+  method: 'POST' | 'PUT' | 'PATCH',
+  url: string,
+  body: unknown
+): Promise<T> {
+  return requestJson<T>(
+    `${url}${url.includes('?') ? '&' : '?'}${API}`,
+    jsonBody(method, azure.auth(ctx), body)
+  )
+}
+
+const STRATEGIES: Record<MergeMethod, string> = {
+  merge: 'noFastForward',
+  squash: 'squash',
+  rebase: 'rebase',
+  rebaseMerge: 'rebaseMerge',
+  // Azure DevOps has no plain fast-forward: a rebase is one when nothing else came in
+  fastForward: 'rebase'
+}
+
 // Settled once every check has finished; votes change the reviewer policies, and are in the key
 const checksCache = new PerPullCache<AzureChecks>((c) => c.checks?.state !== 'pending')
 
@@ -298,6 +324,7 @@ export const azure: ForgeProvider = {
   async viewer(ctx: ProviderContext, repoPath: string) {
     const data = await requestJson<{
       authenticatedUser?: {
+        id?: string
         providerDisplayName?: string
         properties?: { Account?: { $value?: string } }
       }
@@ -308,7 +335,12 @@ export const azure: ForgeProvider = {
     const account = user?.properties?.Account?.$value
     // Without a valid token the answer is the anonymous user
     if (!user || !account) throw new ForgeError(`${ctx.host} refused the token`, 401, true)
-    return { login: account, name: user.providerDisplayName ?? null, avatarUrl: null }
+    return {
+      login: account,
+      name: user.providerDisplayName ?? null,
+      avatarUrl: null,
+      ...(user.id ? { id: user.id } : {})
+    }
   },
 
   async load(ctx, repoPath) {
@@ -388,6 +420,122 @@ export const azure: ForgeProvider = {
   },
 
   headRef: () => null,
+
+  async info(ctx, repoPath) {
+    const repo = await get<{ defaultBranch?: string }>(ctx, urls(ctx.host, repoPath).repo)
+    return {
+      defaultBranch: branch(repo.defaultBranch ?? 'refs/heads/main'),
+      // The branch policies may allow fewer: Azure DevOps refuses the others when merging
+      methods: ['merge', 'squash', 'rebase', 'rebaseMerge'],
+      deleteBranch: false,
+      autoMerge: true,
+      labels: true,
+      reopen: true
+    }
+  },
+
+  async candidates(ctx, repoPath, query) {
+    const q = query.trim()
+    if (!q) return []
+    const { collection } = azureParts(repoPath)
+    // On dev.azure.com people live in the organization's directory service (vssps)
+    const base =
+      ctx.host === 'dev.azure.com'
+        ? `https://vssps.dev.azure.com/${encodeURIComponent(collection[0])}`
+        : urls(ctx.host, repoPath).collection
+    const found = await get<{
+      value: {
+        id: string
+        providerDisplayName?: string
+        properties?: { Mail?: { $value?: string }; Account?: { $value?: string } }
+      }[]
+    }>(
+      ctx,
+      `${base}/_apis/identities?searchFilter=General&filterValue=${encodeURIComponent(q)}&queryMembership=None`
+    )
+    return found.value.slice(0, 20).map((i) => {
+      const login = i.properties?.Mail?.$value || i.properties?.Account?.$value || i.id
+      return {
+        id: i.id,
+        user: { login, name: i.providerDisplayName ?? null, avatarUrl: null, id: i.id }
+      }
+    })
+  },
+
+  labels: async () => [],
+
+  async create(ctx, repoPath, pull) {
+    const at = urls(ctx.host, repoPath)
+    const fork = pull.sourceRepo.toLowerCase() !== repoPath.toLowerCase()
+    const forkId = fork
+      ? (await get<{ id: string }>(ctx, urls(ctx.host, pull.sourceRepo).repo)).id
+      : undefined
+    const created = await send<{ pullRequestId: number }>(ctx, 'POST', `${at.repo}/pullrequests`, {
+      sourceRefName: `refs/heads/${pull.sourceBranch}`,
+      targetRefName: `refs/heads/${pull.targetBranch}`,
+      title: pull.title,
+      description: pull.body,
+      isDraft: pull.draft,
+      reviewers: pull.reviewers.map((r) => ({ id: r.id })),
+      labels: pull.labels.map((name) => ({ name })),
+      ...(forkId ? { forkSource: { repository: { id: forkId } } } : {})
+    })
+    return afterCreate(
+      { number: created.pullRequestId, url: `${at.web}/pullrequest/${created.pullRequestId}` },
+      []
+    )
+  },
+
+  async update(ctx, repoPath, pull, change) {
+    const at = urls(ctx.host, repoPath)
+    const fields = {
+      ...(change.title !== undefined ? { title: change.title } : {}),
+      ...(change.body !== undefined ? { description: change.body } : {}),
+      ...(change.draft !== undefined ? { isDraft: change.draft } : {}),
+      ...(change.state ? { status: change.state === 'closed' ? 'abandoned' : 'active' } : {})
+    }
+    if (Object.keys(fields).length)
+      await send(ctx, 'PATCH', `${at.repo}/pullrequests/${pull.number}`, fields)
+    for (const reviewer of change.reviewers ?? [])
+      await send(
+        ctx,
+        'PUT',
+        `${at.repo}/pullRequests/${pull.number}/reviewers/${encodeURIComponent(reviewer.id)}`,
+        { vote: 0 }
+      )
+  },
+
+  async merge(ctx, repoPath, pull, options) {
+    const at = urls(ctx.host, repoPath)
+    const message = options.message.trim()
+    const completionOptions = {
+      mergeStrategy: STRATEGIES[options.method],
+      deleteSourceBranch: options.deleteBranch,
+      ...(message ? { mergeCommitMessage: message } : {})
+    }
+    if (options.auto) {
+      // Auto-complete is set by someone: the account's identity
+      const viewer = await azure.viewer(ctx, repoPath)
+      await send(ctx, 'PATCH', `${at.repo}/pullrequests/${pull.number}`, {
+        autoCompleteSetBy: { id: viewer.id },
+        completionOptions
+      })
+      return 'auto'
+    }
+    const done = await send<{ status?: string }>(
+      ctx,
+      'PATCH',
+      `${at.repo}/pullrequests/${pull.number}`,
+      {
+        status: 'completed',
+        // Refused if someone pushed since: what was reviewed is what gets merged
+        lastMergeSourceCommit: { commitId: pull.headSha },
+        completionOptions
+      }
+    )
+    // Completing takes Azure DevOps a moment: it may still be at work when it answers
+    return done.status === 'completed' ? 'merged' : 'queued'
+  },
 
   auth: (ctx) =>
     // Microsoft Entra tokens (Git Credential Manager's, by default) are JWTs; personal access
