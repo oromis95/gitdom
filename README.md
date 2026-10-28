@@ -17,7 +17,7 @@ GitDom is a graphical client for everyday Git work: you can browse history, stag
 - [Staging](#staging-and-committing) of files, hunks or single lines, with checks for secrets and big files before you commit
 - [Interactive rebase, fixup, split and reorder](#rewriting-history), with an automatic [backup and undo](#safety-net) for every risky operation
 - A [time-lapse](#history-and-code-archaeology) of any file, blame back in time, the history of a function, and bisect
-- [Pull requests](#pull-requests) of GitHub and GitLab on the branches of the graph, with their reviews, checks and changes read in GitDom's own diff
+- [Pull requests](#pull-requests) of GitHub, GitLab, Bitbucket and Azure DevOps on the branches of the graph, with their reviews, checks and changes read in GitDom's own diff
 - [Statistics](#statistics-and-maintenance), a [dashboard of all your repositories](#several-repositories) and a weekly summary of what you did
 - [Themes](#themes) from Nord to Retro 2000, four that rearrange the whole window, and your own
 - Windows, macOS and Linux, with [updates](#updates-and-help) that install themselves
@@ -108,14 +108,15 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 
 ### Pull requests
 
-GitHub (and GitHub Enterprise) and GitLab (gitlab.com or your own server); Bitbucket and Azure DevOps are next.
+GitHub (and GitHub Enterprise), GitLab (gitlab.com or your own server), Bitbucket Cloud and Azure DevOps (and Azure DevOps Server).
 
-- **Connect** in the **Pull Requests** section of the sidebar. If you already push over HTTPS, GitDom uses the token Git Credential Manager keeps for the host, and asks nothing; otherwise paste a token (the dialog says which permissions to tick and opens the page to create it). Tokens are encrypted with the system's keychain and only sent to their service; Git Credential Manager's aren't copied at all
+- **Connect** in the **Pull Requests** section of the sidebar. If you already push over HTTPS, GitDom uses the token Git Credential Manager keeps for the host, and asks nothing (this works for GitHub and Azure DevOps; GitLab's and often Bitbucket's can't read pull requests); otherwise paste a token, with your Atlassian account's email for a Bitbucket API token. The dialog says which permissions to tick and opens the page to create it. Tokens are encrypted with the system's keychain and only sent to their service; Git Credential Manager's aren't copied at all
 - The section lists the open pull requests (merge requests on GitLab) in **Mine**, **Review requested** and **Others**, with their checks, comments and your review, kept up to date while GitDom is in use
 - On the graph, the branch of a pull request shows a badge with its number, coloured by its state (draft, open, approved, changes requested, conflicts), and a dot for its checks. Resting the mouse on it shows who opened it, the reviewers and their verdict, the failing checks and whether it can be merged
+- Checks are GitHub's checks and statuses, GitLab's pipeline jobs, Bitbucket's build statuses, and on Azure DevOps the pull request's statuses and build policies; Azure DevOps' other policies (reviewers, comments, work items) say why a pull request can't be merged yet
 - Click a pull request to open it in place of the graph: its description and conversation, reviewers, checks with links to their logs, commits, and whether it can be merged, with the reason when it can't. Its commits are fetched into the repository (also from forks), and its changes are listed in the detail panel and read in GitDom's diff, from where it left the target branch as the service shows them
 - Every open pull request is in the command palette, with **Refresh pull requests**
-- **Preferences → Accounts**: the connected accounts, to disconnect them; the badges on or off; your own servers (GitHub Enterprise, self-managed GitLab) as `host kind` lines
+- **Preferences → Accounts**: the connected accounts, to disconnect them; the badges on or off; your own servers (GitHub Enterprise, self-managed GitLab, Azure DevOps Server) as `host kind` lines. Bitbucket Data Center isn't supported
 
 ### Merging and conflicts
 

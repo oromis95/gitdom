@@ -11,7 +11,7 @@ import type {
   ReviewVote
 } from '../../shared/forge'
 import { ForgeError, graphql } from './http'
-import { PULL_LIMIT, toMillis, type ForgeProvider, type ProviderContext } from './provider'
+import { PULL_LIMIT, bearer, toMillis, type ForgeProvider, type ProviderContext } from './provider'
 
 export const gitlabEndpoint = (host: string): string => `https://${host}/api/graphql`
 
@@ -274,5 +274,7 @@ export const gitlab: ForgeProvider = {
     }
   },
 
-  headRef: (number) => `refs/merge-requests/${number}/head`
+  headRef: (number) => `refs/merge-requests/${number}/head`,
+
+  auth: bearer
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Copy, ExternalLink, KeyRound, LogIn } from 'lucide-react'
 import type { DeviceLogin, ForgeKind } from '../../../../shared/forge'
-import { FORGE_NAMES } from '../../../../shared/forge'
+import { FORGE_NAMES, PUBLIC_HOSTS } from '../../../../shared/forge'
 import { connected, openInBrowser, useForge, type ConnectRequest } from '../../forge'
 import * as actions from '../../actions'
 
@@ -11,8 +11,14 @@ import * as actions from '../../actions'
 const SCOPES: Record<ForgeKind, string> = {
   github: 'repo and read:org',
   gitlab: 'api',
-  bitbucket: 'read:pullrequest and write:pullrequest',
-  azure: 'Code: Read & Write'
+  bitbucket: 'pull request, repository and account (read and write)',
+  azure: 'Code: Read & write'
+}
+
+/** Where the token is created, as the button says it */
+const TOKEN_PLACES: Partial<Record<ForgeKind, string>> = {
+  bitbucket: 'your Atlassian account',
+  azure: 'Azure DevOps'
 }
 
 export default function ConnectDialog(): React.JSX.Element | null {
@@ -23,6 +29,8 @@ export default function ConnectDialog(): React.JSX.Element | null {
 
 function ConnectForm({ request }: { request: ConnectRequest }): React.JSX.Element {
   const [token, setToken] = useState('')
+  // Bitbucket's API tokens go with the Atlassian account's email; access tokens go alone
+  const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [login, setLogin] = useState<DeviceLogin | null>(null)
@@ -33,8 +41,7 @@ function ConnectForm({ request }: { request: ConnectRequest }): React.JSX.Elemen
   }, [])
 
   const name = FORGE_NAMES[request.kind]
-  const where =
-    request.host === 'github.com' || request.host === 'gitlab.com' ? '' : ` (${request.host})`
+  const where = PUBLIC_HOSTS.has(request.host) ? '' : ` (${request.host})`
 
   const close = (): void => {
     if (login) window.api.forge.cancelLogin(login.id)
@@ -44,7 +51,13 @@ function ConnectForm({ request }: { request: ConnectRequest }): React.JSX.Elemen
   const submit = async (): Promise<void> => {
     setBusy(true)
     setError(null)
-    const result = await window.api.forge.connectWithToken(request.host, request.kind, token)
+    const result = await window.api.forge.connectWithToken(
+      request.host,
+      request.kind,
+      token,
+      email,
+      request.path
+    )
     setBusy(false)
     if (result.ok) connected(result.value)
     else setError(result.error)
@@ -124,13 +137,28 @@ function ConnectForm({ request }: { request: ConnectRequest }): React.JSX.Elemen
             </button>
           ))}
 
+        {request.kind === 'bitbucket' && (
+          <label className="modal-field">
+            <span>
+              Email <span className="muted">of your Atlassian account, for an API token</span>
+            </span>
+            <input
+              type="email"
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+        )}
         <label className="modal-field">
           <span>
             Token <span className="muted">with the {SCOPES[request.kind]} permissions</span>
           </span>
           <input
             type="password"
-            autoFocus={!request.device}
+            autoFocus={!request.device && request.kind !== 'bitbucket'}
             autoComplete="off"
             spellCheck={false}
             value={token}
@@ -141,10 +169,12 @@ function ConnectForm({ request }: { request: ConnectRequest }): React.JSX.Elemen
           type="button"
           className="row-action connect-create"
           onClick={() =>
-            void window.api.forge.tokenPage(request.host, request.kind).then(openInBrowser)
+            void window.api.forge
+              .tokenPage(request.host, request.kind, request.path)
+              .then(openInBrowser)
           }
         >
-          <KeyRound size={13} /> Create a token on {request.host}
+          <KeyRound size={13} /> Create a token on {TOKEN_PLACES[request.kind] ?? request.host}
         </button>
         {error && <div className="banner-error">{error}</div>}
         <div className="modal-actions">

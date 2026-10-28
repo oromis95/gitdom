@@ -71,15 +71,24 @@ export function registerForgeHandlers(): void {
     toResult(() => service.fetchPull(String(repo), Number(number)))
   )
   ipcMain.handle(IPC.forgeAccounts, () => service.listAccounts())
-  ipcMain.handle(IPC.forgeConnectGit, (_event, host: string, kind: unknown) =>
-    toResult(() => service.connectWithGit(String(host), kindOf(kind)))
+  ipcMain.handle(IPC.forgeConnectGit, (_event, host: string, kind: unknown, path: string) =>
+    toResult(() => service.connectWithGit(String(host), kindOf(kind), String(path ?? '')))
   )
-  ipcMain.handle(IPC.forgeConnectToken, (_event, host: string, kind: unknown, token: string) =>
-    toResult(() => {
-      const value = String(token ?? '').trim()
-      if (!value) throw new Error('Paste the token')
-      return service.connect(String(host), kindOf(kind), 'token', { token: value })
-    })
+  ipcMain.handle(
+    IPC.forgeConnectToken,
+    (_event, host: string, kind: unknown, token: string, username: string, path: string) =>
+      toResult(() => {
+        const value = String(token ?? '').trim()
+        if (!value) throw new Error('Paste the token')
+        const user = String(username ?? '').trim()
+        return service.connect(
+          String(host),
+          kindOf(kind),
+          'token',
+          { token: value, ...(user ? { username: user } : {}) },
+          String(path ?? '')
+        )
+      })
   )
   ipcMain.handle(IPC.forgeStartLogin, (_event, host: string, kind: unknown) =>
     toResult(() => service.startLogin(String(host), kindOf(kind)))
@@ -95,7 +104,7 @@ export function registerForgeHandlers(): void {
     // Only web pages: never a file or another program's protocol
     if (typeof url === 'string' && /^https?:\/\/[^\s]+$/i.test(url)) void shell.openExternal(url)
   })
-  ipcMain.handle(IPC.forgeTokenPage, (_event, host: string, kind: unknown) =>
-    tokenPage(kindOf(kind), String(host))
+  ipcMain.handle(IPC.forgeTokenPage, (_event, host: string, kind: unknown, path: string) =>
+    tokenPage(kindOf(kind), String(host), String(path ?? ''))
   )
 }

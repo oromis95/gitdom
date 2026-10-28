@@ -1,13 +1,14 @@
-import { spawn } from 'child_process'
 import { readFileSync, writeFileSync } from 'fs'
 import { rm } from 'fs/promises'
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'http'
+import { createServer, type Server } from 'http'
 import type { AddressInfo } from 'net'
 import { join } from 'path'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import {
+  AVATAR,
   cleanUp,
   commitFile,
+  gitBackend,
   git,
   launch,
   makeRepo,
@@ -16,47 +17,6 @@ import {
   seedProfile,
   type Running
 } from './helpers'
-
-// A tiny PNG, the avatar the fake service serves
-const AVATAR = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  'base64'
-)
-
-/** Serves the bare repositories of `root` over HTTP, as git's own http-backend does. */
-function gitBackend(root: string, req: IncomingMessage, res: ServerResponse): void {
-  const [path, query = ''] = (req.url ?? '').split('?')
-  const child = spawn('git', ['http-backend'], {
-    env: {
-      ...process.env,
-      GIT_PROJECT_ROOT: root,
-      GIT_HTTP_EXPORT_ALL: '1',
-      PATH_INFO: path,
-      QUERY_STRING: query,
-      REQUEST_METHOD: req.method ?? 'GET',
-      CONTENT_TYPE: String(req.headers['content-type'] ?? ''),
-      HTTP_CONTENT_ENCODING: String(req.headers['content-encoding'] ?? ''),
-      GIT_PROTOCOL: String(req.headers['git-protocol'] ?? ''),
-      REMOTE_ADDR: '127.0.0.1'
-    }
-  })
-  req.pipe(child.stdin)
-  const out: Buffer[] = []
-  child.stdout.on('data', (chunk: Buffer) => out.push(chunk))
-  child.on('close', () => {
-    const all = Buffer.concat(out)
-    const end = all.indexOf('\r\n\r\n')
-    const headers: Record<string, string> = {}
-    let status = 200
-    for (const line of all.subarray(0, end).toString().split('\r\n')) {
-      const [key, ...value] = line.split(':')
-      if (key.toLowerCase() === 'status') status = Number.parseInt(value.join(':'), 10)
-      else headers[key] = value.join(':').trim()
-    }
-    res.writeHead(status, headers)
-    res.end(all.subarray(end + 4))
-  })
-}
 
 const user = (login: string): { login: string; name: string; avatarUrl: string } => ({
   login,

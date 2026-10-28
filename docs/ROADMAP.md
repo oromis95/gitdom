@@ -336,21 +336,26 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
   - funziona anche con le PR da fork; i commit vanno in `refs/gitdom/pull/N/`, fuori dal grafo, e si tolgono quando la PR non è più aperta.
 - ✅ **Palette dei comandi**: ogni PR aperta, la PR del branch corrente (nell'app o nel browser), "Connect to GitHub", "Refresh pull requests".
 
-### Step 20 — v1.14: Azure DevOps e Bitbucket in lettura
+### Step 20 — v1.14: Azure DevOps e Bitbucket in lettura ✅
 
-Tutto lo Step 19 anche per gli altri due provider, con le loro differenze:
+> Completato il 2026-10-27, non ancora pubblicato. Tutto lo Step 19 anche per gli altri due provider, con le loro differenze. Bitbucket è provato su risposte vere di bitbucket.org (un progetto pubblico di Atlassian, senza login); per Azure DevOps non c'è un progetto pubblico con repository Azure da leggere, quindi le risposte seguono gli esempi della documentazione ufficiale. Manca la prova con account veri dei due servizi.
 
-- **Azure DevOps**:
-  - organizzazione e progetto si ricavano dall'URL;
-  - voti dei reviewer: approva (10), approva con suggerimenti (5), in attesa dell'autore (−5), rifiuta (−10);
-  - come CI valgono le policy di build validation e gli status della PR, e le policy obbligatorie spiegano perché la PR è bloccata;
-  - il diff si calcola sul branch sorgente, perché Azure DevOps espone solo `refs/pull/N/merge`.
-- **Bitbucket Cloud**:
-  - workspace e repository dall'URL;
-  - approvazioni e "richieste modifiche";
-  - commit status come CI;
-  - nessun ref per le PR: si scarica il branch sorgente dal repository di origine, anche da un fork.
-- In tutti e quattro i provider, le PR in bozza compaiono come bozze.
+- ✅ **Azure DevOps**:
+  - organizzazione (o collection del server), progetto e repository dall'URL; anche **Azure DevOps Server** fra i server propri, con collection di più segmenti (`tfs/DefaultCollection`);
+  - voti dei reviewer: approva (10), approva con suggerimenti (5), in attesa dell'autore (−5), rifiuta (−10); i reviewer obbligatori decidono se la review manca;
+  - come CI valgono gli status della PR (l'ultimo di ogni contesto) e le policy di build validation, con il link alla build; le altre policy obbligatorie (reviewer, commenti da risolvere, work item) spiegano perché la PR è bloccata;
+  - il token di GCM si chiede con il percorso del repository, perché GCM tiene i token per organizzazione; un PAT va come password, un token Entra come bearer;
+  - Azure DevOps non dice quando una PR è cambiata: il dettaglio si rilegge quando cambiano l'ultimo commit o i voti;
+  - gli avatar stanno dietro il login: il main li chiede con il token, solo per l'host dell'account;
+  - chi ha un'email come login (Azure DevOps) compare con il nome.
+- ✅ **Bitbucket Cloud**:
+  - workspace e repository dall'URL; l'elenco porta reviewer, approvazioni e "richieste modifiche" in una chiamata (`fields=+values.participants`);
+  - commit status come CI: una chiamata per PR, tenuta finché l'ultimo commit non cambia e tutto è finito, per stare nei limiti di Bitbucket;
+  - i conflitti si vedono nella vista della PR (diffstat), perché l'elenco non li dice;
+  - login con API token ed email dell'account Atlassian (Basic), con un access token da solo (Bearer), o con il token di GCM: GitDom prova prima con il suo nome utente, poi senza;
+  - Bitbucket Data Center ha un'altra API: non è supportato.
+- ✅ **Commit della PR senza ref dedicato**: GitDom scarica il branch sorgente dal remoto, da un altro remoto che punta al fork, dall'URL del fork che Azure DevOps dà, oppure dall'URL del remoto con il percorso del fork al posto di quello del repository.
+- ✅ In tutti e quattro i provider, le PR in bozza compaiono come bozze.
 
 ### Step 21 — v1.15: Lavorare su una pull request
 

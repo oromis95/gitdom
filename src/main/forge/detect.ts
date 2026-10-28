@@ -53,7 +53,6 @@ export function parseRemoteUrl(url: string): RemoteLocation | null {
   // Azure DevOps over SSH: v3/org/project/repo
   if (host === 'ssh.dev.azure.com' || host === 'vs-ssh.visualstudio.com')
     path = path.replace(/^v3\//, '')
-  else if (host === 'dev.azure.com') path = path.replace('/_git/', '/')
   else if (host.endsWith('.visualstudio.com')) {
     // org.visualstudio.com[/DefaultCollection]/project/_git/repo
     const org = host.slice(0, -'.visualstudio.com'.length)
@@ -61,6 +60,8 @@ export function parseRemoteUrl(url: string): RemoteLocation | null {
     host = 'dev.azure.com'
   }
   host = ALIASES[host] ?? host
+  // Azure DevOps (and Azure DevOps Server, on any host): collection/project/_git/repo
+  path = path.replace('/_git/', '/')
   if (!path.includes('/')) return null
   return { host, path }
 }
@@ -76,8 +77,11 @@ export function forgeKind(host: string, custom: ForgeHost[]): ForgeKind | null {
 
 function webUrl(kind: ForgeKind, location: RemoteLocation): string {
   if (kind === 'azure') {
-    const [org, project, ...name] = location.path.split('/')
-    return `https://dev.azure.com/${org}/${project}/_git/${name.join('/')}`
+    // The last two segments are the project and the repository, the rest the organization or
+    // the server's collection
+    const segments = location.path.split('/').map(encodeURIComponent)
+    const repo = segments.pop()
+    return `https://${location.host}/${segments.join('/')}/_git/${repo}`
   }
   return `https://${location.host}/${location.path}`
 }

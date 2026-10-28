@@ -116,7 +116,7 @@ export function buildCommands(): Command[] {
         add(
           group,
           `Connect to ${FORGE_NAMES[kind]} to see the ${noun}s`,
-          () => void connectForge({ host, kind, device: forge.device })
+          () => void connectForge({ host, kind, path: forge.repo.path, device: forge.device })
         )
       }
       add(group, `Refresh ${noun}s`, () => void refreshForge(repo, true))

@@ -2,6 +2,18 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- Pull requests of Bitbucket Cloud and Azure DevOps (also Azure DevOps Server), like GitHub's and GitLab's: in the sidebar, on the branches of the graph and in their own view, with their changes fetched from the source branch, also from a fork
+- Azure DevOps: the reviewers' votes, the pull request's statuses and build policies as its checks, and the other policies (reviewers, comments, work items) as the reason it can't be merged yet; Git Credential Manager's token is used when it has one
+- Bitbucket: approvals and changes requested, build statuses as checks, conflicts found in the pull request's view; connect with an API token and your Atlassian account's email, or Git Credential Manager's token when it can read pull requests
+
+### Changed
+
+- People whose login is an email (Azure DevOps) are shown by their name
+
 ## 1.13.0 — 2026-10-27
 
 ### Added

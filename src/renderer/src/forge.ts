@@ -21,6 +21,8 @@ type Ready = Extract<ForgeStatus, { state: 'ready' }>
 export interface ConnectRequest {
   host: string
   kind: ForgeKind
+  /** The repository on the host it's asked from (ForgeRepo.path) */
+  path: string
   device: boolean
 }
 
@@ -199,7 +201,7 @@ export const pullLabel = (kind: ForgeKind, number: number): string =>
  * otherwise by opening the login dialog.
  */
 export async function connectForge(request: ConnectRequest): Promise<void> {
-  const result = await window.api.forge.connectWithGit(request.host, request.kind)
+  const result = await window.api.forge.connectWithGit(request.host, request.kind, request.path)
   if (result.ok && result.value) return connected(result.value)
   if (!result.ok) notify('warning', result.error)
   useForge.setState({ connect: request })

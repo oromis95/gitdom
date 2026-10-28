@@ -4,7 +4,7 @@ import type { ForgeKind, PullRequest } from '../../../../shared/forge'
 import { pullLabel } from '../../forge'
 import { relativeTime } from '../../time'
 import { Avatar, CheckIcon, Labels, PullIcon, VoteIcon } from './PullBits'
-import { CHECK_TITLES, mergeText, voteTitle } from './pullText'
+import { CHECK_TITLES, mergeText, voteTitle, who } from './pullText'
 
 /** Failed checks are listed by name; this many at most */
 const SHOWN_CHECKS = 4
@@ -30,12 +30,14 @@ export default function PullCard({
         </span>
       </div>
       <div className="muted pull-card-line">
-        <Avatar user={pull.author} size={16} /> {pull.author.login} wants to merge{' '}
+        <Avatar user={pull.author} size={16} /> {who(pull.author)} wants to merge{' '}
         <span className="mono">{pull.sourceBranch}</span> into{' '}
         <span className="mono">{pull.targetBranch}</span>
       </div>
       <div className="muted">
-        Opened {relativeTime(pull.createdAt / 1000)}, updated {relativeTime(pull.updatedAt / 1000)}
+        Opened {relativeTime(pull.createdAt / 1000)}
+        {/* Azure DevOps doesn't say when it last changed */}
+        {pull.updatedAt !== pull.createdAt && `, updated ${relativeTime(pull.updatedAt / 1000)}`}
         {pull.comments > 0 && (
           <>
             {' · '}
@@ -49,7 +51,7 @@ export default function PullCard({
           {pull.reviewers.map((r) => (
             <div key={r.user.login} className="pull-card-line">
               <VoteIcon vote={r.vote} /> <Avatar user={r.user} size={16} />
-              {r.user.login} <span className="muted">{voteTitle(r.vote)}</span>
+              {who(r.user)} <span className="muted">{voteTitle(r.vote)}</span>
             </div>
           ))}
         </div>

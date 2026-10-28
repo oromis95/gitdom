@@ -12,7 +12,7 @@ import type {
   ReviewVote
 } from '../../shared/forge'
 import { ForgeError, graphql } from './http'
-import { toMillis, type ForgeProvider, type ProviderContext } from './provider'
+import { bearer, toMillis, type ForgeProvider, type ProviderContext } from './provider'
 
 export const githubEndpoint = (host: string): string =>
   host === 'github.com' ? 'https://api.github.com/graphql' : `https://${host}/api/graphql`
@@ -402,5 +402,7 @@ export const github: ForgeProvider = {
     }
   },
 
-  headRef: (number) => `refs/pull/${number}/head`
+  headRef: (number) => `refs/pull/${number}/head`,
+
+  auth: bearer
 }

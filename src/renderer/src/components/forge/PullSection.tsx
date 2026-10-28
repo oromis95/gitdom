@@ -3,6 +3,7 @@
 import { GitPullRequest, LogIn, MessageSquare, TriangleAlert } from 'lucide-react'
 import {
   FORGE_NAMES,
+  PUBLIC_HOSTS,
   PULL_NOUN,
   type ForgeKind,
   type ForgeStatus,
@@ -32,18 +33,21 @@ const matches = (pull: PullRequest, query: string, kind: ForgeKind): boolean =>
   )
 
 function pullMenu(snapshot: RepoSnapshot, pull: PullRequest, kind: ForgeKind): MenuItem[] {
-  const inGraph = snapshot.commits.some((c) => c.hash === pull.headSha)
+  // Bitbucket gives the start of the hash only
+  const head = pull.headSha
+    ? snapshot.commits.find((c) => c.hash.startsWith(pull.headSha))
+    : undefined
   return [
     {
       label: `Open ${pullLabel(kind, pull.number)}`,
       onClick: () => useApp.getState().openPullRequest(pull.number)
     },
     { label: `Open in ${FORGE_NAMES[kind]}`, onClick: () => openInBrowser(pull.url) },
-    ...(inGraph
+    ...(head
       ? [
           {
             label: 'Show its last commit in the graph',
-            onClick: () => useApp.getState().select(pull.headSha, true)
+            onClick: () => useApp.getState().select(head.hash, true)
           }
         ]
       : []),
@@ -124,12 +128,14 @@ export default function PullSection({
           <button
             className="tree-item pull-connect"
             title={`Show the ${PULL_NOUN[kind].name}s of ${host}`}
-            onClick={() => void connectForge({ host, kind, device: status.device })}
+            onClick={() =>
+              void connectForge({ host, kind, path: status.repo.path, device: status.device })
+            }
           >
             <LogIn size={14} />
             <span>
               {reconnect ? 'Reconnect' : 'Connect'} to {FORGE_NAMES[kind]}
-              {host !== 'github.com' && host !== 'gitlab.com' ? ` (${host})` : ''}
+              {PUBLIC_HOSTS.has(host) ? '' : ` (${host})`}
             </span>
           </button>
         )}

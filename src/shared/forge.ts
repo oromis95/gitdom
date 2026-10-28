@@ -18,6 +18,9 @@ export const PULL_NOUN: Record<ForgeKind, { name: string; short: string; prefix:
   azure: { name: 'pull request', short: 'PR', prefix: '!' }
 }
 
+/** The services' own hosts: a server of one's own is named by its host too */
+export const PUBLIC_HOSTS = new Set(['github.com', 'gitlab.com', 'bitbucket.org', 'dev.azure.com'])
+
 /** A server of the user's own (GitHub Enterprise, GitLab self-managed), set in the preferences. */
 export interface ForgeHost {
   host: string
@@ -95,6 +98,8 @@ export interface PullRequest {
   sourceBranch: string
   /** Repository the source branch is in (its path, as in ForgeRepo): another one for a fork */
   sourceRepo: string
+  /** Where to fetch a fork's branch from, when the service says (Azure DevOps) */
+  sourceUrl?: string
   targetBranch: string
   /** Last commit of the source branch */
   headSha: string

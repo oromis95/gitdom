@@ -21,11 +21,17 @@ export interface StoredAccount {
   refresh?: string
   /** Unix milliseconds the token stops working, when it does */
   expiresAt?: number
+  /** Encrypted; sent with the token as username and password (a Bitbucket account's email) */
+  username?: string
+  /** Git Credential Manager's username goes with its token (Bitbucket app passwords) */
+  gcmUser?: boolean
 }
 
 /** A token, with what renews it when it expires. */
 export interface Secret {
   token: string
+  /** Sent with the token as username and password, where the service wants that */
+  username?: string
   refresh?: string
   expiresAt?: number
 }
@@ -85,6 +91,7 @@ export class AccountStore {
     try {
       const secret: Secret = {
         token: this.cipher.decrypt(account.token),
+        username: account.username ? this.cipher.decrypt(account.username) : undefined,
         refresh: account.refresh ? this.cipher.decrypt(account.refresh) : undefined,
         expiresAt: account.expiresAt
       }
@@ -97,10 +104,13 @@ export class AccountStore {
   }
 
   /** Adds or replaces the account of a host. Git Credential Manager's token is only kept in memory. */
-  save(account: Omit<StoredAccount, 'token' | 'refresh' | 'expiresAt'>, secret: Secret): void {
+  save(
+    account: Omit<StoredAccount, 'token' | 'refresh' | 'expiresAt' | 'username'>,
+    secret: Secret
+  ): void {
     this.memory.set(account.host, secret)
-    const { host, kind, user, source } = account
-    const stored: StoredAccount = { host, kind, user, source }
+    const { host, kind, user, source, gcmUser } = account
+    const stored: StoredAccount = { host, kind, user, source, ...(gcmUser ? { gcmUser } : {}) }
     if (account.source !== 'gcm') {
       if (!this.cipher.available()) {
         // Never in clear on disk (NFR-06): the account lasts until GitDom closes
@@ -110,6 +120,7 @@ export class AccountStore {
         return
       }
       stored.token = this.cipher.encrypt(secret.token)
+      if (secret.username) stored.username = this.cipher.encrypt(secret.username)
       if (secret.refresh) stored.refresh = this.cipher.encrypt(secret.refresh)
       if (secret.expiresAt) stored.expiresAt = secret.expiresAt
     }

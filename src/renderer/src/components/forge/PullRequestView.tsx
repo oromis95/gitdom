@@ -33,7 +33,11 @@ import { fromTerminal } from '../../ui'
 import { relativeTime } from '../../time'
 import Markdown from './Markdown'
 import { Avatar, CheckIcon, Labels, PullIcon, VoteIcon } from './PullBits'
-import { CHECK_TITLES, mergeText, voteTitle } from './pullText'
+import { CHECK_TITLES, mergeText, voteTitle, who } from './pullText'
+
+/** How a fork is named before its branch: its owner, or on Azure DevOps the fork itself */
+const forkName = (kind: ForgeKind, path: string): string =>
+  kind === 'azure' ? path.split('/').at(-1)! : path.split('/')[0]
 
 const STATE_TITLES = { open: 'Open', draft: 'Draft', merged: 'Merged', closed: 'Closed' }
 
@@ -90,7 +94,9 @@ function useChanges(
 }
 
 function useDetail(repo: string, pull: PullRequest): Load<PullDetail> {
-  const key = `${repo}\n${pull.number}\n${pull.updatedAt}`
+  // Azure DevOps has no date of the last change: a new commit or vote reads it again too
+  const votes = pull.reviewers.map((r) => r.vote).join()
+  const key = `${repo}\n${pull.number}\n${pull.updatedAt}\n${pull.headSha}\n${votes}`
   const [state, setState] = useState<Load<PullDetail>>({ key })
   const cached = details.get(key)
   useEffect(() => {
@@ -213,7 +219,7 @@ function Conversation({ detail }: { detail: Load<PullDetail> }): React.JSX.Eleme
         <div key={i} className={`pull-comment${entry.vote ? ` vote-${entry.vote}` : ''}`}>
           <div className="pull-comment-head">
             <Avatar user={entry.author} size={20} />
-            <b>{entry.author.login}</b>
+            <b>{who(entry.author)}</b>
             {entry.vote ? (
               <span className="pull-comment-vote">
                 <VoteIcon vote={entry.vote} /> {voteTitle(entry.vote)}
@@ -261,11 +267,11 @@ function PullPage({
         </span>
         <Avatar user={pull.author} size={20} />
         <span>
-          <b>{pull.author.login}</b> wants to merge
+          <b>{who(pull.author)}</b> wants to merge
           {commits !== undefined ? ` ${commits} commit${commits === 1 ? '' : 's'}` : ''} into{' '}
           <span className="mono pull-branch">{pull.targetBranch}</span> from{' '}
           <span className="mono pull-branch">
-            {sameRepoPath(pull.sourceRepo, forgePath) ? '' : `${pull.sourceRepo.split('/')[0]}:`}
+            {sameRepoPath(pull.sourceRepo, forgePath) ? '' : `${forkName(kind, pull.sourceRepo)}:`}
             {pull.sourceBranch}
           </span>
         </span>

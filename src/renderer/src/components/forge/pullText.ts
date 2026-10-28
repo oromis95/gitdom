@@ -1,6 +1,7 @@
 // Words and states of pull requests shared by the components: badge tones and titles.
 import type {
   CheckState,
+  ForgeUser,
   Mergeability,
   MergeState,
   PullRequest,
@@ -65,3 +66,7 @@ export function mergeText(merge: Mergeability): {
     return { title: 'Can be merged', detail, tone: 'merge-warning' }
   return { title: MERGE_TITLES[merge.state], detail, tone: `merge-${merge.state}` }
 }
+
+/** How a person is named: the login, unless it's an email (Azure DevOps), then the name. */
+export const who = (user: ForgeUser): string =>
+  user.login.includes('@') ? (user.name ?? user.login) : user.login

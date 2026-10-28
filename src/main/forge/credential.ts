@@ -20,10 +20,14 @@ export function parseCredential(output: string): Credential | null {
 }
 
 /**
- * Runs `git credential fill` for https://host. Not through runGit: its output holds the token,
+ * Runs `git credential fill` for https://host/path. Not through runGit: its output holds the token,
  * which must not reach the activity log.
  */
-export function credentialFill(host: string, timeout = 15000): Promise<Credential | null> {
+export function credentialFill(
+  host: string,
+  path?: string,
+  timeout = 15000
+): Promise<Credential | null> {
   return new Promise((resolve) => {
     let child: ReturnType<typeof spawn>
     try {
@@ -53,6 +57,7 @@ export function credentialFill(host: string, timeout = 15000): Promise<Credentia
       clearTimeout(timer)
       resolve(code === 0 ? parseCredential(Buffer.concat(out).toString('utf8')) : null)
     })
-    child.stdin?.end(`protocol=https\nhost=${host}\n\n`)
+    // With credential.useHttpPath (set for Azure DevOps) the helper keys its tokens by path too
+    child.stdin?.end(`protocol=https\nhost=${host}\n${path ? `path=${path}\n` : ''}\n`)
   })
 }

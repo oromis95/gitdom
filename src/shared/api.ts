@@ -845,10 +845,22 @@ export interface ForgeApi {
   /** Fetches a pull request's commits and resolves the range of its changes. */
   fetchPull(repo: string, number: number): Promise<Result<PullRange>>
   accounts(): Promise<ForgeAccount[]>
-  /** Connects with Git Credential Manager's token; null when it has none the API accepts. */
-  connectWithGit(host: string, kind: ForgeKind): Promise<Result<ForgeAccount | null>>
-  /** Checks a token the user typed and saves it, encrypted. */
-  connectWithToken(host: string, kind: ForgeKind, token: string): Promise<Result<ForgeAccount>>
+  /**
+   * Connects with Git Credential Manager's token; null when it has none the API accepts. `path` is
+   * the repository on the host (ForgeRepo.path), for services whose tokens are per organization.
+   */
+  connectWithGit(host: string, kind: ForgeKind, path: string): Promise<Result<ForgeAccount | null>>
+  /**
+   * Checks a token the user typed and saves it, encrypted; `username` goes with it where the
+   * service wants one (a Bitbucket account's email), empty otherwise.
+   */
+  connectWithToken(
+    host: string,
+    kind: ForgeKind,
+    token: string,
+    username: string,
+    path: string
+  ): Promise<Result<ForgeAccount>>
   startLogin(host: string, kind: ForgeKind): Promise<Result<DeviceLogin>>
   /** Resolves once the user approved the device login on the service's page. */
   finishLogin(id: number): Promise<Result<ForgeAccount>>
@@ -861,7 +873,7 @@ export interface ForgeApi {
   /** Opens a page in the browser: the pull request, a check's log, the token page. */
   openUrl(url: string): void
   /** The page where a token with the right permissions is created. */
-  tokenPage(host: string, kind: ForgeKind): Promise<string>
+  tokenPage(host: string, kind: ForgeKind, path: string): Promise<string>
 }
 
 /**

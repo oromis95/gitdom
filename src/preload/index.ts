@@ -161,9 +161,9 @@ const api: GitDomApi = {
     detail: (repo, number) => ipcRenderer.invoke(IPC.forgeDetail, repo, number),
     fetchPull: (repo, number) => ipcRenderer.invoke(IPC.forgeFetchPull, repo, number),
     accounts: () => ipcRenderer.invoke(IPC.forgeAccounts),
-    connectWithGit: (host, kind) => ipcRenderer.invoke(IPC.forgeConnectGit, host, kind),
-    connectWithToken: (host, kind, token) =>
-      ipcRenderer.invoke(IPC.forgeConnectToken, host, kind, token),
+    connectWithGit: (host, kind, path) => ipcRenderer.invoke(IPC.forgeConnectGit, host, kind, path),
+    connectWithToken: (host, kind, token, username, path) =>
+      ipcRenderer.invoke(IPC.forgeConnectToken, host, kind, token, username, path),
     startLogin: (host, kind) => ipcRenderer.invoke(IPC.forgeStartLogin, host, kind),
     finishLogin: (id) => ipcRenderer.invoke(IPC.forgeFinishLogin, id),
     cancelLogin: (id) => ipcRenderer.send(IPC.forgeCancelLogin, id),
@@ -171,7 +171,7 @@ const api: GitDomApi = {
     canSaveTokens: () => ipcRenderer.invoke(IPC.forgeCanSave),
     avatar: (url) => ipcRenderer.invoke(IPC.forgeAvatar, url),
     openUrl: (url) => ipcRenderer.send(IPC.forgeOpenUrl, url),
-    tokenPage: (host, kind) => ipcRenderer.invoke(IPC.forgeTokenPage, host, kind)
+    tokenPage: (host, kind, path) => ipcRenderer.invoke(IPC.forgeTokenPage, host, kind, path)
   }
 }
 

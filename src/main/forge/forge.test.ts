@@ -455,7 +455,7 @@ describe('ForgeService', () => {
     expect(await s.status(repo, remotes)).toMatchObject({ state: 'signedOut', device: false })
 
     setFetcher(async () => json({ data: { viewer: user } }))
-    await s.connect('github.com', 'github', 'token', { token: 'tok' })
+    await s.connect('github.com', 'github', 'token', { token: 'tok' }, 'acme/widgets')
     setFetcher(async () => answer([githubNode()]))
     const status = await s.status(repo, remotes)
     expect(status).toMatchObject({
@@ -470,7 +470,9 @@ describe('ForgeService', () => {
     const fill = vi.fn(async () => ({ username: 'ann', password: 'gcm-token' }))
     const { service: s } = service(fill)
     setFetcher(async () => json({ data: { viewer: user } }))
-    expect(await s.connectWithGit('github.com', 'github')).toMatchObject({ source: 'gcm' })
+    expect(await s.connectWithGit('github.com', 'github', 'acme/widgets')).toMatchObject({
+      source: 'gcm'
+    })
 
     const tokens: string[] = []
     setFetcher(async (_url, init) => {
@@ -488,7 +490,7 @@ describe('ForgeService', () => {
   it("leaves teams out when the token can't read them, as Git Credential Manager's can't", async () => {
     const { service: s } = service()
     setFetcher(async () => json({ data: { viewer: user } }))
-    await s.connect('github.com', 'github', 'token', { token: 'tok' })
+    await s.connect('github.com', 'github', 'token', { token: 'tok' }, 'acme/widgets')
     const queries: string[] = []
     setFetcher(async (_url, init) => {
       const { query } = JSON.parse(String(init.body)) as { query: string }
@@ -514,7 +516,7 @@ describe('ForgeService', () => {
   it('returns null when Git Credential Manager has nothing usable', async () => {
     const { service: s } = service(async () => ({ username: 'ann', password: 'a-password' }))
     setFetcher(async () => json({ message: 'Bad credentials' }, 401))
-    expect(await s.connectWithGit('github.com', 'github')).toBeNull()
+    expect(await s.connectWithGit('github.com', 'github', 'acme/widgets')).toBeNull()
   })
 
   it("fetches a pull request's commits and finds where it left the target branch", async () => {
@@ -532,7 +534,7 @@ describe('ForgeService', () => {
 
     const { service: s } = service()
     setFetcher(async () => json({ data: { viewer: user } }))
-    await s.connect('github.com', 'github', 'token', { token: 'tok' })
+    await s.connect('github.com', 'github', 'token', { token: 'tok' }, 'acme/widgets')
     setFetcher(async () => answer([githubNode({ headRefOid: head })]))
     await s.status(repo, remotes)
 
@@ -550,7 +552,7 @@ describe('ForgeService', () => {
   it('refuses branch names that could change the refspec', async () => {
     const { service: s } = service()
     setFetcher(async () => json({ data: { viewer: user } }))
-    await s.connect('github.com', 'github', 'token', { token: 'tok' })
+    await s.connect('github.com', 'github', 'token', { token: 'tok' }, 'acme/widgets')
     setFetcher(async () => answer([githubNode({ baseRefName: 'main:refs/heads/x' })]))
     await s.status(repo, remotes)
     await expect(s.fetchPull(repo, 42)).rejects.toThrow('Unexpected branch name')

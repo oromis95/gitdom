@@ -70,6 +70,9 @@ export async function requestJson<T>(url: string, init: RequestInit = {}): Promi
   } catch {
     // Not JSON: a proxy's or the server's error page
   }
+  // Azure DevOps answers a refused token with its sign-in page, as 203
+  if (response.status === 203)
+    throw new ForgeError(`${new URL(url).host} refused the token`, 401, true)
   if (response.ok) {
     if (body === null && text)
       throw new ForgeError('The service sent an unreadable answer', response.status)
@@ -83,6 +86,10 @@ export async function requestJson<T>(url: string, init: RequestInit = {}): Promi
     const reset = Number(response.headers.get('x-ratelimit-reset'))
     const when = reset ? ` until ${new Date(reset * 1000).toLocaleTimeString()}` : ''
     throw new ForgeError(`${host}: too many requests, paused${when}`, 403)
+  }
+  if (response.status === 429) {
+    const wait = Number(response.headers.get('retry-after'))
+    throw new ForgeError(`${host}: too many requests, paused${wait ? ` for ${wait} s` : ''}`, 429)
   }
   if (response.status === 403)
     throw new ForgeError(
