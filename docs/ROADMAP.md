@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.14.0 pubblicata il 2026-10-28 (Step 1–20 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.15.0 pubblicata il 2026-10-28 (Step 1–21 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -239,7 +239,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Pull request — piano (Step 19–23)
 
-> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 pubblicato con la v1.13.0, Step 20 con la v1.14.0): pull request di GitHub, GitLab, Bitbucket e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
+> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 pubblicato con la v1.13.0, Step 20 con la v1.14.0, Step 21 con la v1.15.0): pull request di GitHub, GitLab, Bitbucket e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
 
 ### Decisioni comuni a tutti gli step
 
@@ -359,7 +359,7 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
 
 ### Step 21 — v1.15: Lavorare su una pull request ✅
 
-> Completato il 2026-10-28, non ancora pubblicato. Le chiamate che cambiano le PR (creare, unire, chiudere) non si possono provare sui servizi veri senza creare PR vere: sono verificate sulla documentazione e sugli schemi ufficiali (GitHub: OpenAPI e schema GraphQL; GitLab: documentazione dell'API; Bitbucket: swagger; Azure DevOps: documentazione REST), con test che controllano richiesta per richiesta, e con un finto GitHub negli end-to-end. Differenze dal piano:
+> Completato con la v1.15.0. Le chiamate che cambiano le PR (creare, unire, chiudere) non si possono provare sui servizi veri senza creare PR vere: sono verificate sulla documentazione e sugli schemi ufficiali (GitHub: OpenAPI e schema GraphQL; GitLab: documentazione dell'API; Bitbucket: swagger; Azure DevOps: documentazione REST), con test che controllano richiesta per richiesta, e con un finto GitHub negli end-to-end. Differenze dal piano:
 >
 > - l'anteprima della creazione mostra i commit, non i file;
 > - si riapre una PR chiusa in GitDom nella stessa sessione: le PR chiuse non sono nell'elenco;
