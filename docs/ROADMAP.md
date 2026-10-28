@@ -1,6 +1,6 @@
 # GitDom — Roadmap
 
-> Versione 1.15.1 pubblicata il 2026-10-28 (Step 1–21 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
+> Versione 1.16.0 pubblicata il 2026-10-28 (Step 1–22 completati). Gli ID tra parentesi rimandano a [REQUISITI.md](REQUISITI.md).
 
 ## Dove siamo
 
@@ -239,7 +239,7 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ## Pull request — piano (Step 19–24)
 
-> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 pubblicato con la v1.13.0, Step 20 con la v1.14.0, Step 21 con la v1.15.0, Step 22 completato e da pubblicare): pull request di GitHub, GitLab, Bitbucket (Cloud e Data Center) e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
+> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 pubblicato con la v1.13.0, Step 20 con la v1.14.0, Step 21 con la v1.15.0, Step 22 con la v1.16.0): pull request di GitHub, GitLab, Bitbucket (Cloud e Data Center) e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
 
 ### Decisioni comuni a tutti gli step
 
@@ -397,7 +397,7 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
 
 ### Step 22 — v1.16: Bitbucket Data Center ✅
 
-> Completato, da pubblicare. Richiesto dall'utente il 2026-10-28: i suoi repository di lavoro stanno su un Bitbucket Data Center 9.4, dove la sezione Pull Requests non compariva. Le chiamate seguono lo schema OpenAPI ufficiale della 9.4, gli esempi della documentazione REST e le risposte registrate da un server vero nei test del plugin Bitbucket di Jenkins; il riconoscimento, il login anonimo rifiutato e la pagina dei token sono verificati sul server dell'utente. Manca la prova con un account vero.
+> Completato con la v1.16.0. Richiesto dall'utente il 2026-10-28: i suoi repository di lavoro stanno su un Bitbucket Data Center 9.4, dove la sezione Pull Requests non compariva. Le chiamate seguono lo schema OpenAPI ufficiale della 9.4, gli esempi della documentazione REST e le risposte registrate da un server vero nei test del plugin Bitbucket di Jenkins; il riconoscimento, il login anonimo rifiutato e la pagina dei token sono verificati sul server dell'utente. Manca la prova con un account vero.
 
 - ✅ **Riconoscimento senza configurare nulla**: `…/scm/<progetto>/<repo>.git` (anche sotto un context path, `https://host/bitbucket/scm/…`) o SSH sulla porta 7999. Il percorso diventa `[context/]PROGETTO/repo`; i remoti dei fork si leggono allo stesso modo. Nelle preferenze, `host bitbucket` su un host diverso da bitbucket.org vuol dire Data Center.
 - ✅ **Login**: la credenziale di GCM (nome utente e password, o token) in Basic, poi da sola in Bearer; oppure un HTTP access token incollato, con il link alla pagina dei token del server. Chi è l'account lo dice l'header `X-AUSERNAME` delle risposte, o `/plugins/servlet/applinks/whoami`.
