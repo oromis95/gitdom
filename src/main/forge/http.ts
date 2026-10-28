@@ -70,13 +70,13 @@ function errorText(body: unknown): string | null {
 }
 
 /**
- * Sends a request and reads its JSON answer and status, turning statuses other than 2xx into a
- * ForgeError.
+ * Sends a request and reads its JSON answer, status and headers, turning statuses other than 2xx
+ * into a ForgeError.
  */
 export async function request(
   url: string,
   init: RequestInit = {}
-): Promise<{ status: number; body: unknown }> {
+): Promise<{ status: number; body: unknown; headers: Headers }> {
   const response = await send(url, init)
   const text = await response.text()
   let body: unknown = null
@@ -91,7 +91,7 @@ export async function request(
   if (response.ok) {
     if (body === null && text)
       throw new ForgeError('The service sent an unreadable answer', response.status)
-    return { status: response.status, body }
+    return { status: response.status, body, headers: response.headers }
   }
   const host = new URL(url).host
   const detail = errorText(body)

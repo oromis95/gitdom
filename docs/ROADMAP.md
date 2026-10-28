@@ -237,9 +237,9 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
 
 ---
 
-## Pull request — piano (Step 19–23)
+## Pull request — piano (Step 19–24)
 
-> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 pubblicato con la v1.13.0, Step 20 con la v1.14.0, Step 21 con la v1.15.0): pull request di GitHub, GitLab, Bitbucket e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
+> 📝 In corso, richiesto dall'utente il 2026-10-27 (Step 19 pubblicato con la v1.13.0, Step 20 con la v1.14.0, Step 21 con la v1.15.0, Step 22 completato e da pubblicare): pull request di GitHub, GitLab, Bitbucket (Cloud e Data Center) e Azure DevOps dentro GitDom (INT-01, INT-03, INT-05, SIDE-07, AUTH-06). L'idea non è copiare il sito del provider: le PR compaiono dove si lavora già, nel grafo, nella sidebar e nel diff. Si procede uno step alla volta, ognuno è una release.
 
 ### Decisioni comuni a tutti gli step
 
@@ -249,9 +249,10 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
   - `github.com`;
   - `gitlab.com`;
   - `bitbucket.org`;
-  - per Azure DevOps `dev.azure.com/<org>/<progetto>/_git/<repo>`, `<org>.visualstudio.com` e `ssh.dev.azure.com:v3/…`.
+  - per Azure DevOps `dev.azure.com/<org>/<progetto>/_git/<repo>`, `<org>.visualstudio.com` e `ssh.dev.azure.com:v3/…`;
+  - per Bitbucket Data Center, su qualsiasi host, `https://<server>/scm/<progetto>/<repo>.git` o SSH sulla porta 7999 (Step 22).
 
-  I server propri (GitHub Enterprise, GitLab self-managed, Azure DevOps Server) si aggiungono nelle preferenze, indicando host e tipo. Bitbucket Data Center ha API diverse da Bitbucket Cloud: resta fuori, si valuta dopo.
+  I server propri (GitHub Enterprise, GitLab self-managed, Bitbucket Data Center con altre porte SSH, Azure DevOps Server) si aggiungono nelle preferenze, indicando host e tipo; le preferenze vincono sul riconoscimento automatico.
 
 - Se c'è un remoto `upstream`, cioè la repository è un fork, le PR si leggono lì, e il branch sorgente sta su `origin`. Altrimenti si usa `origin`.
 - Il termine segue il provider: "Pull request" su GitHub, Bitbucket e Azure DevOps, "Merge request" su GitLab.
@@ -262,12 +263,14 @@ Operazioni che oggi richiedono il terminale o diversi passaggi, sempre con backu
    - con **GitHub** funziona: GCM chiede gli scope `repo`, `gist` e `workflow`;
    - con **Azure DevOps** funziona: GCM usa un token Entra ID oppure un PAT `vso.code_write`, che copre le PR;
    - con **GitLab** non basta: GCM chiede solo `read_repository` e `write_repository`, che non danno accesso alle API;
-   - con **Bitbucket** non basta: GCM chiede `repository:write` e `account`, ma non `pullrequest`.
+   - con **Bitbucket** non basta: GCM chiede `repository:write` e `account`, ma non `pullrequest`;
+   - con **Bitbucket Data Center** funziona: GCM tiene nome utente e password (o token), che le API accettano in Basic.
 2. **Device flow OAuth**: si inserisce un codice nella pagina del provider. È possibile su GitHub e su gitlab.com, ma serve un'app OAuth "GitDom" registrata su ciascuno, con un client ID pubblico incluso nell'app.
 3. **Token inserito a mano**:
    - GitHub: PAT;
    - GitLab: PAT con scope `api`;
    - Bitbucket: API token Atlassian con email e scope `read:pullrequest`/`write:pullrequest`, che sostituisce le app password;
+   - Bitbucket Data Center: HTTP access token con il permesso "Repository write";
    - Azure DevOps: PAT "Code: Read & Write".
 
    La finestra spiega quali permessi spuntare e apre la pagina giusta del provider.
@@ -282,14 +285,14 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
   - `detect.ts`: dal remoto al provider, al progetto e al repository;
   - `accounts.ts` (token cifrati), `credential.ts` (GCM) e `device.ts` (device flow);
   - `http.ts`: richieste, errori chiari (token rifiutato, permesso mancante, rate limit, rete);
-  - un modulo per provider, `github.ts` e `gitlab.ts`, poi `bitbucket.ts` e `azure.ts`, tutti con la stessa interfaccia `ForgeProvider` (`provider.ts`);
+  - un modulo per provider, `github.ts` e `gitlab.ts`, poi `bitbucket.ts`, `azure.ts` e `bitbucketServer.ts`, tutti con la stessa interfaccia `ForgeProvider` (`provider.ts`);
   - `service.ts`: account da usare, ultimo stato di ogni repository, fetch delle PR; `ipc.ts`.
 - Modello normalizzato in `src/shared/forge.ts`:
   - `PullRequest` con numero, titolo, autore, stato (bozza, aperta, merged, chiusa), branch sorgente e destinazione, repository sorgente, sha della testa, reviewer col loro voto, riassunto dei check, mergeability (pulita, conflitti, bloccata con il motivo), commenti e URL;
   - `capabilities` per provider, per esempio: label, auto-merge, "richiedi modifiche", metodi di merge permessi dal repository. L'interfaccia nasconde ciò che il provider non ha.
 - Chiamate:
   - per GitHub e GitLab, GraphQL per gli elenchi: PR, review, check e mergeability in una richiesta; le query sono validate sugli schemi ufficiali;
-  - REST per le azioni e per gli altri provider: Bitbucket 2.0, Azure DevOps `api-version=7.1`.
+  - REST per le azioni e per gli altri provider: Bitbucket 2.0, Azure DevOps `api-version=7.1`, Bitbucket Data Center 1.0.
 - **Aggiornamento**:
   - nella scheda attiva, ogni 60 s con la finestra in primo piano e ogni 5 minuti in background;
   - subito dopo push e fetch;
@@ -353,7 +356,7 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
   - commit status come CI: una chiamata per PR, tenuta finché l'ultimo commit non cambia e tutto è finito, per stare nei limiti di Bitbucket;
   - i conflitti si vedono nella vista della PR (diffstat), perché l'elenco non li dice;
   - login con API token ed email dell'account Atlassian (Basic), con un access token da solo (Bearer), o con il token di GCM: GitDom prova prima con il suo nome utente, poi senza;
-  - Bitbucket Data Center ha un'altra API: non è supportato.
+  - Bitbucket Data Center ha un'altra API: arriva con lo Step 22.
 - ✅ **Commit della PR senza ref dedicato**: GitDom scarica il branch sorgente dal remoto, da un altro remoto che punta al fork, dall'URL del fork che Azure DevOps dà, oppure dall'URL del remoto con il percorso del fork al posto di quello del repository.
 - ✅ In tutti e quattro i provider, le PR in bozza compaiono come bozze.
 
@@ -392,7 +395,24 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
 - ✅ **Pulizia dopo il merge**: GitDom propone di tornare sul branch di destinazione, aggiornarlo e cancellare il branch locale: una finestra con le due scelte, e il branch locale si cancella anche dopo uno squash, che git non vede come unito.
 - ✅ Chiudere e riaprire una PR.
 
-### Step 22 — v1.16: Review nell'app
+### Step 22 — v1.16: Bitbucket Data Center ✅
+
+> Completato, da pubblicare. Richiesto dall'utente il 2026-10-28: i suoi repository di lavoro stanno su un Bitbucket Data Center 9.4, dove la sezione Pull Requests non compariva. Le chiamate seguono lo schema OpenAPI ufficiale della 9.4, gli esempi della documentazione REST e le risposte registrate da un server vero nei test del plugin Bitbucket di Jenkins; il riconoscimento, il login anonimo rifiutato e la pagina dei token sono verificati sul server dell'utente. Manca la prova con un account vero.
+
+- ✅ **Riconoscimento senza configurare nulla**: `…/scm/<progetto>/<repo>.git` (anche sotto un context path, `https://host/bitbucket/scm/…`) o SSH sulla porta 7999. Il percorso diventa `[context/]PROGETTO/repo`; i remoti dei fork si leggono allo stesso modo. Nelle preferenze, `host bitbucket` su un host diverso da bitbucket.org vuol dire Data Center.
+- ✅ **Login**: la credenziale di GCM (nome utente e password, o token) in Basic, poi da sola in Bearer; oppure un HTTP access token incollato, con il link alla pagina dei token del server. Chi è l'account lo dice l'header `X-AUSERNAME` delle risposte, o `/plugins/servlet/applinks/whoami`.
+- ✅ **Lettura**:
+  - reviewer approvati, "needs work" e in attesa; vale anche chi approva senza essere reviewer;
+  - conflitti dall'elenco (`mergeResult`); nella vista, le merge check che bloccano (approvazioni, build, task) dicono perché;
+  - build status dell'ultimo commit come CI, una chiamata per PR tenuta finché nulla cambia;
+  - commenti con le risposte e la riga del diff; commit; avatar dal server, chiesti con il token.
+- ✅ **Scrittura**: ogni modifica rilegge la `version` della PR, che Bitbucket vuole aggiornata.
+  - Creazione con i default reviewer del repository, come la pagina di Bitbucket, senza l'autore.
+  - Modifica di titolo, descrizione e bozza, mantenendo i reviewer; reviewer nuovi come partecipanti.
+  - Chiusura e riapertura.
+  - Merge con le strategie attive del repository, rifiutato se nel frattempo è arrivato un commit; auto-merge se il repository lo permette; il branch sorgente si cancella solo se è ancora all'ultimo commit visto.
+
+### Step 23 — v1.17: Review nell'app
 
 - **Commenti sul diff**:
   - un clic sul margine di una riga, o un trascinamento per più righe, apre un commento;
@@ -405,7 +425,7 @@ Nelle preferenze, una sezione **Accounts** elenca gli account collegati, con ava
 - Suggerimenti di modifica (GitHub e GitLab), mostrati come mini-diff e applicabili con un clic.
 - Scorciatoie: `N`/`P` per il file successivo o precedente, `C` per commentare, `V` per segnare come visto.
 
-### Step 23 — v1.17: Notifiche e dashboard
+### Step 24 — v1.18: Notifiche e dashboard
 
 - **Notifiche**: confrontando un aggiornamento con il precedente, GitDom mostra toast come "CI fallita su #42", "Mario ha approvato #42", "Review richiesta su !17", "#42 ha conflitti", e un contatore sulla sezione della sidebar. Si possono disattivare per tipo.
 - **Dashboard personale** (INT-05): una vista con le PR di tutti i repository preferiti e del workspace:

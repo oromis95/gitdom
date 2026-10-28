@@ -30,7 +30,7 @@ async function toResult<T>(work: () => Promise<T>): Promise<Result<T>> {
   }
 }
 
-const KINDS = new Set<ForgeKind>(['github', 'gitlab', 'bitbucket', 'azure'])
+const KINDS = new Set<ForgeKind>(['github', 'gitlab', 'bitbucket', 'bitbucketServer', 'azure'])
 const kindOf = (kind: unknown): ForgeKind => {
   if (!KINDS.has(kind as ForgeKind)) throw new Error(`Unknown service: ${String(kind)}`)
   return kind as ForgeKind

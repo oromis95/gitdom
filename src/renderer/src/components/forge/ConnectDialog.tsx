@@ -12,6 +12,7 @@ const SCOPES: Record<ForgeKind, string> = {
   github: 'repo and read:org',
   gitlab: 'api',
   bitbucket: 'pull request, repository and account (read and write)',
+  bitbucketServer: 'Repository write',
   azure: 'Code: Read & write'
 }
 

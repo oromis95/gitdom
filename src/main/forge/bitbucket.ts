@@ -1,6 +1,6 @@
 // Bitbucket Cloud, through its REST API 2.0. The list brings the pull requests with their
 // reviewers; checks need a request per pull request, kept while nothing changes (PerPullCache).
-// Bitbucket Data Center has another API and isn't supported.
+// Bitbucket Data Center has another API: bitbucketServer.ts.
 import type {
   Candidate,
   CheckState,
@@ -87,8 +87,7 @@ export const bitbucketUser = (account: Account | null): ForgeUser =>
     : GHOST
 
 async function api(ctx: ProviderContext, path: string, init?: RequestInit): Promise<unknown> {
-  if (ctx.host !== 'bitbucket.org')
-    throw new Error(`${ctx.host}: Bitbucket Data Center isn't supported yet`)
+  if (ctx.host !== 'bitbucket.org') throw new Error(`${ctx.host} isn't Bitbucket Cloud`)
   return requestJson(`${API}${path}`, {
     ...init,
     headers: {

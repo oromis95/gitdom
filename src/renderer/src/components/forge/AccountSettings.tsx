@@ -82,8 +82,10 @@ export default function AccountSettings(): React.JSX.Element {
         label="Servers of your own"
         hint={
           <>
-            GitHub Enterprise or self-managed GitLab: a host and its kind per line, e.g.{' '}
-            <span className="mono">git.example.com gitlab</span>
+            GitHub Enterprise, self-managed GitLab, Bitbucket Data Center or Azure DevOps Server: a
+            host and its kind (github, gitlab, bitbucket, azure) per line, e.g.{' '}
+            <span className="mono">git.example.com gitlab</span>. Bitbucket Data Center is found by
+            itself from its /scm/ addresses
           </>
         }
       >

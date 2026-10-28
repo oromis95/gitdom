@@ -7,6 +7,7 @@ import type { PullRequest } from '../../shared/forge'
 import { AccountStore, type Cipher } from './accounts'
 import { azure } from './azure'
 import { bitbucket, bitbucketMethods } from './bitbucket'
+import { bitbucketServer, bitbucketServerMethods } from './bitbucketServer'
 import { github } from './github'
 import { draftTitle, gitlab } from './gitlab'
 import { setFetcher } from './http'
@@ -306,6 +307,232 @@ describe('Bitbucket changes', () => {
     await expect(bitbucket.update(bb, 'team/app', pull(), { state: 'open' })).rejects.toThrow(
       "can't reopen"
     )
+  })
+})
+
+describe('Bitbucket Data Center changes', () => {
+  const dc = { host: 'git.example.com', token: 'tok' }
+  const api = 'https://git.example.com/rest/api/1.0/projects/ABC/repos/app'
+  const user = (name: string): Record<string, unknown> => ({ name, displayName: name })
+  const node = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    id: 7,
+    version: 5,
+    title: 'Add login',
+    description: 'Body',
+    state: 'OPEN',
+    fromRef: { id: 'refs/heads/feature/login', latestCommit: 'f'.repeat(40) },
+    reviewers: [{ user: user('bob'), role: 'REVIEWER', status: 'APPROVED' }],
+    ...overrides
+  })
+  const asked = (sent: { method: string; url: string }[]): string[] =>
+    sent.map((s) => `${s.method} ${s.url.replace('https://git.example.com/rest/', '')}`)
+
+  it('maps the strategies the repository allows, its default first', () => {
+    const methods = bitbucketServerMethods({
+      defaultStrategy: { id: 'squash' },
+      strategies: [
+        { id: 'no-ff', enabled: true },
+        { id: 'ff', enabled: true },
+        { id: 'ff-only', enabled: false },
+        { id: 'rebase-no-ff', enabled: true },
+        { id: 'squash', enabled: true }
+      ]
+    })
+    expect([...methods.entries()]).toEqual([
+      ['squash', 'squash'],
+      ['merge', 'no-ff'],
+      ['rebaseMerge', 'rebase-no-ff']
+    ])
+    expect([...bitbucketServerMethods(undefined).keys()]).toEqual(['merge'])
+  })
+
+  it('reads the default branch, the strategies and whether auto-merge is on', async () => {
+    recorder((url) =>
+      url.endsWith('/default-branch')
+        ? new Response('{"errors":[{"message":"Not found"}]}', { status: 404 })
+        : url.endsWith('/branches/default')
+          ? { id: 'refs/heads/develop', displayId: 'develop' }
+          : url.endsWith('/auto-merge')
+            ? { enabled: true }
+            : {
+                mergeConfig: { defaultStrategy: { id: 'ff-only' }, strategies: [{ id: 'ff-only' }] }
+              }
+    )
+    expect(await bitbucketServer.info(dc, 'ABC/app')).toEqual({
+      defaultBranch: 'develop',
+      methods: ['fastForward'],
+      deleteBranch: false,
+      autoMerge: true,
+      labels: false,
+      reopen: true
+    })
+  })
+
+  it("opens a fork's pull request with the default reviewers, never the author", async () => {
+    const sent = recorder((url, method) => {
+      if (url.endsWith('/projects/ABC/repos/app')) return { id: 1 }
+      if (url.endsWith('/projects/~ANN/repos/app')) return { id: 12 }
+      if (url.includes('/default-reviewers/'))
+        return [user('cy'), { reviewers: [user('ann'), user('bob')] }]
+      if (url.includes('/users?limit=1'))
+        return new Response('{"values":[]}', { headers: { 'X-AUSERNAME': 'ann' } })
+      if (method === 'POST')
+        return {
+          id: 9,
+          links: {
+            self: [{ href: 'https://git.example.com/projects/ABC/repos/app/pull-requests/9' }]
+          }
+        }
+      return {}
+    })
+    const created = await bitbucketServer.create(dc, 'ABC/app', {
+      ...newPull,
+      sourceRepo: '~ANN/app',
+      sourceBranch: 'feature/login'
+    })
+    expect(created).toEqual({
+      number: 9,
+      url: 'https://git.example.com/projects/ABC/repos/app/pull-requests/9'
+    })
+    const reviewersAsked = sent.find((s) => s.url.includes('/default-reviewers/'))!.url
+    expect(new URL(reviewersAsked).searchParams.toString()).toBe(
+      'sourceRepoId=12&targetRepoId=1&sourceRefId=refs%2Fheads%2Ffeature%2Flogin&targetRefId=refs%2Fheads%2Fmain'
+    )
+    const post = sent.find((s) => s.method === 'POST')!
+    expect(post.url).toBe(`${api}/pull-requests`)
+    expect(post.body).toEqual({
+      title: 'Add login',
+      description: 'Body',
+      fromRef: {
+        id: 'refs/heads/feature/login',
+        repository: { slug: 'app', project: { key: '~ANN' } }
+      },
+      toRef: { id: 'refs/heads/main', repository: { slug: 'app', project: { key: 'ABC' } } },
+      reviewers: [{ user: { name: 'bob' } }, { user: { name: 'cy' } }],
+      draft: true
+    })
+  })
+
+  it('opens it all the same when the default reviewers cannot be read', async () => {
+    const sent = recorder((_url, method) =>
+      method === 'POST' ? { id: 3 } : new Response('{}', { status: 500 })
+    )
+    const created = await bitbucketServer.create(dc, 'ABC/app', {
+      ...newPull,
+      draft: false,
+      reviewers: [],
+      sourceRepo: 'ABC/app',
+      sourceBranch: 'fix'
+    })
+    expect(created.url).toBe('https://git.example.com/projects/ABC/repos/app/pull-requests/3')
+    const post = sent.find((s) => s.method === 'POST')!
+    expect(post.body).toMatchObject({ reviewers: [] })
+    expect(post.body).not.toHaveProperty('draft')
+  })
+
+  it('sends the current version, keeps the reviewers, and adds new ones as participants', async () => {
+    const sent = recorder((_url, method) => (method === 'GET' ? node() : {}))
+    await bitbucketServer.update(dc, 'ABC/app', pull(), { title: 'Better title', draft: true })
+    expect(sent[1]).toMatchObject({
+      method: 'PUT',
+      url: `${api}/pull-requests/7`,
+      body: {
+        version: 5,
+        title: 'Better title',
+        description: 'Body',
+        reviewers: [{ user: { name: 'bob' } }],
+        draft: true
+      }
+    })
+    sent.length = 0
+    await bitbucketServer.update(dc, 'ABC/app', pull(), {
+      reviewers: [{ id: 'cy', user: { login: 'cy', name: null, avatarUrl: null } }]
+    })
+    expect(sent).toMatchObject([
+      {
+        method: 'POST',
+        url: `${api}/pull-requests/7/participants`,
+        body: { user: { name: 'cy' }, role: 'REVIEWER' }
+      }
+    ])
+    expect(sent[0].auth).toBe('Bearer tok')
+  })
+
+  it('declines and reopens with the version', async () => {
+    const sent = recorder((_url, method) => (method === 'GET' ? node() : {}))
+    await bitbucketServer.update(dc, 'ABC/app', pull(), { state: 'closed' })
+    await bitbucketServer.update(dc, 'ABC/app', pull(), { state: 'open' })
+    expect(asked(sent)).toEqual([
+      'GET api/1.0/projects/ABC/repos/app/pull-requests/7',
+      'POST api/1.0/projects/ABC/repos/app/pull-requests/7/decline?version=5',
+      'GET api/1.0/projects/ABC/repos/app/pull-requests/7',
+      'POST api/1.0/projects/ABC/repos/app/pull-requests/7/reopen?version=5'
+    ])
+    expect(sent[1].body).toEqual({ version: 5 })
+  })
+
+  it('merges what was reviewed with its strategy, then deletes its own branch', async () => {
+    const sent = recorder((url, method) => {
+      if (url.endsWith('/settings/pull-requests'))
+        return { mergeConfig: { strategies: [{ id: 'no-ff' }, { id: 'squash' }] } }
+      if (method === 'POST') return node({ state: 'MERGED' })
+      if (method === 'DELETE') return new Response(null, { status: 204 })
+      return node()
+    })
+    const options = {
+      method: 'squash' as const,
+      message: 'Squashed',
+      deleteBranch: true,
+      auto: false
+    }
+    expect(
+      await bitbucketServer.merge(dc, 'ABC/app', pull({ sourceRepo: 'ABC/app' }), options)
+    ).toBe('merged')
+    const merge = sent.find((s) => s.method === 'POST')!
+    expect(merge.url).toBe(`${api}/pull-requests/7/merge?version=5`)
+    expect(merge.body).toEqual({ version: 5, strategyId: 'squash', message: 'Squashed' })
+    expect(sent.find((s) => s.method === 'DELETE')).toMatchObject({
+      url: 'https://git.example.com/rest/branch-utils/1.0/projects/ABC/repos/app/branches',
+      body: { name: 'refs/heads/feature/login', endPoint: 'f'.repeat(40) }
+    })
+
+    // A fork's branch belongs to its owner
+    sent.length = 0
+    await bitbucketServer.merge(dc, 'ABC/app', pull({ sourceRepo: '~ANN/app' }), options)
+    expect(sent.some((s) => s.method === 'DELETE')).toBe(false)
+  })
+
+  it('merges by itself when asked, and refuses once new commits came', async () => {
+    const sent = recorder((_url, method) => node(method === 'POST' ? { state: 'OPEN' } : {}))
+    const options = { method: 'merge' as const, message: '', deleteBranch: true, auto: true }
+    expect(await bitbucketServer.merge(dc, 'ABC/app', pull(), options)).toBe('auto')
+    expect(sent.find((s) => s.method === 'POST')!.body).toEqual({ version: 5, autoMerge: true })
+    expect(sent.some((s) => s.method === 'DELETE')).toBe(false)
+    sent.length = 0
+    await expect(
+      bitbucketServer.merge(dc, 'ABC/app', pull({ headSha: 'e'.repeat(40) }), options)
+    ).rejects.toThrow('new commits')
+    expect(sent.some((s) => s.method === 'POST')).toBe(false)
+  })
+
+  it('searches the people who can read the repository', async () => {
+    const sent = recorder(() => ({
+      values: [
+        { name: 'bob', displayName: 'Bob', active: true },
+        { name: 'old', displayName: 'Gone', active: false }
+      ]
+    }))
+    const found = await bitbucketServer.candidates(dc, 'ABC/app', ' bo ')
+    expect(found).toEqual([{ id: 'bob', user: { login: 'bob', name: 'Bob', avatarUrl: null } }])
+    const params = new URL(sent[0].url).searchParams
+    expect(Object.fromEntries(params)).toEqual({
+      'permission.1': 'REPO_READ',
+      'permission.1.projectKey': 'ABC',
+      'permission.1.repositorySlug': 'app',
+      avatarSize: '64',
+      limit: '20',
+      filter: 'bo'
+    })
   })
 })
 

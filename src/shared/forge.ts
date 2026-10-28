@@ -1,12 +1,14 @@
 // Pull requests of the services hosting a repository (INT-01, INT-03, SIDE-07): GitHub, GitLab,
-// Bitbucket and Azure DevOps, read in the main process and shown in a shape common to them all.
+// Bitbucket (Cloud and Data Center) and Azure DevOps, read in the main process and shown in a shape
+// common to them all.
 
-export type ForgeKind = 'github' | 'gitlab' | 'bitbucket' | 'azure'
+export type ForgeKind = 'github' | 'gitlab' | 'bitbucket' | 'bitbucketServer' | 'azure'
 
 export const FORGE_NAMES: Record<ForgeKind, string> = {
   github: 'GitHub',
   gitlab: 'GitLab',
   bitbucket: 'Bitbucket',
+  bitbucketServer: 'Bitbucket Data Center',
   azure: 'Azure DevOps'
 }
 
@@ -15,13 +17,17 @@ export const PULL_NOUN: Record<ForgeKind, { name: string; short: string; prefix:
   github: { name: 'pull request', short: 'PR', prefix: '#' },
   gitlab: { name: 'merge request', short: 'MR', prefix: '!' },
   bitbucket: { name: 'pull request', short: 'PR', prefix: '#' },
+  bitbucketServer: { name: 'pull request', short: 'PR', prefix: '#' },
   azure: { name: 'pull request', short: 'PR', prefix: '!' }
 }
 
 /** The services' own hosts: a server of one's own is named by its host too */
 export const PUBLIC_HOSTS = new Set(['github.com', 'gitlab.com', 'bitbucket.org', 'dev.azure.com'])
 
-/** A server of the user's own (GitHub Enterprise, GitLab self-managed), set in the preferences. */
+/**
+ * A server of the user's own (GitHub Enterprise, GitLab self-managed, Bitbucket Data Center, Azure
+ * DevOps Server), set in the preferences.
+ */
 export interface ForgeHost {
   host: string
   kind: ForgeKind
@@ -272,17 +278,34 @@ export interface PullRange {
 /** Compares repository paths on a service, which treats them case-insensitively. */
 export const sameRepoPath = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase()
 
-/** "git.example.com gitlab" lines, as written in the preferences; unknown lines are skipped. */
+/**
+ * "git.example.com gitlab" lines, as written in the preferences; unknown lines are skipped. Bitbucket
+ * on a server of one's own is Bitbucket Data Center: Bitbucket Cloud is only bitbucket.org.
+ */
 export function parseForgeHosts(text: string): ForgeHost[] {
   const hosts: ForgeHost[] = []
+  const kinds = new Map(Object.keys(FORGE_NAMES).map((k) => [k.toLowerCase(), k as ForgeKind]))
   for (const line of text.split(/\r?\n/)) {
-    const [host, kind] = line.trim().split(/\s+/)
+    const [host, word] = line.trim().split(/\s+/)
     const name = host
       ?.toLowerCase()
       .replace(/^https?:\/\//, '')
       .replace(/\/.*$/, '')
-    if (name && kind && kind.toLowerCase() in FORGE_NAMES)
-      hosts.push({ host: name, kind: kind.toLowerCase() as ForgeKind })
+    let kind = word ? kinds.get(word.toLowerCase()) : undefined
+    if (kind === 'bitbucket' && name !== 'bitbucket.org') kind = 'bitbucketServer'
+    if (name && kind) hosts.push({ host: name, kind })
   }
   return hosts
+}
+
+/**
+ * Who a fork is of, as a remote can be named after them: the owner on GitHub, GitLab and Bitbucket,
+ * the project on Azure DevOps, the project's key on Bitbucket Data Center (a personal one, ~USER,
+ * without its tilde, which git refuses in a remote's name).
+ */
+export function forkOwner(kind: ForgeKind, path: string): string {
+  const segments = path.split('/')
+  if (kind === 'azure') return segments.at(-2) ?? path
+  if (kind === 'bitbucketServer') return (segments.at(-2) ?? path).replace(/^~/, '').toLowerCase()
+  return segments[0]
 }

@@ -361,3 +361,231 @@ describe('pull requests of Bitbucket', () => {
     await win.keyboard.press('Escape')
   })
 })
+
+// Bitbucket Data Center at 127.0.0.1, project "abc", repository "widgets", told by its /scm/ address
+describe('pull requests of Bitbucket Data Center', () => {
+  let dir: string
+  let profile: string
+  let server: Server
+  let gitdom: Running
+  const avatarAuth: string[] = []
+  const posted: { url: string; body: Record<string, unknown> }[] = []
+
+  const person = (name: string): Record<string, unknown> => ({
+    name: name.toLowerCase(),
+    displayName: name,
+    slug: name.toLowerCase(),
+    active: true,
+    avatarUrl: `/users/${name.toLowerCase()}/avatar.png?s=64`
+  })
+
+  beforeAll(async () => {
+    dir = scratch('bitbucket-server')
+    const served = join(dir, 'served')
+    const { repo, head } = repoWithBranch(dir, join(served, 'scm', 'abc', 'widgets.git'))
+    // The branch a new pull request comes from, already pushed
+    git(repo, 'checkout', '-q', '-b', 'feature/cart')
+    commitFile(repo, 'cart.js', 'export const cart = []\n', 'Add the cart')
+    const cart = git(repo, 'rev-parse', 'HEAD')
+    git(repo, 'push', '-q', join(served, 'scm', 'abc', 'widgets.git'), 'feature/cart')
+
+    const repoApi = '/127.0.0.1/rest/api/1.0/projects/ABC/repos/widgets'
+    const ref = (branch: string, commit: string): Record<string, unknown> => ({
+      id: `refs/heads/${branch}`,
+      displayId: branch,
+      latestCommit: commit,
+      repository: { slug: 'widgets', project: { key: 'ABC' } }
+    })
+    const pulls = [
+      {
+        id: 5,
+        version: 1,
+        title: 'Log in with a password',
+        description: 'Adds **the login**',
+        state: 'OPEN',
+        createdDate: 1790000000000,
+        updatedDate: 1790000600000,
+        fromRef: ref('feature/login', head),
+        toRef: ref('main', head),
+        author: { user: person('Bob'), role: 'AUTHOR', status: 'UNAPPROVED' },
+        reviewers: [{ user: person('Ann'), role: 'REVIEWER', status: 'UNAPPROVED' }],
+        participants: [],
+        properties: { mergeResult: { outcome: 'CLEAN' }, commentCount: 1 },
+        links: { self: [{ href: 'https://127.0.0.1/projects/ABC/repos/widgets/pull-requests/5' }] }
+      }
+    ]
+    const reply = (res: ServerResponse, body: unknown, headers = {}): true => {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-AUSERNAME': 'ann', ...headers })
+      res.end(JSON.stringify(body))
+      return true
+    }
+    ;({ server } = await fakeService(served, (url, req, res) => {
+      if (url.startsWith('/127.0.0.1/users/')) {
+        avatarAuth.push(String(req.headers.authorization))
+        res.writeHead(200, { 'Content-Type': 'image/png' })
+        res.end(AVATAR)
+        return true
+      }
+      if (!url.startsWith('/127.0.0.1/rest/')) return false
+      // Git Credential Manager's username and password, as a Data Center keeps them
+      if (req.headers.authorization !== `Basic ${Buffer.from('git:gcm-token').toString('base64')}`)
+        return send(res, { errors: [{ message: 'Authentication failed' }] }, 401)
+      if (req.method === 'POST') {
+        let raw = ''
+        req.on('data', (chunk: Buffer) => (raw += chunk.toString()))
+        req.on('end', () => {
+          const body = JSON.parse(raw) as Record<string, unknown>
+          posted.push({ url, body })
+          const created = {
+            ...pulls[0],
+            id: 6,
+            title: String(body.title),
+            fromRef: ref('feature/cart', cart)
+          }
+          pulls.push(created)
+          reply(res, { ...created, reviewers: body.reviewers })
+        })
+        return true
+      }
+      if (url.startsWith('/127.0.0.1/rest/api/1.0/users?')) {
+        if (url.includes('permission.1=REPO_READ'))
+          return reply(res, { values: [person('Bob'), person('Cy')] })
+        return reply(res, { values: url.includes('filter=ann') ? [person('Ann')] : [] })
+      }
+      if (url.startsWith('/127.0.0.1/rest/build-status/1.0/commits/'))
+        return reply(res, {
+          values: [{ key: 'ci', name: 'Jenkins', state: 'FAILED', url: 'https://127.0.0.1/ci/1' }]
+        })
+      if (url.startsWith('/127.0.0.1/rest/default-reviewers/')) return reply(res, [person('Cy')])
+      if (url.startsWith(`${repoApi}/pull-requests?`)) return reply(res, { values: pulls })
+      if (url.startsWith(`${repoApi}/default-branch`)) return reply(res, { displayId: 'main' })
+      if (url.startsWith(`${repoApi}/settings/pull-requests`))
+        return reply(res, {
+          mergeConfig: { defaultStrategy: { id: 'no-ff' }, strategies: [{ id: 'no-ff' }] }
+        })
+      if (url.startsWith(`${repoApi}/settings/auto-merge`)) return reply(res, { enabled: false })
+      const one = /\/pull-requests\/(\d+)(\/[a-z]+)?/.exec(url)
+      if (one?.[2] === '/activities')
+        return reply(res, {
+          values: [
+            {
+              action: 'COMMENTED',
+              commentAction: 'ADDED',
+              comment: {
+                id: 1,
+                text: 'Use a **constant**',
+                author: person('Ann'),
+                createdDate: 1790000300000,
+                comments: []
+              },
+              commentAnchor: { path: 'login.js', line: 1 }
+            }
+          ]
+        })
+      if (one?.[2] === '/commits') return reply(res, { values: [{ id: head }] })
+      if (one?.[2] === '/merge')
+        return reply(res, {
+          canMerge: false,
+          conflicted: false,
+          outcome: 'CLEAN',
+          vetoes: [{ summaryMessage: 'Requires 2 approvals' }]
+        })
+      if (one) return reply(res, pulls.find((p) => p.id === Number(one[1])) ?? pulls[0])
+      if (url === repoApi) return reply(res, { id: 1, slug: 'widgets' })
+      return send(res, { errors: [{ message: `Unexpected ${url}` }] }, 404)
+    }))
+    const { port } = server.address() as AddressInfo
+    git(repo, 'remote', 'add', 'origin', `http://127.0.0.1:${port}/scm/abc/widgets.git`)
+    git(
+      repo,
+      'fetch',
+      '-q',
+      join(served, 'scm', 'abc', 'widgets.git'),
+      'feature/cart:refs/remotes/origin/feature/cart'
+    )
+    git(repo, 'branch', '-q', '--set-upstream-to=origin/feature/cart', 'feature/cart')
+    profile = profileWith(repo, '')
+    gitdom = await launch([repo], {
+      profile,
+      env: {
+        GITDOM_FORGE_MOCK: `http://127.0.0.1:${port}`,
+        GITDOM_FORGE_MOCK_GCM_TOKEN: 'gcm-token',
+        NO_PROXY: '127.0.0.1',
+        no_proxy: '127.0.0.1'
+      }
+    })
+  })
+
+  afterEach(() => expect(gitdom.errors).toEqual([]))
+
+  afterAll(async () => {
+    await gitdom?.close()
+    await new Promise((done) => server?.close(done))
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+    cleanUp(profile)
+  })
+
+  it("connects with Git Credential Manager's username and password", async () => {
+    const { win } = gitdom
+    await win
+      .locator('.pull-connect:has-text("Connect to Bitbucket Data Center (127.0.0.1)")')
+      .click()
+    await win.locator('.toast:has-text("Connected to Bitbucket Data Center as ann")').waitFor()
+    const row = win.locator('.pull-row:has-text("Log in with a password")')
+    await row.waitFor()
+    await expect(row.innerText()).resolves.toContain('#5')
+    const groups = await win.locator('.pull-group').allInnerTexts()
+    expect(groups.map((g) => g.split('\n')[0].trim())).toEqual(['REVIEW REQUESTED'])
+  })
+
+  it('shows the merge checks that veto it, the conversation, the build and the changes', async () => {
+    const { win } = gitdom
+    const badge = win.locator('.ref-pill:has-text("origin/feature/login") .pull-badge')
+    await expect(badge.innerText()).resolves.toBe('#5')
+    await badge.click()
+    const view = win.locator('.pull-view')
+    await view.locator('.pull-description:has-text("Adds the login")').waitFor()
+    await view.locator('.pull-merge:has-text("Requires 2 approvals")').waitFor()
+    await view.locator('.pull-check:has-text("Jenkins")').waitFor()
+    await view.locator('.pull-comment:has-text("Use a constant")').waitFor()
+    await expect(view.locator('.pull-comment').innerText()).resolves.toContain('login.js:1')
+    await win.locator('.detail-title:has-text("Changes of #5")').waitFor()
+    await win.locator('.detail .file-row:has-text("login.js")').waitFor()
+    // The pictures are on the server, behind the login
+    expect(avatarAuth.length).toBeGreaterThan(0)
+    expect(avatarAuth.every((a) => a.startsWith('Basic '))).toBe(true)
+    await win.keyboard.press('Escape')
+  })
+
+  it('opens a pull request with a reviewer and the default reviewers', async () => {
+    const { win } = gitdom
+    await win
+      .locator('.section-header:has-text("Pull Requests") .section-add[title="New pull request"]')
+      .click()
+    const dialog = win.locator('.create-pull')
+    await dialog
+      .locator('.modal-title:has-text("New pull request on Bitbucket Data Center")')
+      .waitFor()
+    await dialog.locator('.create-commit:has-text("Add the cart")').waitFor()
+    await expect(dialog.locator('input').first().inputValue()).resolves.toBe('Add the cart')
+    // Data Center has no labels
+    await expect(dialog.locator('.create-labels').count()).resolves.toBe(0)
+    await dialog.locator('.reviewer-chips input').fill('bo')
+    await dialog.locator('.reviewer-result:has-text("bob")').click()
+    await dialog.locator('button[type=submit]:has-text("Open pull request")').click()
+    await win.locator('.pull-view .pull-title:has-text("Add the cart")').waitFor()
+    expect(posted).toHaveLength(1)
+    expect(posted[0].url).toBe('/127.0.0.1/rest/api/1.0/projects/ABC/repos/widgets/pull-requests')
+    expect(posted[0].body).toEqual({
+      title: 'Add the cart',
+      description: '',
+      fromRef: {
+        id: 'refs/heads/feature/cart',
+        repository: { slug: 'widgets', project: { key: 'ABC' } }
+      },
+      toRef: { id: 'refs/heads/main', repository: { slug: 'widgets', project: { key: 'ABC' } } },
+      reviewers: [{ user: { name: 'bob' } }, { user: { name: 'cy' } }]
+    })
+    await win.keyboard.press('Escape')
+  })
+})

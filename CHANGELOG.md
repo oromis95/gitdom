@@ -2,6 +2,15 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Added
+
+- Pull requests of Bitbucket Data Center (once Bitbucket Server), like the other services': in the sidebar, on the branches of the graph and in their own view, with their changes in GitDom's diff; create, merge, close and reopen them, ask for reviews, mark them as drafts, check them out, also from forks
+- The repository is recognized by its address (`https://<server>/scm/<project>/<repository>.git`, or SSH on port 7999), with nothing to set; **Connect** uses the username and password (or token) Git Credential Manager keeps for the server, or an HTTP access token you paste
+- The merge checks that keep a pull request from being merged (approvals, builds, tasks) say why in its view; merging offers the strategies the repository allows, and merging by itself where auto-merge is on
+- A new pull request gets the repository's default reviewers too, as on Bitbucket's own page
+
 ## 1.15.1 — 2026-10-28
 
 ### Changed

@@ -3,6 +3,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import {
+  PULL_NOUN,
+  forkOwner,
   sameRepoPath,
   type Candidate,
   type DeviceLogin,
@@ -28,6 +30,7 @@ import { inAction } from '../git/activity'
 import type { AccountStore, Secret } from './accounts'
 import { azure, azureGitPath, azureParts } from './azure'
 import { bitbucket } from './bitbucket'
+import { bitbucketServer, serverParts } from './bitbucketServer'
 import { credentialFill, type Credential } from './credential'
 import { detectForge, remotesOn } from './detect'
 import {
@@ -43,13 +46,24 @@ import { gitlab } from './gitlab'
 import { ForgeError, send } from './http'
 import type { Created, ForgeProvider, ProviderContext } from './provider'
 
-const PROVIDERS: Record<ForgeKind, ForgeProvider> = { github, gitlab, bitbucket, azure }
+const PROVIDERS: Record<ForgeKind, ForgeProvider> = {
+  github,
+  gitlab,
+  bitbucket,
+  bitbucketServer,
+  azure
+}
 
 /** Where a token for API access is created, with the permissions GitDom needs. */
 export function tokenPage(kind: ForgeKind, host: string, repoPath: string): string {
   if (kind === 'gitlab')
     return `https://${host}/-/user_settings/personal_access_tokens?name=GitDom&scopes=api`
   if (kind === 'bitbucket') return 'https://id.atlassian.com/manage-profile/security/api-tokens'
+  if (kind === 'bitbucketServer') {
+    const context = repoPath ? serverParts(repoPath).context : []
+    const root = [host, ...context.map(encodeURIComponent)].join('/')
+    return `https://${root}/plugins/servlet/access-tokens/manage`
+  }
   if (kind === 'azure') {
     const { collection } = azureParts(repoPath)
     return `https://${host}/${collection.map(encodeURIComponent).join('/')}/_usersSettings/tokens`
@@ -85,6 +99,7 @@ const TEMPLATES: Record<ForgeKind, string[]> = {
   ],
   gitlab: ['.gitlab/merge_request_templates/default.md', '.gitlab/merge_request_templates/'],
   bitbucket: [],
+  bitbucketServer: [],
   azure: [
     '.azuredevops/pull_request_template.md',
     '.vsts/pull_request_template.md',
@@ -345,7 +360,7 @@ export class ForgeService {
    */
   async checkoutSource(repoPath: string, number: number): Promise<PullSource> {
     const { status, pull } = this.pull(repoPath, number)
-    const owner = pull.sourceRepo.split('/')[status.repo.kind === 'azure' ? 1 : 0]
+    const owner = forkOwner(status.repo.kind, pull.sourceRepo)
     const remote = sameRepoPath(pull.sourceRepo, status.repo.path)
       ? status.repo.remote
       : Object.entries(status.remotes).find(([, path]) => sameRepoPath(path, pull.sourceRepo))?.[0]
@@ -416,8 +431,7 @@ export class ForgeService {
       runGit(repoPath, ['fetch', '--no-tags', '--no-write-fetch-head', from, ...refspecs], {
         withStderr: true
       })
-    const prefix = repo.kind === 'gitlab' || repo.kind === 'azure' ? '!' : '#'
-    return inAction(`Fetch ${prefix}${number}`, async () => {
+    return inAction(`Fetch ${PULL_NOUN[repo.kind].prefix}${number}`, async () => {
       const target = `+refs/heads/${pull.targetBranch}:${base}`
       if (source.from === repo.remote) await fetch(repo.remote, `+${source.ref}:${head}`, target)
       else {
@@ -454,9 +468,10 @@ export class ForgeService {
   ): Promise<ForgeAccount | null> {
     const credential = await this.fill(host, credentialPath(kind, repoPath))
     if (!credential) return null
-    // Bitbucket takes an app password with its username, an OAuth token alone
+    // Bitbucket takes an app password (on Data Center, a password or a token) with its username,
+    // an OAuth token alone
     const tries: Secret[] =
-      kind === 'bitbucket' && credential.username
+      (kind === 'bitbucket' || kind === 'bitbucketServer') && credential.username
         ? [
             { token: credential.password, username: credential.username },
             { token: credential.password }

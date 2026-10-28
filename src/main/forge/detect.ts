@@ -75,13 +75,44 @@ export function forgeKind(host: string, custom: ForgeHost[]): ForgeKind | null {
   return custom.find((h) => h.host === host)?.kind ?? null
 }
 
+// Bitbucket Data Center's addresses: https://host[/context]/scm/KEY/slug.git, and ssh on its port
+const SERVER_HTTP = /^(?:(.+)\/)?scm\/([^/]+\/[^/]+)$/
+const SERVER_SSH = /^ssh:\/\/[^/]*:7999\//i
+
+/** A Bitbucket Data Center repository's path, without the scm of its address: [context/]KEY/slug. */
+export function serverPath(path: string): string {
+  const match = SERVER_HTTP.exec(path)
+  if (!match) return path
+  return match[1] ? `${match[1]}/${match[2]}` : match[2]
+}
+
+/**
+ * The service a remote is on: a well-known host, a server listed in the preferences, or else a
+ * Bitbucket Data Center told by its addresses.
+ */
+function locate(url: string, custom: ForgeHost[]): (RemoteLocation & { kind: ForgeKind }) | null {
+  const location = parseRemoteUrl(url)
+  if (!location) return null
+  const looksLikeServer =
+    SERVER_HTTP.test(location.path) ||
+    (SERVER_SSH.test(url.trim()) && location.path.split('/').length === 2)
+  const kind = forgeKind(location.host, custom) ?? (looksLikeServer ? 'bitbucketServer' : null)
+  if (!kind) return null
+  const path = kind === 'bitbucketServer' ? serverPath(location.path) : location.path
+  return { kind, host: location.host, path }
+}
+
 function webUrl(kind: ForgeKind, location: RemoteLocation): string {
-  if (kind === 'azure') {
+  if (kind === 'azure' || kind === 'bitbucketServer') {
     // The last two segments are the project and the repository, the rest the organization or
-    // the server's collection
+    // the server's collection on Azure DevOps, the server's context path on Bitbucket
     const segments = location.path.split('/').map(encodeURIComponent)
     const repo = segments.pop()
-    return `https://${location.host}/${segments.join('/')}/_git/${repo}`
+    if (kind === 'azure') return `https://${location.host}/${segments.join('/')}/_git/${repo}`
+    // Project keys are upper case on the server's pages, lower case in clone addresses
+    const project = segments.pop()?.toUpperCase()
+    const root = [location.host, ...segments].join('/')
+    return `https://${root}/projects/${project}/repos/${repo}`
   }
   return `https://${location.host}/${location.path}`
 }
@@ -97,16 +128,10 @@ export function detectForge(remotes: Remote[], custom: ForgeHost[]): ForgeRepo |
     ...remotes.filter((r) => r.name !== 'upstream' && r.name !== 'origin')
   ]
   for (const remote of order) {
-    const location = parseRemoteUrl(remote.fetchUrl)
-    const kind = location && forgeKind(location.host, custom)
-    if (location && kind) {
-      return {
-        kind,
-        host: location.host,
-        path: location.path,
-        remote: remote.name,
-        webUrl: webUrl(kind, location)
-      }
+    const location = locate(remote.fetchUrl, custom)
+    if (location) {
+      const { kind, host, path } = location
+      return { kind, host, path, remote: remote.name, webUrl: webUrl(kind, location) }
     }
   }
   return null
@@ -117,7 +142,9 @@ export function remotesOn(remotes: Remote[], repo: ForgeRepo): Record<string, st
   const result: Record<string, string> = {}
   for (const remote of remotes) {
     const location = parseRemoteUrl(remote.fetchUrl)
-    if (location?.host === repo.host) result[remote.name] = location.path
+    if (location?.host === repo.host)
+      result[remote.name] =
+        repo.kind === 'bitbucketServer' ? serverPath(location.path) : location.path
   }
   return result
 }

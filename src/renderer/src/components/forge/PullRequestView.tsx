@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import {
   FORGE_NAMES,
+  forkOwner,
   sameRepoPath,
   type ForgeKind,
   type PullDetail,
@@ -44,7 +45,7 @@ import { CHECK_TITLES, mergeText, voteTitle, who } from './pullText'
 
 /** How a fork is named before its branch: its owner, or on Azure DevOps the fork itself */
 const forkName = (kind: ForgeKind, path: string): string =>
-  kind === 'azure' ? path.split('/').at(-1)! : path.split('/')[0]
+  kind === 'azure' ? path.split('/').at(-1)! : forkOwner(kind, path)
 
 const STATE_TITLES = { open: 'Open', draft: 'Draft', merged: 'Merged', closed: 'Closed' }
 
