@@ -2,6 +2,13 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Changed
+
+- A push goes to the remote git would choose: the branch's `pushRemote`, then `remote.pushDefault`, then the remote of its upstream, the only remote, `origin`. With a `pushRemote` other than the upstream's remote (a fork), the branch goes there under its own name and keeps following its upstream
+- With several remotes, none of them `origin`, the first push of a branch asks where to push it, also when creating a pull request, instead of picking the first remote
+
 ## 1.16.0 — 2026-10-28
 
 ### Added

@@ -3,7 +3,7 @@ import type { PullMode } from '../../../shared/api'
 import { isAuthFailure } from '../../../shared/askpass'
 import type { RepoSnapshot, Submodule } from '../../../shared/types'
 import { confirm, notify, prompt, showForm } from '../ui'
-import { fail, reportOutcome, run, runBusy } from './core'
+import { call, fail, reportOutcome, run, runBusy, snapshotOf } from './core'
 import { storage } from '../storage'
 import { notifyPushed } from '../forge'
 
@@ -59,8 +59,44 @@ export async function pull(repo: string, mode: PullMode): Promise<void> {
 
 const PUSH_REJECTED = /\[rejected\]|non-fast-forward|fetch first|stale info/
 
+/**
+ * Asks where to push the branch (default the current one) when git can't tell: several remotes,
+ * none is origin, and neither the branch nor the repository says. Resolves undefined when git can
+ * tell, null when the user cancels.
+ */
+export async function choosePushRemote(
+  repo: string,
+  branch?: string
+): Promise<string | null | undefined> {
+  const remotes = snapshotOf(repo)?.remotes.map((r) => r.name) ?? []
+  if (remotes.length < 2 || remotes.includes('origin')) return undefined
+  const known = await call(repo, 'pushRemote', branch)
+  // A failure is the push's to report
+  if (!known.ok || known.value !== null) return undefined
+  const name = branch ?? snapshotOf(repo)?.head.branch ?? 'the branch'
+  const values = await showForm({
+    title: 'Choose the remote',
+    message:
+      `${name} isn't on a remote yet, and none of them is origin: where should it go? ` +
+      'From then on it follows the branch there.\n\n' +
+      'To choose once for every branch, set remote.pushDefault in Preferences → Git config.',
+    fields: [
+      {
+        key: 'remote',
+        label: 'Remote',
+        options: remotes.map((r) => ({ value: r, label: r })),
+        initial: remotes[0]
+      }
+    ],
+    confirmLabel: 'Push'
+  })
+  return values ? String(values.remote) : null
+}
+
 export async function push(repo: string): Promise<void> {
-  let result = await runBusy(repo, 'Pushing', 'push', false)
+  const remote = await choosePushRemote(repo)
+  if (remote === null) return
+  let result = await runBusy(repo, 'Pushing', 'push', false, undefined, remote)
   if (!result.ok && PUSH_REJECTED.test(result.details ?? '')) {
     const force = await confirm(
       'Push rejected',
@@ -70,7 +106,7 @@ export async function push(repo: string): Promise<void> {
       true
     )
     if (!force) return
-    result = await runBusy(repo, 'Pushing', 'push', true)
+    result = await runBusy(repo, 'Pushing', 'push', true, undefined, remote)
   }
   if (result.ok) notifyPushed(repo, result.value)
   else fail(result)

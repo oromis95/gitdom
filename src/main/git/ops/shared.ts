@@ -145,14 +145,46 @@ export async function getConfig(repo: string, key: string): Promise<string | nul
   return (await tryGit(repo, ['config', '--get', key]))?.trim() || null
 }
 
-/** Remote used for a branch without upstream: its configured remote, else origin, else the only one. */
-export async function defaultRemote(repo: string, branch: string): Promise<string> {
-  const configured = await getConfig(repo, `branch.${branch}.remote`)
+/**
+ * Remote a push of the branch goes to, chosen as git does: its pushRemote, remote.pushDefault, the
+ * remote of its upstream, the only remote, origin. Null when there are several and none is origin.
+ */
+export async function pushRemoteOf(repo: string, branch: string): Promise<string | null> {
+  const configured =
+    (await getConfig(repo, `branch.${branch}.pushRemote`)) ??
+    (await getConfig(repo, 'remote.pushDefault')) ??
+    (await getConfig(repo, `branch.${branch}.remote`))
   if (configured) return configured
   const remotes = (await runGit(repo, ['remote'])).split('\n').filter(Boolean)
-  if (remotes.includes('origin')) return 'origin'
-  if (remotes.length > 0) return remotes[0]
-  throw new Error('No remote configured: add one first')
+  if (remotes.length === 0) throw new Error('No remote configured: add one first')
+  if (remotes.length === 1) return remotes[0]
+  return remotes.includes('origin') ? 'origin' : null
+}
+
+export interface PushDestination {
+  remote: string
+  /** Branch on the remote, e.g. refs/heads/main */
+  ref: string
+  /** First push: the branch is to follow it */
+  setUpstream: boolean
+}
+
+/** Where a push of the branch goes; `remote` is the one the user picked when git can't tell. */
+export async function pushDestination(
+  repo: string,
+  branch: string,
+  remote?: string
+): Promise<PushDestination> {
+  if (remote !== undefined) assertArg(remote, 'remote')
+  const to = remote ?? (await pushRemoteOf(repo, branch))
+  if (!to)
+    throw new Error(`There are several remotes and none is origin: choose where to push ${branch}`)
+  const upstream = await getConfig(repo, `branch.${branch}.remote`)
+  const merge = await getConfig(repo, `branch.${branch}.merge`)
+  // To its upstream's remote it goes to the upstream, even with another name; to another remote
+  // (a fork set as pushRemote) to a branch of the same name, leaving the upstream as it is
+  if (upstream === to && merge) return { remote: to, ref: merge, setUpstream: false }
+  return { remote: to, ref: `refs/heads/${branch}`, setUpstream: !(upstream && merge) }
 }
 
 export async function firstParentOf(repo: string, hash: string): Promise<string | undefined> {

@@ -11,8 +11,8 @@ import {
   assertIdle,
   withConflicts,
   currentBranch,
-  getConfig,
-  defaultRemote
+  pushDestination,
+  pushRemoteOf
 } from './shared'
 
 export const remoteOps: Pick<
@@ -20,6 +20,7 @@ export const remoteOps: Pick<
   | 'fetch'
   | 'pull'
   | 'push'
+  | 'pushRemote'
   | 'addRemote'
   | 'removeRemote'
   | 'renameRemote'
@@ -46,28 +47,25 @@ export const remoteOps: Pick<
     return withConflicts(repo, ['pull', '--autostash', flag])
   },
 
-  async push(repo, forceWithLease, name) {
+  async push(repo, forceWithLease, name, remote) {
     if (name !== undefined) assertArg(name, 'branch name')
     const branch = name ?? (await currentBranch(repo))
-    const remote = await getConfig(repo, `branch.${branch}.remote`)
-    const merge = await getConfig(repo, `branch.${branch}.merge`)
+    const to = await pushDestination(repo, branch, remote)
     // --progress: git only reports it to a terminal otherwise
     const args = ['push', '--progress']
     if (forceWithLease) args.push('--force-with-lease')
-    if (remote && merge) {
-      // Explicit refspec: works even when the upstream has a different name (push.default=simple would refuse)
-      args.push(remote, `refs/heads/${branch}:${merge}`)
-    } else {
-      args.push(
-        '-u',
-        await defaultRemote(repo, branch),
-        `refs/heads/${branch}:refs/heads/${branch}`
-      )
-    }
+    if (to.setUpstream) args.push('-u')
+    // Explicit refspec: works even when the upstream has a different name (push.default=simple would refuse)
+    args.push(to.remote, `refs/heads/${branch}:${to.ref}`)
     return runGit(repo, args, {
       withStderr: true,
       onStderr: progressReader(PUSH_PHASES, reportProgress)
     })
+  },
+
+  async pushRemote(repo, name) {
+    if (name !== undefined) assertArg(name, 'branch name')
+    return pushRemoteOf(repo, name ?? (await currentBranch(repo)))
   },
 
   async addRemote(repo, name, url) {

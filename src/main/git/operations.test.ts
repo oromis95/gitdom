@@ -574,6 +574,44 @@ describe('remotes', () => {
     expect(git(repo, 'log', '-1', '--format=%s', backup.refs[0].hash)).toBe('remote work')
   })
 
+  it('pushes to the remote git would choose, and asks for one when git can not tell', async () => {
+    const fork = join(root, 'fork.git')
+    git(root, 'init', '-q', '--bare', '-b', 'main', fork)
+    await runOp(repo, 'addRemote', ['fork', fork])
+    const branches = (dir: string): string => git(dir, 'branch', '--format=%(refname:short)')
+
+    // origin among several remotes; remote.pushDefault comes first
+    expect(await runOp(repo, 'pushRemote', [])).toBe('origin')
+    git(repo, 'config', 'remote.pushDefault', 'fork')
+    expect(await runOp(repo, 'pushRemote', [])).toBe('fork')
+    await runOp(repo, 'push', [false])
+    expect(branches(fork)).toBe('main')
+    expect(branches(remote)).toBe('')
+    expect(git(repo, 'rev-parse', '--abbrev-ref', 'main@{u}')).toBe('fork/main')
+
+    // The branch's pushRemote comes before both: a branch of the same name, the upstream stays
+    git(repo, 'config', 'branch.main.pushRemote', 'origin')
+    await runOp(repo, 'push', [false])
+    expect(branches(remote)).toBe('main')
+    expect(git(repo, 'rev-parse', '--abbrev-ref', 'main@{u}')).toBe('fork/main')
+
+    // Several remotes, none is origin, nothing configured: the push needs one
+    git(repo, 'config', '--unset', 'remote.pushDefault')
+    await runOp(repo, 'renameRemote', ['origin', 'upstream'])
+    await runOp(repo, 'createBranch', ['feat', null, true])
+    expect(await runOp(repo, 'pushRemote', ['feat'])).toBeNull()
+    await expect(runOp(repo, 'push', [false, 'feat'])).rejects.toThrow(/choose where to push feat/)
+    await runOp(repo, 'push', [false, 'feat', 'upstream'])
+    expect(branches(remote)).toBe('feat\nmain')
+    expect(git(repo, 'rev-parse', '--abbrev-ref', 'feat@{u}')).toBe('upstream/feat')
+    expect(await runOp(repo, 'pushRemote', ['feat'])).toBe('upstream')
+
+    // The only remote, even if it isn't origin
+    await runOp(repo, 'removeRemote', ['fork'])
+    await runOp(repo, 'createBranch', ['solo', null, true])
+    expect(await runOp(repo, 'pushRemote', [])).toBe('upstream')
+  })
+
   it('checks out a remote branch as a tracking branch and deletes it remotely', async () => {
     await runOp(repo, 'createBranch', ['feat', null, true])
     await runOp(repo, 'push', [false])

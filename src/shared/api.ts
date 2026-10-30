@@ -520,8 +520,16 @@ export interface RepoOps {
   fetch(background?: boolean): void
   /** Local changes are stashed around the pull. */
   pull(mode: PullMode): OpOutcome
-  /** Pushes the current branch, or `branch`, setting the upstream on the first push. */
-  push(forceWithLease: boolean, branch?: string): string
+  /**
+   * Pushes the current branch, or `branch`, setting the upstream on the first push. It goes to the
+   * remote git would choose, or to `remote` when git can't tell (see pushRemote).
+   */
+  push(forceWithLease: boolean, branch?: string, remote?: string): string
+  /**
+   * The remote a push of the current branch, or `branch`, goes to, chosen as git does; null when
+   * there are several remotes, none is origin, and neither the branch nor the repository says.
+   */
+  pushRemote(branch?: string): string | null
 
   addRemote(name: string, url: string): void
   removeRemote(name: string): void

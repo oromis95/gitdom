@@ -104,6 +104,7 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 
 - Pull (merge, fast-forward only or rebase), push, and a periodic background fetch
 - Push with a progress bar under the toolbar: it fills as git counts, compresses and sends the objects, with the amount sent and the speed in the status bar and the percentage on the Push button. Fetch, pull and the other long operations show a moving bar
+- The first push of a branch creates it on the remote and makes it follow it there. The remote is the one git would choose: the branch's `pushRemote`, `remote.pushDefault`, the remote of its upstream, the only remote, `origin`. With several remotes and none of them `origin`, GitDom asks where to push
 - Credentials when git needs them: a username with a password or token, an SSH key's passphrase, or whether to trust a server seen for the first time, asked in a GitDom dialog. Your credential helper keeps them, if you have one; GitDom stores nothing. The periodic fetch never asks: if it needs credentials it says so once, and **Fetch** asks
 
 ### Pull requests

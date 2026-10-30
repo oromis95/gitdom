@@ -312,11 +312,12 @@ export default function Overlays(): React.JSX.Element {
       </Suspense>
       <CommandPalette />
       <RepoDialogs />
-      <FormDialog />
       <ConnectDialog />
       <CreatePullDialog />
       <MergeDialog />
       <ReviewersDialog />
+      {/* Above the pull request dialogs: creating one may ask where to push the branch */}
+      <FormDialog />
       {/* Above any other dialog: a command that asks waits on it */}
       <CredentialDialog />
       <Toasts />

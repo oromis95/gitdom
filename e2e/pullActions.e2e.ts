@@ -159,14 +159,15 @@ describe('working on pull requests', () => {
         if (url.startsWith(`${api}/assignees`)) return reply([{ login: 'bob', avatar_url: null }])
         if (url.startsWith(`${api}/labels`)) return reply([{ name: 'feature', color: '0e8a16' }])
         if (method === 'POST' && url === `${api}/pulls`) {
+          const number = 9 + pulls.filter((p) => p.number >= 9).length
           pulls.push({
-            number: 9,
+            number,
             title: String(body.title),
             branch: String(body.head),
             head: git(bare, 'rev-parse', `refs/heads/${String(body.head)}`),
             draft: body.draft === true
           })
-          return reply({ number: 9, html_url: 'https://127.0.0.1/acme/widgets/pull/9' }, 201)
+          return reply({ number, html_url: `https://127.0.0.1/acme/widgets/pull/${number}` }, 201)
         }
         const merge = /\/pulls\/(\d+)\/merge$/.exec(url)
         if (merge && method === 'PUT') {
@@ -341,6 +342,33 @@ describe('working on pull requests', () => {
     expect(sent('PATCH', '/api/v3/repos/acme/widgets/pulls/8')).toEqual({ state: 'closed' })
     await view.locator('.center-message button:has-text("Reopen")').click()
     await view.locator('.pull-title:has-text("Dark mode")').waitFor()
+    await win.keyboard.press('Escape')
+  })
+
+  it('asks where to push a new branch when no remote is origin, above the dialog', async () => {
+    const { win } = gitdom
+    const fork = join(dir, 'fork.git')
+    git(dir, 'init', '-q', '--bare', '-b', 'main', fork)
+    git(repo, 'remote', 'rename', 'origin', 'upstream')
+    git(repo, 'remote', 'add', 'fork', fork)
+    git(repo, 'checkout', '-q', '-b', 'feature/search', 'main')
+    commitFile(repo, 'search.js', 'export const search = () => []\n', 'Add search')
+    await win.locator('.toolbar:has-text("feature/search")').waitFor()
+    await win
+      .locator('.section-header:has-text("Pull Requests") .section-add[title="New pull request"]')
+      .click()
+    const dialog = win.locator('.create-pull')
+    await dialog.locator('.create-commit:has-text("Add search")').waitFor()
+    await dialog.locator('button[type=submit]:has-text("Push and open")').click()
+    // Clicks fail on a form hidden under the pull request dialog
+    const choose = win.locator('.modal:has-text("Choose the remote")')
+    await choose.locator('select').selectOption('upstream')
+    await choose.locator('button[type=submit]:has-text("Push")').click()
+    await win.locator('.pull-view .pull-title:has-text("Add search")').waitFor()
+    expect(git(repo, 'rev-parse', '--abbrev-ref', 'feature/search@{upstream}')).toBe(
+      'upstream/feature/search'
+    )
+    expect(git(fork, 'branch')).toBe('')
     await win.keyboard.press('Escape')
   })
 })

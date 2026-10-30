@@ -5,7 +5,7 @@ import { readOperation } from './repository'
 import * as history from './history'
 import * as backups from './backups'
 import { inAction } from './activity'
-import { type OpImpl, TRASH, currentBranch, getConfig, defaultRemote, short } from './ops/shared'
+import { type OpImpl, TRASH, currentBranch, pushDestination, short } from './ops/shared'
 import { contentOps } from './ops/content'
 import { logOps } from './ops/log'
 import { workingTreeOps } from './ops/workingTree'
@@ -76,7 +76,8 @@ const READ_ONLY = new Set<OpName>([
   'patchText',
   'inspectPatch',
   'repoSummary',
-  'myCommits'
+  'myCommits',
+  'pushRemote'
 ])
 
 /**
@@ -159,14 +160,11 @@ async function currentBranchRef(repo: string): Promise<string[]> {
   return ref ? [ref] : []
 }
 
-/** Remote branch a push of the current branch would overwrite. */
-async function pushTarget(repo: string): Promise<string[]> {
-  const branch = await currentBranch(repo)
-  const remote = await getConfig(repo, `branch.${branch}.remote`)
-  const merge = await getConfig(repo, `branch.${branch}.merge`)
-  if (remote && merge) return [`refs/remotes/${remote}/${merge.replace(/^refs\/heads\//, '')}`]
-  const fallback = await defaultRemote(repo, branch).catch(() => null)
-  return fallback ? [`refs/remotes/${fallback}/${branch}`] : []
+/** Remote branch a push of the branch (default the current one) would overwrite. */
+async function pushTarget(repo: string, name?: string, remote?: string): Promise<string[]> {
+  const branch = name ?? (await currentBranch(repo))
+  const to = await pushDestination(repo, branch, remote).catch(() => null)
+  return to ? [`refs/remotes/${to.remote}/${to.ref.replace(/^refs\/heads\//, '')}`] : []
 }
 
 /** Operations that rewrite or overwrite history, and the refs to back up before them (NFR-04). */
@@ -182,7 +180,7 @@ const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise
   fixup: (repo) => currentBranchRef(repo),
   splitCommit: (repo) => currentBranchRef(repo),
   reorderCommits: (repo) => currentBranchRef(repo),
-  push: async (repo, force) => (force ? pushTarget(repo) : []),
+  push: async (repo, force, name, remote) => (force ? pushTarget(repo, name, remote) : []),
   // Restoring a backup moves the branch too: where it was is saved first
   restoreBackup: async (_repo, _id, ref) => [ref],
   deleteBranches: async (_repo, names) => names.map((name) => `refs/heads/${name}`)

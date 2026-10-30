@@ -1,7 +1,8 @@
 // Tabs and waiting: opening a repository shows it loading at once, a tab's menu closes several
-// tabs, and a push shows its progress. They run in order on the same window.
+// tabs, a push shows its progress and asks where to go when git can't tell. They run in order on
+// the same window.
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { cleanUp, git, launch, makeRepo, scratch, type Running } from './helpers'
+import { cleanUp, commitFile, git, launch, makeRepo, scratch, type Running } from './helpers'
 
 /** Records whether an element matching `selector` ever appears, even briefly. */
 function watchFor(gitdom: Running, selector: string): Promise<void> {
@@ -83,6 +84,37 @@ describe('Tabs', () => {
     await win.waitForSelector('.toast:has-text("Pushed")', { timeout: 30000 })
     expect(await wasSeen(gitdom, '.busy-bar')).toBe(true)
     expect(git(gamma, 'rev-parse', '--abbrev-ref', 'main@{u}')).toBe('origin/main')
+  })
+
+  it('asks where to push a new branch when there are several remotes and none is origin', async () => {
+    const { win } = gitdom
+    const gamma = repos[2]
+    git(dir, 'init', '-q', '--bare', '-b', 'main', 'fork.git')
+    git(gamma, 'remote', 'rename', 'origin', 'company')
+    git(gamma, 'remote', 'add', 'fork', `${dir}/fork.git`)
+    git(gamma, 'checkout', '-q', '-b', 'feature')
+    await win.locator('.toolbar:has-text("feature")').waitFor()
+    await win.locator('.tool:has-text("Push")').click()
+    const choose = win.locator('.modal:has-text("Choose the remote")')
+    await choose.waitFor()
+    await expect(choose.locator('select option').allInnerTexts()).resolves.toEqual([
+      'company',
+      'fork'
+    ])
+    await choose.locator('select').selectOption('fork')
+    await choose.locator('button[type=submit]:has-text("Push")').click()
+    await win.waitForSelector('.toast:has-text("Pushed")', { timeout: 30000 })
+    expect(git(gamma, 'rev-parse', '--abbrev-ref', 'feature@{u}')).toBe('fork/feature')
+    expect(git(`${dir}/fork.git`, 'branch', '--format=%(refname:short)')).toBe('feature')
+
+    // Now it follows the branch there: the next push asks nothing
+    commitFile(gamma, 'next.txt', 'next\n', 'Next change')
+    await win.locator('.graph-row:has-text("Next change")').waitFor()
+    await win.locator('.tool:has-text("Push")').click()
+    await expect
+      .poll(() => git(`${dir}/fork.git`, 'rev-parse', 'feature'), { timeout: 30000 })
+      .toBe(git(gamma, 'rev-parse', 'HEAD'))
+    await expect(choose.count()).resolves.toBe(0)
   })
 
   it('closes every tab', async () => {
