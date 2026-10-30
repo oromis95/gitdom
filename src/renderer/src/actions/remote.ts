@@ -1,5 +1,5 @@
 // Fetch, pull and push, remotes, submodules and LFS.
-import type { PullMode } from '../../../shared/api'
+import type { PullMode, PushChoice } from '../../../shared/api'
 import { isAuthFailure } from '../../../shared/askpass'
 import type { RepoSnapshot, Submodule } from '../../../shared/types'
 import { confirm, notify, prompt, showForm } from '../ui'
@@ -44,8 +44,8 @@ export async function pull(repo: string, mode: PullMode): Promise<void> {
       /Already up to date/i.test(output) ? 'Already up to date' : 'Pulled'
     )
   } else if (
-    mode === 'ff-only' &&
-    /Not possible to fast-forward|diverg/i.test(result.details ?? result.error)
+    (mode === 'ff-only' || mode === 'git') &&
+    /Not possible to fast-forward/i.test(result.details ?? result.error)
   ) {
     notify(
       'error',
@@ -60,20 +60,40 @@ export async function pull(repo: string, mode: PullMode): Promise<void> {
 const PUSH_REJECTED = /\[rejected\]|non-fast-forward|fetch first|stale info/
 
 /**
- * Asks where to push the branch (default the current one) when git can't tell: several remotes,
- * none is origin, and neither the branch nor the repository says. Resolves undefined when git can
- * tell, null when the user cancels.
+ * Asks what a push of the branch (default the current one) needs where git can't decide alone: the
+ * remote, when there are several and none is origin; whether to push to an upstream with another
+ * name, which git refuses. Resolves null when the user cancels.
  */
-export async function choosePushRemote(
-  repo: string,
-  branch?: string
-): Promise<string | null | undefined> {
-  const remotes = snapshotOf(repo)?.remotes.map((r) => r.name) ?? []
-  if (remotes.length < 2 || remotes.includes('origin')) return undefined
-  const known = await call(repo, 'pushRemote', branch)
+export async function choosePush(repo: string, branch?: string): Promise<PushChoice | null> {
+  const plan = await call(repo, 'pushPlan', branch)
   // A failure is the push's to report
-  if (!known.ok || known.value !== null) return undefined
+  if (!plan.ok) return {}
   const name = branch ?? snapshotOf(repo)?.head.branch ?? 'the branch'
+  const { remote, renamedUpstream } = plan.value
+  if (remote && renamedUpstream) {
+    const values = await showForm({
+      title: 'Push where?',
+      message:
+        `${name} follows ${renamedUpstream}, which has another name: git refuses to push it ` +
+        'there unless told to.\n\n' +
+        'To always push to the upstream, set push.default to upstream in Preferences → Git config.',
+      fields: [
+        {
+          key: 'to',
+          label: 'Push to',
+          options: [
+            { value: 'own', label: `${remote}/${name}, which it then follows` },
+            { value: 'upstream', label: renamedUpstream }
+          ],
+          initial: 'own'
+        }
+      ],
+      confirmLabel: 'Push'
+    })
+    return values ? { toUpstream: values.to === 'upstream' } : null
+  }
+  const remotes = snapshotOf(repo)?.remotes.map((r) => r.name) ?? []
+  if (remote !== null || remotes.length === 0) return {}
   const values = await showForm({
     title: 'Choose the remote',
     message:
@@ -90,13 +110,13 @@ export async function choosePushRemote(
     ],
     confirmLabel: 'Push'
   })
-  return values ? String(values.remote) : null
+  return values ? { remote: String(values.remote) } : null
 }
 
 export async function push(repo: string): Promise<void> {
-  const remote = await choosePushRemote(repo)
-  if (remote === null) return
-  let result = await runBusy(repo, 'Pushing', 'push', false, undefined, remote)
+  const choice = await choosePush(repo)
+  if (!choice) return
+  let result = await runBusy(repo, 'Pushing', 'push', false, undefined, choice)
   if (!result.ok && PUSH_REJECTED.test(result.details ?? '')) {
     const force = await confirm(
       'Push rejected',
@@ -106,7 +126,7 @@ export async function push(repo: string): Promise<void> {
       true
     )
     if (!force) return
-    result = await runBusy(repo, 'Pushing', 'push', true, undefined, remote)
+    result = await runBusy(repo, 'Pushing', 'push', true, undefined, choice)
   }
   if (result.ok) notifyPushed(repo, result.value)
   else fail(result)
@@ -253,7 +273,7 @@ const PULL_MODE_KEY = 'gitdom.pullMode'
 
 export function savedPullMode(): PullMode {
   const saved = storage.getItem(PULL_MODE_KEY)
-  return saved === 'ff-only' || saved === 'rebase' ? saved : 'ff'
+  return saved === 'ff' || saved === 'ff-only' || saved === 'rebase' ? saved : 'git'
 }
 
 export function savePullMode(mode: PullMode): void {

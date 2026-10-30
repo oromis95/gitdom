@@ -53,7 +53,26 @@ import type { Remote } from './types'
  */
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string; details?: string }
 
-export type PullMode = 'ff' | 'ff-only' | 'rebase'
+/** As set in git (pull.rebase, pull.ff, merging otherwise), or a way of GitDom's menu. */
+export type PullMode = 'git' | 'ff' | 'ff-only' | 'rebase'
+
+/** Where a push goes when git can't decide alone. */
+export interface PushPlan {
+  /** The remote; null when there are several, none is origin, and neither branch nor repo says */
+  remote: string | null
+  /**
+   * The upstream, as remote/branch, when it has another name than the branch: git refuses to push
+   * there (push.default=simple), so GitDom asks
+   */
+  renamedUpstream: string | null
+}
+
+/** The user's answer to a PushPlan. */
+export interface PushChoice {
+  remote?: string
+  /** To the renamed upstream (true), or to a branch of its own name, followed from then on */
+  toUpstream?: boolean
+}
 /** Auto-stash around a checkout: none, tracked changes only, or untracked files too. */
 export type StashMode = 'none' | 'tracked' | 'all'
 
@@ -521,15 +540,12 @@ export interface RepoOps {
   /** Local changes are stashed around the pull. */
   pull(mode: PullMode): OpOutcome
   /**
-   * Pushes the current branch, or `branch`, setting the upstream on the first push. It goes to the
-   * remote git would choose, or to `remote` when git can't tell (see pushRemote).
+   * Pushes the current branch, or `branch`, setting the upstream on the first push. It goes where
+   * git would push it, as push.default says; `choice` answers what git can't decide (see pushPlan).
    */
-  push(forceWithLease: boolean, branch?: string, remote?: string): string
-  /**
-   * The remote a push of the current branch, or `branch`, goes to, chosen as git does; null when
-   * there are several remotes, none is origin, and neither the branch nor the repository says.
-   */
-  pushRemote(branch?: string): string | null
+  push(forceWithLease: boolean, branch?: string, choice?: PushChoice): string
+  /** What a push of the current branch, or `branch`, needs to be told before it can go. */
+  pushPlan(branch?: string): PushPlan
 
   addRemote(name: string, url: string): void
   removeRemote(name: string): void

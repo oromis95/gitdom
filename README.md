@@ -87,7 +87,7 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 - Commit options: skip the hooks (`--no-verify`), sign, commit as another author
 - Checks before committing: secrets, big files and binaries outside LFS, leftover `console.log` and TODOs, the message style; warnings only, each kind can be turned off
 - Commit message template (`commit.template`) and quick reuse of a recent message
-- Edit the message of any commit on the current branch from its details (reword)
+- Edit the message of any commit on the current branch from its details (reword); the commit hooks run as with git, so `commit-msg` can check or complete the new message
 - Sign commits and tags with GPG, SSH or X.509 keys, and see whether each signature is verified
 - Add a file, its extension or its folder to `.gitignore` from the file's menu, and see which rule ignores a file, and from which file and line
 - Clean up untracked and ignored files: a preview with sizes, then to the Recycle Bin or deleted for good
@@ -102,9 +102,9 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 
 ### Remotes and credentials
 
-- Pull (merge, fast-forward only or rebase), push, and a periodic background fetch
+- Pull as set in git (`pull.rebase`, `pull.ff`), or with merge, fast-forward only or rebase; push, and a periodic background fetch
 - Push with a progress bar under the toolbar: it fills as git counts, compresses and sends the objects, with the amount sent and the speed in the status bar and the percentage on the Push button. Fetch, pull and the other long operations show a moving bar
-- The first push of a branch creates it on the remote and makes it follow it there. The remote is the one git would choose: the branch's `pushRemote`, `remote.pushDefault`, the remote of its upstream, the only remote, `origin`. With several remotes and none of them `origin`, GitDom asks where to push
+- The first push of a branch creates it on the remote and makes it follow it there. The remote is the one git would choose: the branch's `pushRemote`, `remote.pushDefault`, the remote of its upstream, the only remote, `origin`. With several remotes and none of them `origin`, GitDom asks where to push. It follows `push.default`: a branch following one with another name (one created from `origin/main`) doesn't push onto it, as git refuses, and GitDom asks where to push instead
 - Credentials when git needs them: a username with a password or token, an SSH key's passphrase, or whether to trust a server seen for the first time, asked in a GitDom dialog. Your credential helper keeps them, if you have one; GitDom stores nothing. The periodic fetch never asks: if it needs credentials it says so once, and **Fetch** asks
 
 ### Pull requests

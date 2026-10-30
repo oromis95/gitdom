@@ -50,6 +50,7 @@ export interface Command {
 }
 
 const PULLS: { mode: PullMode; title: string }[] = [
+  { mode: 'git', title: 'Pull (as set in git)' },
   { mode: 'ff', title: 'Pull (fast-forward if possible)' },
   { mode: 'ff-only', title: 'Pull (fast-forward only)' },
   { mode: 'rebase', title: 'Pull (rebase)' }

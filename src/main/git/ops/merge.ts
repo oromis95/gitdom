@@ -3,7 +3,7 @@ import { mkdir, rm, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 import type { CommitsToMove, MergeMode, ResetMode } from '../../../shared/api'
 import { REFLOG_FORMAT, parseReflog } from '../parsers'
-import { runGit, tryGit } from '../exec'
+import { GitError, runGit, tryGit } from '../exec'
 import { signingProgramArgs } from '../repository'
 import * as history from '../history'
 import * as backups from '../backups'
@@ -144,9 +144,10 @@ export const mergeOps: Pick<
         if (!step.message?.trim()) throw new Error('A reworded commit needs a message')
         const file = resolve(dir, `message-${i}.txt`)
         await writeFile(file, step.message.trim() + '\n', 'utf8')
+        // The hooks run, as when git rewords: commit-msg can check or complete the message
         lines.push(
           `pick ${step.hash}`,
-          `exec git commit --amend --no-verify --allow-empty -q -F ${quote(file)}`
+          `exec git commit --amend --allow-empty -q -F ${quote(file)}`
         )
       } else {
         lines.push(`${step.action} ${step.hash}`)
@@ -155,13 +156,24 @@ export const mergeOps: Pick<
     const todoFile = resolve(dir, 'todo.txt')
     await writeFile(todoFile, lines.join('\n') + '\n', 'utf8')
 
-    return withConflicts(
+    const outcome = await withConflicts(
       repo,
       // -c options reach the exec'd commits too, through GIT_CONFIG_PARAMETERS
       [...(await signingProgramArgs(repo)), 'rebase', '-i', '--autostash', base ?? '--root'],
       // git runs the sequence editor with the todo file as argument: replace it with ours
       { GIT_SEQUENCE_EDITOR: `cp ${quote(todoFile)}` }
     )
+    // A hook refused a new message: with nothing to resolve, the rebase is undone
+    if (outcome.conflicts && /execution failed: git commit --amend/.test(outcome.output)) {
+      await runGit(repo, ['rebase', '--abort'])
+      throw new GitError(
+        'A hook refused the new message: nothing was changed',
+        ['commit', '--amend'],
+        1,
+        outcome.output
+      )
+    }
+    return outcome
   },
 
   async cherryPick(repo, hashes) {

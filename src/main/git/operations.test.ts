@@ -10,12 +10,18 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { setToolSettings } from '../settings'
 import { runOp, setTrash } from './operations'
 import { withProgress } from './progress'
 import type { OpProgress } from '../../shared/api'
-import { ensureCommitGraph, loadCommits, loadIdentity, loadSnapshot } from './repository'
+import {
+  ensureCommitGraph,
+  loadCommits,
+  loadIdentity,
+  loadSnapshot,
+  readOperation
+} from './repository'
 
 // Git on Windows is slow to spawn: remote scenarios run dozens of commands
 vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })
@@ -581,9 +587,11 @@ describe('remotes', () => {
     const branches = (dir: string): string => git(dir, 'branch', '--format=%(refname:short)')
 
     // origin among several remotes; remote.pushDefault comes first
-    expect(await runOp(repo, 'pushRemote', [])).toBe('origin')
+    const remoteOf = async (branch?: string): Promise<string | null> =>
+      (await runOp(repo, 'pushPlan', branch === undefined ? [] : [branch])).remote
+    expect(await remoteOf()).toBe('origin')
     git(repo, 'config', 'remote.pushDefault', 'fork')
-    expect(await runOp(repo, 'pushRemote', [])).toBe('fork')
+    expect(await remoteOf()).toBe('fork')
     await runOp(repo, 'push', [false])
     expect(branches(fork)).toBe('main')
     expect(branches(remote)).toBe('')
@@ -599,17 +607,96 @@ describe('remotes', () => {
     git(repo, 'config', '--unset', 'remote.pushDefault')
     await runOp(repo, 'renameRemote', ['origin', 'upstream'])
     await runOp(repo, 'createBranch', ['feat', null, true])
-    expect(await runOp(repo, 'pushRemote', ['feat'])).toBeNull()
+    expect(await remoteOf('feat')).toBeNull()
     await expect(runOp(repo, 'push', [false, 'feat'])).rejects.toThrow(/choose where to push feat/)
-    await runOp(repo, 'push', [false, 'feat', 'upstream'])
+    await runOp(repo, 'push', [false, 'feat', { remote: 'upstream' }])
     expect(branches(remote)).toBe('feat\nmain')
     expect(git(repo, 'rev-parse', '--abbrev-ref', 'feat@{u}')).toBe('upstream/feat')
-    expect(await runOp(repo, 'pushRemote', ['feat'])).toBe('upstream')
+    expect(await remoteOf('feat')).toBe('upstream')
 
     // The only remote, even if it isn't origin
     await runOp(repo, 'removeRemote', ['fork'])
     await runOp(repo, 'createBranch', ['solo', null, true])
-    expect(await runOp(repo, 'pushRemote', [])).toBe('upstream')
+    expect(await remoteOf()).toBe('upstream')
+  })
+
+  it('refuses an upstream with another name as git does, unless told where to push', async () => {
+    await runOp(repo, 'push', [false])
+    const tip = (ref: string): string => git(remote, 'log', '-1', '--format=%s', ref)
+    // Created from origin/main, it follows origin/main
+    await runOp(repo, 'createBranch', ['feature/x', 'origin/main', true])
+    await commitFile('x.txt', 'x\n', 'feature work')
+    expect(await runOp(repo, 'pushPlan', [])).toEqual({
+      remote: 'origin',
+      renamedUpstream: 'origin/main'
+    })
+    await expect(runOp(repo, 'push', [false])).rejects.toThrow(/follows origin\/main/)
+    expect(tip('main')).toBe('init')
+
+    // To a branch of its own name, which it then follows
+    await runOp(repo, 'push', [false, undefined, { toUpstream: false }])
+    expect(tip('feature/x')).toBe('feature work')
+    expect(tip('main')).toBe('init')
+    expect(git(repo, 'rev-parse', '--abbrev-ref', 'feature/x@{u}')).toBe('origin/feature/x')
+    expect((await runOp(repo, 'pushPlan', [])).renamedUpstream).toBeNull()
+
+    // To the upstream only when asked, or when push.default says so
+    await runOp(repo, 'createBranch', ['hotfix', 'origin/main', true])
+    await commitFile('h.txt', 'h\n', 'hotfix work')
+    await runOp(repo, 'push', [false, undefined, { toUpstream: true }])
+    expect(tip('main')).toBe('hotfix work')
+    await commitFile('h.txt', 'h2\n', 'more hotfix work')
+    git(repo, 'config', 'push.default', 'upstream')
+    expect((await runOp(repo, 'pushPlan', [])).renamedUpstream).toBeNull()
+    await runOp(repo, 'push', [false])
+    expect(tip('main')).toBe('more hotfix work')
+    // current: a branch of the same name, the upstream stays
+    git(repo, 'config', 'push.default', 'current')
+    await runOp(repo, 'push', [false])
+    expect(tip('hotfix')).toBe('more hotfix work')
+    expect(git(repo, 'rev-parse', '--abbrev-ref', 'hotfix@{u}')).toBe('origin/main')
+    git(repo, 'config', 'push.default', 'nothing')
+    await expect(runOp(repo, 'push', [false])).rejects.toThrow(/push\.default=nothing/)
+  })
+
+  it('pulls as git is set, unless GitDom is told how', async () => {
+    // Only the repository's settings: Git for Windows sets pull.rebase=false for the system
+    vi.stubEnv('GIT_CONFIG_NOSYSTEM', '1')
+    vi.stubEnv('GIT_CONFIG_GLOBAL', join(root, 'no-global-config'))
+    onTestFinished(() => void vi.unstubAllEnvs())
+    await runOp(repo, 'push', [false])
+    git(root, 'clone', '-q', remote, clone)
+    init(clone)
+    const diverge = async (n: number): Promise<void> => {
+      writeFileSync(join(clone, `c${n}.txt`), 'c\n')
+      git(clone, 'add', '.')
+      git(clone, 'commit', '-qm', `remote ${n}`)
+      git(clone, 'push', '-q')
+      await commitFile(`l${n}.txt`, 'l\n', `local ${n}`)
+    }
+    const merges = (): string => git(repo, 'rev-list', '--count', '--merges', 'HEAD')
+
+    // pull.rebase: rebased, as git would
+    git(repo, 'config', 'pull.rebase', 'true')
+    await diverge(1)
+    await runOp(repo, 'pull', ['git'])
+    expect(merges()).toBe('0')
+    expect(git(repo, 'log', '-2', '--format=%s')).toBe('local 1\nremote 1')
+    // A mode of GitDom's menu goes first, as a flag of git pull would
+    await diverge(2)
+    await runOp(repo, 'pull', ['ff'])
+    expect(merges()).toBe('1')
+    // Nothing set: git 2.33+ would refuse, GitDom merges
+    git(repo, 'config', '--unset', 'pull.rebase')
+    await diverge(3)
+    await runOp(repo, 'pull', ['git'])
+    expect(merges()).toBe('2')
+    // The branch's own setting counts too: the rebase flattens the merges not pushed yet
+    git(repo, 'config', 'branch.main.rebase', 'true')
+    await diverge(4)
+    await runOp(repo, 'pull', ['git'])
+    expect(merges()).toBe('0')
+    expect(git(repo, 'log', '-1', '--format=%s')).toBe('local 4')
   })
 
   it('checks out a remote branch as a tracking branch and deletes it remotely', async () => {
@@ -1437,14 +1524,37 @@ describe('complete commits', () => {
     expect(git(repo, 'rev-parse', 'HEAD')).toBe(tip)
   })
 
-  it('rewords without running the commit hooks', async () => {
+  it('rewords running the commit hooks, as git does, and changes nothing when they refuse', async () => {
     await commitFile('b.txt', 'b\n', 'three')
     mkdirSync(join(repo, '.git', 'hooks'), { recursive: true })
-    writeFileSync(join(repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\nexit 1\n', { mode: 0o755 })
+    const hook = (script: string): void =>
+      writeFileSync(join(repo, '.git', 'hooks', 'commit-msg'), `#!/bin/sh\n${script}\n`, {
+        mode: 0o755
+      })
+    const message = (rev: string): string => git(repo, 'log', '-1', '--format=%B', rev)
+
+    // commit-msg completes the message, of the last commit and of an older one
+    hook('echo "Checked-by: hook" >> "$1"')
     await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD'), 'three, reworded'])
+    expect(message('HEAD')).toBe('three, reworded\nChecked-by: hook')
     const outcome = await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD~2'), 'one, reworded'])
     expect(outcome.conflicts).toBe(false)
-    expect(subjects()).toEqual(['three, reworded', 'two', 'one, reworded'])
+    expect(message('HEAD~2')).toBe('one, reworded\nChecked-by: hook')
+
+    // A refusal leaves the branch as it was, without a rebase to finish
+    hook('grep -q "JIRA-" "$1" || { echo "missing JIRA key" >&2; exit 1; }')
+    const tip = git(repo, 'rev-parse', 'HEAD')
+    await expect(
+      runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD~2'), 'one, no key'])
+    ).rejects.toMatchObject({
+      message: 'A hook refused the new message: nothing was changed',
+      stderr: expect.stringContaining('missing JIRA key')
+    })
+    await expect(runOp(repo, 'reword', [tip, 'three, no key'])).rejects.toThrow('missing JIRA key')
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(tip)
+    expect(await readOperation(repo)).toBeNull()
+    await runOp(repo, 'reword', [git(repo, 'rev-parse', 'HEAD~2'), 'JIRA-1 one'])
+    expect(subjects()).toEqual(['three, reworded Checked-by: hook', 'two', 'JIRA-1 one'])
   })
 
   it('refuses to reword across merges or off the current branch', async () => {

@@ -1,6 +1,6 @@
 // Tabs and waiting: opening a repository shows it loading at once, a tab's menu closes several
-// tabs, a push shows its progress and asks where to go when git can't tell. They run in order on
-// the same window.
+// tabs, a push shows its progress and asks where to go when git can't tell or would refuse, a pull
+// follows git's settings. They run in order on the same window.
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { cleanUp, commitFile, git, launch, makeRepo, scratch, type Running } from './helpers'
 
@@ -115,6 +115,38 @@ describe('Tabs', () => {
       .poll(() => git(`${dir}/fork.git`, 'rev-parse', 'feature'), { timeout: 30000 })
       .toBe(git(gamma, 'rev-parse', 'HEAD'))
     await expect(choose.count()).resolves.toBe(0)
+  })
+
+  it('asks before pushing to an upstream with another name, which git refuses', async () => {
+    const { win } = gitdom
+    const gamma = repos[2]
+    const company = `${dir}/gamma.git`
+    // Made from company/main, it follows company/main
+    git(gamma, 'checkout', '-q', '-b', 'hotfix', 'company/main')
+    commitFile(gamma, 'fix.txt', 'fix\n', 'Fix it')
+    await win.locator('.graph-row:has-text("Fix it")').waitFor()
+    await win.locator('.tool:has-text("Push")').click()
+    const choose = win.locator('.modal:has-text("Push where?")')
+    await choose.waitFor()
+    await expect(choose.locator('select option').allInnerTexts()).resolves.toEqual([
+      'company/hotfix, which it then follows',
+      'company/main'
+    ])
+    await choose.locator('button[type=submit]:has-text("Push")').click()
+    await expect
+      .poll(() => git(gamma, 'rev-parse', '--abbrev-ref', 'hotfix@{u}'), { timeout: 30000 })
+      .toBe('company/hotfix')
+    expect(git(company, 'log', '-1', '--format=%s', 'hotfix')).toBe('Fix it')
+    expect(git(company, 'log', '-1', '--format=%s', 'main')).toBe('Add the app')
+  })
+
+  it('pulls as set in git unless another way is picked', async () => {
+    const { win } = gitdom
+    await win.locator('.tool-arrow[aria-label="Pull options"]').click()
+    await expect(win.locator('.menu-item:has-text("✓")').innerText()).resolves.toContain(
+      'Pull (as set in git)'
+    )
+    await win.keyboard.press('Escape')
   })
 
   it('closes every tab', async () => {

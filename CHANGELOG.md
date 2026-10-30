@@ -8,6 +8,9 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 
 - A push goes to the remote git would choose: the branch's `pushRemote`, then `remote.pushDefault`, then the remote of its upstream, the only remote, `origin`. With a `pushRemote` other than the upstream's remote (a fork), the branch goes there under its own name and keeps following its upstream
 - With several remotes, none of them `origin`, the first push of a branch asks where to push it, also when creating a pull request, instead of picking the first remote
+- A push follows `push.default` as git does. A branch following one with another name, like a branch created from `origin/main`, no longer pushes onto it: as git refuses, GitDom asks whether to push to a branch of its own name (proposed, and followed from then on) or to the upstream. With `push.default=upstream` it goes to the upstream, with `current` to a branch of the same name
+- The Pull button follows git's settings (`pull.rebase`, `pull.ff`, the branch's `rebase`), merging when none is set: the new first choice of the Pull menu, **Pull (as set in git)**, and the default. A way picked in the menu or in Preferences still goes first, as an option of `git pull` would
+- Rewording a commit runs the commit hooks, as git does: `commit-msg` can check the new message or complete it. If a hook refuses it, nothing is changed
 
 ## 1.16.0 — 2026-10-28
 

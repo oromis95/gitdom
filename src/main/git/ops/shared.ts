@@ -1,7 +1,7 @@
 // Helpers shared by the repository operations: argument checks and small git queries.
 import { lstat, readdir } from 'fs/promises'
 import { relative, resolve } from 'path'
-import type { OpArgs, OpName, OpOutcome, OpResult } from '../../../shared/api'
+import type { OpArgs, OpName, OpOutcome, OpResult, PushChoice, PushPlan } from '../../../shared/api'
 import { GitError, runGit, tryGit } from '../exec'
 import { readOperation } from '../repository'
 
@@ -146,45 +146,114 @@ export async function getConfig(repo: string, key: string): Promise<string | nul
 }
 
 /**
- * Remote a push of the branch goes to, chosen as git does: its pushRemote, remote.pushDefault, the
- * remote of its upstream, the only remote, origin. Null when there are several and none is origin.
+ * Values of the config keys matching `pattern`, by key as git writes them: section and name in
+ * lowercase, the branch or remote name as it is. The last value of a key wins, as in git.
  */
-export async function pushRemoteOf(repo: string, branch: string): Promise<string | null> {
-  const configured =
-    (await getConfig(repo, `branch.${branch}.pushRemote`)) ??
-    (await getConfig(repo, 'remote.pushDefault')) ??
-    (await getConfig(repo, `branch.${branch}.remote`))
-  if (configured) return configured
+export async function configValues(repo: string, pattern: string): Promise<Map<string, string>> {
+  const output = await tryGit(repo, ['config', '-z', '--get-regexp', pattern])
+  const values = new Map<string, string>()
+  for (const entry of (output ?? '').split('\0').filter(Boolean)) {
+    const at = entry.indexOf('\n')
+    // A key without a value is a true boolean
+    if (at < 0) values.set(entry, 'true')
+    else values.set(entry.slice(0, at), entry.slice(at + 1))
+  }
+  return values
+}
+
+interface PushSettings {
+  /**
+   * Remote the push goes to, chosen as git does: the branch's pushRemote, remote.pushDefault, the
+   * remote of its upstream, the only remote, origin. Null when there are several and none is origin.
+   */
+  remote: string | null
+  /** The upstream's remote and branch (refs/heads/…) */
+  upstream: string | null
+  merge: string | null
+  /** push.default: simple, current, upstream, matching or nothing */
+  mode: string
+}
+
+async function pushSettings(repo: string, branch: string): Promise<PushSettings> {
+  const config = await configValues(
+    repo,
+    '^(remote\\.pushdefault|push\\.default|branch\\..+\\.(remote|merge|pushremote))$'
+  )
+  const value = (key: string): string | null => config.get(key) || null
+  const upstream = value(`branch.${branch}.remote`)
+  const merge = value(`branch.${branch}.merge`)
+  const mode = value('push.default') ?? 'simple'
+  const configured = value(`branch.${branch}.pushremote`) ?? value('remote.pushdefault') ?? upstream
+  if (configured) return { remote: configured, upstream, merge, mode }
   const remotes = (await runGit(repo, ['remote'])).split('\n').filter(Boolean)
   if (remotes.length === 0) throw new Error('No remote configured: add one first')
-  if (remotes.length === 1) return remotes[0]
-  return remotes.includes('origin') ? 'origin' : null
+  const remote = remotes.length === 1 ? remotes[0] : remotes.includes('origin') ? 'origin' : null
+  return { remote, upstream, merge, mode }
+}
+
+const OWN = (branch: string): string => `refs/heads/${branch}`
+
+/**
+ * Whether git would refuse the push: push.default is simple, and the branch follows a branch with
+ * another name on the remote it goes to, e.g. one created from origin/main.
+ */
+const refusedUpstream = (s: PushSettings, branch: string): boolean =>
+  s.mode === 'simple' && !!s.merge && s.upstream === s.remote && s.merge !== OWN(branch)
+
+/** What a push of the branch needs from the user, where git can't decide alone. */
+export async function pushPlanOf(repo: string, branch: string): Promise<PushPlan> {
+  const s = await pushSettings(repo, branch)
+  return {
+    remote: s.remote,
+    renamedUpstream: refusedUpstream(s, branch)
+      ? `${s.upstream}/${s.merge!.replace(/^refs\/heads\//, '')}`
+      : null
+  }
 }
 
 export interface PushDestination {
   remote: string
   /** Branch on the remote, e.g. refs/heads/main */
   ref: string
-  /** First push: the branch is to follow it */
+  /** The branch is to follow it afterwards */
   setUpstream: boolean
 }
 
-/** Where a push of the branch goes; `remote` is the one the user picked when git can't tell. */
+/** Where a push of the branch goes, as git's push.default says; `choice` is the user's answer. */
 export async function pushDestination(
   repo: string,
   branch: string,
-  remote?: string
+  choice: PushChoice = {}
 ): Promise<PushDestination> {
-  if (remote !== undefined) assertArg(remote, 'remote')
-  const to = remote ?? (await pushRemoteOf(repo, branch))
+  if (choice.remote !== undefined) assertArg(choice.remote, 'remote')
+  const s = await pushSettings(repo, branch)
+  if (choice.remote !== undefined) s.remote = choice.remote
+  const to = s.remote
   if (!to)
     throw new Error(`There are several remotes and none is origin: choose where to push ${branch}`)
-  const upstream = await getConfig(repo, `branch.${branch}.remote`)
-  const merge = await getConfig(repo, `branch.${branch}.merge`)
-  // To its upstream's remote it goes to the upstream, even with another name; to another remote
-  // (a fork set as pushRemote) to a branch of the same name, leaving the upstream as it is
-  if (upstream === to && merge) return { remote: to, ref: merge, setUpstream: false }
-  return { remote: to, ref: `refs/heads/${branch}`, setUpstream: !(upstream && merge) }
+  if (s.mode === 'nothing')
+    throw new Error('git is set to push only what you name (push.default=nothing)')
+  const own = OWN(branch)
+  if (s.upstream !== to || !s.merge) {
+    // A fork set as pushRemote gets a branch of the same name, and the upstream stays: but not
+    // with push.default=upstream, which only pushes to the upstream
+    if (s.mode === 'upstream' && s.merge)
+      throw new Error(
+        `${branch} would go to ${to}, which isn't its upstream's remote (push.default=upstream)`
+      )
+    return { remote: to, ref: own, setUpstream: !(s.upstream && s.merge) }
+  }
+  if (!refusedUpstream(s, branch) || choice.toUpstream === true) {
+    // current and matching push to a branch of the same name, upstream to the upstream
+    const same = s.mode === 'current' || s.mode === 'matching'
+    return { remote: to, ref: same && !choice.toUpstream ? own : s.merge, setUpstream: false }
+  }
+  // Where git would refuse: to a branch of its own name, followed from then on
+  if (choice.toUpstream === false) return { remote: to, ref: own, setUpstream: true }
+  throw new Error(
+    `${branch} follows ${to}/${s.merge.replace(/^refs\/heads\//, '')}, which has another name: ` +
+      'choose where to push it'
+  )
 }
 
 export async function firstParentOf(repo: string, hash: string): Promise<string | undefined> {

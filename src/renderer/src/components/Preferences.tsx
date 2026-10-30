@@ -23,6 +23,7 @@ import ConfigSettings from './ConfigSettings'
 import AccountSettings from './forge/AccountSettings'
 
 const PULL_MODES: { value: PullMode; label: string }[] = [
+  { value: 'git', label: 'As set in git (pull.rebase, pull.ff), otherwise merge' },
   { value: 'ff', label: 'Fast-forward if possible, otherwise merge' },
   { value: 'ff-only', label: 'Fast-forward only' },
   { value: 'rebase', label: 'Rebase' }

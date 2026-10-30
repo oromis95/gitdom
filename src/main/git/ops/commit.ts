@@ -112,8 +112,8 @@ export const commitOps: Pick<
       )
     )
     if (commit === head) {
-      // --only without paths commits HEAD's tree again: staged changes stay staged.
-      // The content is unchanged, so hooks checking it would only get in the way
+      // --only without paths commits HEAD's tree again: staged changes stay staged. The hooks
+      // run, as with git commit --amend: commit-msg can check or complete the message
       const output = await runGit(
         repo,
         [
@@ -121,7 +121,6 @@ export const commitOps: Pick<
           'commit',
           '--amend',
           '--only',
-          '--no-verify',
           '--allow-empty',
           '-F',
           '-'

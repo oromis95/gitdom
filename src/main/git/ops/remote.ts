@@ -1,6 +1,6 @@
 // Operations on remotes, submodules, worktrees and Git LFS.
 import { resolve } from 'path'
-import { runGit } from '../exec'
+import { runGit, tryGit } from '../exec'
 import { PUSH_PHASES, progressReader, reportProgress } from '../progress'
 import {
   type OpImpl,
@@ -11,16 +11,29 @@ import {
   assertIdle,
   withConflicts,
   currentBranch,
+  configValues,
   pushDestination,
-  pushRemoteOf
+  pushPlanOf
 } from './shared'
+
+/** The flags of a pull as git is configured: none when it says how to pull, else a merge. */
+async function configuredPull(repo: string): Promise<string[]> {
+  const branch = (await tryGit(repo, ['symbolic-ref', '-q', '--short', 'HEAD']))?.trim()
+  const config = await configValues(repo, '^(pull\\.(rebase|ff)|branch\\..+\\.rebase)$')
+  const set =
+    config.has('pull.rebase') ||
+    config.has('pull.ff') ||
+    (!!branch && config.has(`branch.${branch}.rebase`))
+  // Without them git 2.33+ refuses to pull a branch that has diverged: it used to merge
+  return set ? [] : ['--no-rebase']
+}
 
 export const remoteOps: Pick<
   OpImpl,
   | 'fetch'
   | 'pull'
   | 'push'
-  | 'pushRemote'
+  | 'pushPlan'
   | 'addRemote'
   | 'removeRemote'
   | 'renameRemote'
@@ -43,19 +56,22 @@ export const remoteOps: Pick<
 
   async pull(repo, mode) {
     await assertIdle(repo)
-    const flag = { ff: '--no-rebase', 'ff-only': '--ff-only', rebase: '--rebase' }[mode]
-    return withConflicts(repo, ['pull', '--autostash', flag])
+    const flags =
+      mode === 'git'
+        ? await configuredPull(repo)
+        : [{ ff: '--no-rebase', 'ff-only': '--ff-only', rebase: '--rebase' }[mode]]
+    return withConflicts(repo, ['pull', '--autostash', ...flags])
   },
 
-  async push(repo, forceWithLease, name, remote) {
+  async push(repo, forceWithLease, name, choice) {
     if (name !== undefined) assertArg(name, 'branch name')
     const branch = name ?? (await currentBranch(repo))
-    const to = await pushDestination(repo, branch, remote)
+    const to = await pushDestination(repo, branch, choice)
     // --progress: git only reports it to a terminal otherwise
     const args = ['push', '--progress']
     if (forceWithLease) args.push('--force-with-lease')
     if (to.setUpstream) args.push('-u')
-    // Explicit refspec: works even when the upstream has a different name (push.default=simple would refuse)
+    // Explicit refspec: the destination is already decided as push.default says
     args.push(to.remote, `refs/heads/${branch}:${to.ref}`)
     return runGit(repo, args, {
       withStderr: true,
@@ -63,9 +79,9 @@ export const remoteOps: Pick<
     })
   },
 
-  async pushRemote(repo, name) {
+  async pushPlan(repo, name) {
     if (name !== undefined) assertArg(name, 'branch name')
-    return pushRemoteOf(repo, name ?? (await currentBranch(repo)))
+    return pushPlanOf(repo, name ?? (await currentBranch(repo)))
   },
 
   async addRemote(repo, name, url) {

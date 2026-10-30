@@ -1,5 +1,5 @@
 // Repository operations exposed to the renderer through the `repo:op` IPC channel.
-import type { OpArgs, OpName, OpResult } from '../../shared/api'
+import type { OpArgs, OpName, OpResult, PushChoice } from '../../shared/api'
 import { tryGit } from './exec'
 import { readOperation } from './repository'
 import * as history from './history'
@@ -77,7 +77,7 @@ const READ_ONLY = new Set<OpName>([
   'inspectPatch',
   'repoSummary',
   'myCommits',
-  'pushRemote'
+  'pushPlan'
 ])
 
 /**
@@ -161,9 +161,9 @@ async function currentBranchRef(repo: string): Promise<string[]> {
 }
 
 /** Remote branch a push of the branch (default the current one) would overwrite. */
-async function pushTarget(repo: string, name?: string, remote?: string): Promise<string[]> {
+async function pushTarget(repo: string, name?: string, choice?: PushChoice): Promise<string[]> {
   const branch = name ?? (await currentBranch(repo))
-  const to = await pushDestination(repo, branch, remote).catch(() => null)
+  const to = await pushDestination(repo, branch, choice).catch(() => null)
   return to ? [`refs/remotes/${to.remote}/${to.ref.replace(/^refs\/heads\//, '')}`] : []
 }
 
@@ -180,7 +180,7 @@ const BACKED_UP: { [K in OpName]?: (repo: string, ...args: OpArgs<K>) => Promise
   fixup: (repo) => currentBranchRef(repo),
   splitCommit: (repo) => currentBranchRef(repo),
   reorderCommits: (repo) => currentBranchRef(repo),
-  push: async (repo, force, name, remote) => (force ? pushTarget(repo, name, remote) : []),
+  push: async (repo, force, name, choice) => (force ? pushTarget(repo, name, choice) : []),
   // Restoring a backup moves the branch too: where it was is saved first
   restoreBackup: async (_repo, _id, ref) => [ref],
   deleteBranches: async (_repo, names) => names.map((name) => `refs/heads/${name}`)

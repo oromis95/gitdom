@@ -12,7 +12,7 @@ import {
 import type { Ref } from '../../shared/types'
 import { call, fail, run, runBusy, snapshotOf } from './actions/core'
 import { checkoutBranch, checkoutRemoteBranch } from './actions/refs'
-import { choosePushRemote, pull as pullBranch } from './actions/remote'
+import { choosePush, pull as pullBranch } from './actions/remote'
 import { isReady, pullLabel, pullsByRef, refreshForge, setEnded, useForge } from './forge'
 import { useApp } from './store'
 import { notify, showForm } from './ui'
@@ -99,9 +99,9 @@ export async function checkoutPull(
  */
 export async function createPull(repo: string, pull: NewPull, push: boolean): Promise<boolean> {
   if (push) {
-    const remote = await choosePushRemote(repo, pull.branch)
-    if (remote === null) return false
-    const pushed = await runBusy(repo, 'Pushing', 'push', false, pull.branch, remote)
+    const choice = await choosePush(repo, pull.branch)
+    if (!choice) return false
+    const pushed = await runBusy(repo, 'Pushing', 'push', false, pull.branch, choice)
     if (!pushed.ok) {
       fail(pushed)
       return false

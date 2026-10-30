@@ -32,6 +32,7 @@ import RepoSwitcher from './RepoSwitcher'
 const LATER = 'Available in a later milestone'
 
 const PULL_MODES: { mode: PullMode; label: string }[] = [
+  { mode: 'git', label: 'Pull (as set in git)' },
   { mode: 'ff', label: 'Pull (fast-forward if possible)' },
   { mode: 'ff-only', label: 'Pull (fast-forward only)' },
   { mode: 'rebase', label: 'Pull (rebase)' }
