@@ -6,14 +6,12 @@ import { useActiveTab, useApp } from '../../store'
 import { displayCombo } from '../../keys'
 import { matches } from '../../shortcuts'
 import { hoverCard } from '../../hover'
-import { relativeTime } from '../../time'
+import { dateTimeFormat, relativeTime } from '../../time'
 import { AuthorCard } from '../HoverCards'
 import { reword } from '../../actions'
 import { useFileView } from './fileListing'
 import { ViewToggle } from './ViewToggle'
 import { FileList } from './FileList'
-
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
 /** The repository snapshot once HEAD has moved from `head`: null after a few seconds. */
 function snapshotAfter(repo: string, head: string | null): Promise<RepoSnapshot | null> {
@@ -238,14 +236,14 @@ export function CommitPanel({
         </dd>
         <dt>authored</dt>
         <dd title={relativeTime(detail.authorDate)}>
-          {dateFormat.format(detail.authorDate * 1000)}
+          {dateTimeFormat.format(detail.authorDate * 1000)}
         </dd>
         {(detail.committerName !== detail.authorName ||
           detail.committerDate !== detail.authorDate) && (
           <>
             <dt>committer</dt>
             <dd>
-              {detail.committerName}, {dateFormat.format(detail.committerDate * 1000)}
+              {detail.committerName}, {dateTimeFormat.format(detail.committerDate * 1000)}
             </dd>
           </>
         )}

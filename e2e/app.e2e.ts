@@ -26,6 +26,22 @@ describe('GitDom', () => {
     await expect(win.locator('.tab.active').innerText()).resolves.toContain('demo')
   })
 
+  it('writes dates day first, with times on 24 hours', async () => {
+    const { win } = gitdom
+    const when = git(
+      repo,
+      'log',
+      '-1',
+      '--date=format-local:%d/%m/%Y, %H:%M',
+      '--format=%ad',
+      'HEAD~1'
+    )
+    const row = win.locator('.graph-row:has-text("Initial commit")')
+    await expect(row.locator('.cell-date').innerText()).resolves.toBe(when)
+    await row.click()
+    await expect(win.locator('dt:has-text("authored") + dd').innerText()).resolves.toBe(when)
+  })
+
   it('runs the interface in a sandbox, with only the GitDom API', async () => {
     const page = await gitdom.win.evaluate(() => ({
       api: typeof window.api?.op,

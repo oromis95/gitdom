@@ -31,7 +31,8 @@ import {
   type TimelapseFilters
 } from '../timelapse'
 import TimelapseTrack from './TimelapseTrack'
-import { copyHash, dayFormat, formatDate, showInGraph, useLoaded } from './inspect'
+import { copyHash, formatDate, showInGraph, useLoaded } from './inspect'
+import { dayFormat } from '../time'
 import { storage } from '../storage'
 
 const VIEW_KEY = 'gitdom.timelapse'

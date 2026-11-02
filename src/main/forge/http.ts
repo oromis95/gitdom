@@ -99,7 +99,9 @@ export async function request(
     throw new ForgeError(`${host} refused the token${detail ? `: ${detail}` : ''}`, 401, true)
   if (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') {
     const reset = Number(response.headers.get('x-ratelimit-reset'))
-    const when = reset ? ` until ${new Date(reset * 1000).toLocaleTimeString()}` : ''
+    const when = reset
+      ? ` until ${new Date(reset * 1000).toLocaleTimeString('en-GB', { timeStyle: 'short' })}`
+      : ''
     throw new ForgeError(`${host}: too many requests, paused${when}`, 403)
   }
   if (response.status === 429) {

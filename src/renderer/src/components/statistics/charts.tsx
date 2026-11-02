@@ -11,9 +11,8 @@ import {
   punchcardRows,
   yearsOf
 } from '../../statistics'
+import { utcDayFormat } from '../../time'
 
-// Calendar days are dates without a time: read them as UTC, or they may show as the day before
-const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' })
 const monthLabel = new Intl.DateTimeFormat('en', { month: 'short', timeZone: 'UTC' })
 const shortMonth = (month: string): string => monthLabel.format(new Date(`${month}-01`))
 
@@ -71,7 +70,7 @@ export function ActivityCalendar({ days }: { days: Record<string, number> }): Re
             rx={2}
           >
             <title>
-              {d.count} commit{d.count === 1 ? '' : 's'} on {dayFormat.format(new Date(d.date))}
+              {d.count} commit{d.count === 1 ? '' : 's'} on {utcDayFormat.format(new Date(d.date))}
             </title>
           </rect>
         ))}

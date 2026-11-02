@@ -6,7 +6,8 @@ import { WIP_HASH, useActiveTab, useApp, type FileInspect } from '../../store'
 import { openMenu, type MenuItem } from '../../ui'
 import { highlightLines } from '../../highlight'
 import { rangeLabel } from '../../lineRange'
-import { copyHash, dayFormat, formatDate, showInGraph, useLoaded } from '../inspect'
+import { copyHash, formatDate, showInGraph, useLoaded } from '../inspect'
+import { dayFormat } from '../../time'
 
 /** Lines picked in the blame, by clicking their numbers. */
 interface Picked {

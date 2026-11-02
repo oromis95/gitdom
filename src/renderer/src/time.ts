@@ -1,4 +1,5 @@
-// Dates as people say them: "3 hours ago", "in 2 days".
+// Dates as people say them, "3 hours ago", and as they write them: day first, 25/09/2026, with
+// times on 24 hours, whatever the locale of the system.
 
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['year', 365 * 24 * 3600],
@@ -22,12 +23,26 @@ export function relativeTime(seconds: number, now = Date.now()): string {
   return 'just now'
 }
 
-export const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short'
-})
+const DAY: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
+const CLOCK: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
+const SECONDS: Intl.DateTimeFormatOptions = { ...CLOCK, second: '2-digit' }
 
-/** "3 hours ago · 25 Sept 2026, 14:02" */
+/** "25/09/2026" */
+export const dayFormat = new Intl.DateTimeFormat('en-GB', DAY)
+/** "25/09/2026" for a date without a time, read as UTC or it may show as the day before */
+export const utcDayFormat = new Intl.DateTimeFormat('en-GB', { ...DAY, timeZone: 'UTC' })
+/** "Friday, 25/09/2026" */
+export const weekdayFormat = new Intl.DateTimeFormat('en-GB', { weekday: 'long', ...DAY })
+/** "25/09/2026, 14:02" */
+export const dateTimeFormat = new Intl.DateTimeFormat('en-GB', { ...DAY, ...CLOCK })
+/** "25/09/2026, 14:02:37" */
+export const dateTimeSecondsFormat = new Intl.DateTimeFormat('en-GB', { ...DAY, ...SECONDS })
+/** "14:02" */
+export const timeFormat = new Intl.DateTimeFormat('en-GB', CLOCK)
+/** "14:02:37" */
+export const timeSecondsFormat = new Intl.DateTimeFormat('en-GB', SECONDS)
+
+/** "3 hours ago · 25/09/2026, 14:02" */
 export function describeDate(seconds: number): string {
   return `${relativeTime(seconds)} · ${dateTimeFormat.format(seconds * 1000)}`
 }

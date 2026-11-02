@@ -2,6 +2,12 @@
 
 What's new in each GitDom version. GitDom shows this list after an update (**Help → What's New**), and each GitHub release uses its version's section as release notes.
 
+## Unreleased
+
+### Changed
+
+- Dates are written day first, 02/11/2026, with times on 24 hours, whatever the language of the system: in the graph, the commit details, the hover cards, the history, blame and timelapse of a file, the recovery view, the statistics, What I did and the activity log
+
 ## 1.16.1 — 2026-11-02
 
 ### Changed

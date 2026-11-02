@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { RepoStatistics } from '../../../../shared/types'
 import { useApp } from '../../store'
 import { laneColor } from '../../graph/colors'
-import { relativeTime } from '../../time'
+import { dayFormat, relativeTime } from '../../time'
 import { formatBytes, formatCompact, formatCount, formatSpan } from '../../statistics'
 import FilePath from '../FilePath'
 import { Avatar } from '../HoverCards'
@@ -11,8 +11,7 @@ import { ActivityCalendar, MonthlyChart, Punchcard } from './charts'
 
 const AUTHORS_SHOWN = 15
 
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
-const formatDate = (seconds: number): string => dateFormat.format(seconds * 1000)
+const formatDate = (seconds: number): string => dayFormat.format(seconds * 1000)
 
 function Card({
   title,

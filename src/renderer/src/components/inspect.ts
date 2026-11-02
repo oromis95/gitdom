@@ -3,10 +3,9 @@ import { useEffect, useState } from 'react'
 import type { Result } from '../../../shared/api'
 import { useApp } from '../store'
 import { notify } from '../ui'
+import { dateTimeFormat } from '../time'
 
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-export const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
-export const formatDate = (seconds: number, format = dateFormat): string =>
+export const formatDate = (seconds: number, format = dateTimeFormat): string =>
   format.format(new Date(seconds * 1000))
 
 interface Loaded<T> {

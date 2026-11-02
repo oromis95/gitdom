@@ -7,6 +7,7 @@ import { useApp } from '../store'
 import { eachLimited, knownRepositories, useWorkspaces } from '../workspaces'
 import { loadProfiles } from '../identity'
 import { notify, useUi } from '../ui'
+import { timeFormat, weekdayFormat } from '../time'
 
 type Period = 'thisWeek' | 'lastWeek' | 'last7' | 'last30'
 
@@ -33,14 +34,8 @@ function range(period: Period, now = new Date()): [number, number] {
 }
 
 const nameOf = (path: string): string => path.split(/[\\/]/).pop() || path
-const dayOf = (date: number): string =>
-  new Date(date * 1000).toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  })
-const timeOf = (date: number): string =>
-  new Date(date * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+const dayOf = (date: number): string => weekdayFormat.format(date * 1000)
+const timeOf = (date: number): string => timeFormat.format(date * 1000)
 
 interface Found extends MyCommit {
   repo: string

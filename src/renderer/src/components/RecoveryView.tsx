@@ -7,8 +7,7 @@ import type { Backup, ReflogEntry, RepoSnapshot } from '../../../shared/types'
 import { useActiveTab, useApp, type RecoveryView as View } from '../store'
 import { checkoutCommit, createBranch, reset, run } from '../actions'
 import { confirm, fromTerminal, notify, openMenu, type MenuItem } from '../ui'
-
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' })
+import { dateTimeSecondsFormat } from '../time'
 
 const shortRef = (ref: string): string => ref.replace(/^refs\/(heads|remotes|tags)\//, '')
 
@@ -101,7 +100,7 @@ function Reflog({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
           </span>
         )}
         <span className="cell-date">
-          {e.date ? dateFormat.format(new Date(e.date * 1000)) : ''}
+          {e.date ? dateTimeSecondsFormat.format(new Date(e.date * 1000)) : ''}
         </span>
         <button
           className="row-action"
@@ -181,7 +180,7 @@ function Backups({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
           <div key={b.id} className="backup">
             <div className="backup-title">
               <span className="backup-label">{b.label}</span>
-              <span className="cell-date">{dateFormat.format(new Date(b.date))}</span>
+              <span className="cell-date">{dateTimeSecondsFormat.format(new Date(b.date))}</span>
               <button className="row-action" onClick={() => void remove(b)}>
                 Delete
               </button>

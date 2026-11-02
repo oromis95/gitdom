@@ -64,6 +64,7 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 - Search by message, author, SHA or changed file (Ctrl+F), with matches highlighted, Enter to step through them, and an option to list only the matches
 - Hide a branch from the graph, or show only one branch, from its right-click menu
 - Resizable columns, an optional SHA column, and right-click the header to hide columns
+- Dates day first everywhere, 02/11/2026, with times on 24 hours, whatever the language of the system
 - Author pictures from Gravatar (or GitHub for its noreply addresses), with initials when offline
 - Stashes drawn as nodes on the commits they were made on
 - Hover a branch label to highlight its line; a minimap beside the graph marks HEAD, the selection and the search matches

@@ -7,7 +7,7 @@ import { laneColor } from '../../graph/colors'
 import type { GraphItem } from '../../graph/rows'
 import type { RefLabel } from '../../graph/refLabels'
 import { hoverCard } from '../../hover'
-import { describeDate } from '../../time'
+import { dateTimeFormat, describeDate } from '../../time'
 import type { Settings } from '../../settings'
 import * as actions from '../../actions'
 import { AuthorCard, CommitCard, StashCard } from '../HoverCards'
@@ -17,8 +17,6 @@ import { openRefsMenu, rowKey } from './shared'
 
 /** Drag and drop payload: the hash of a commit being moved along the current branch */
 const COMMIT_MIME = 'application/x-gitdom-commit'
-
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' })
 
 export default function GraphRow({
   snapshot,
@@ -196,7 +194,7 @@ export default function GraphRow({
               style={{ width: settings.graphDateWidth }}
               title={describeDate(row.kind === 'commit' ? row.commit.authorDate : row.stash.date)}
             >
-              {dateFormat.format(
+              {dateTimeFormat.format(
                 (row.kind === 'commit' ? row.commit.authorDate : row.stash.date) * 1000
               )}
             </div>

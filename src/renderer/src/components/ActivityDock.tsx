@@ -13,6 +13,7 @@ import {
   useActivity
 } from '../activity'
 import { notify } from '../ui'
+import { timeSecondsFormat } from '../time'
 import { useShortcut, useShortcutLabel } from '../shortcuts'
 
 interface Group {
@@ -25,12 +26,7 @@ interface Group {
 
 const baseName = (path: string): string => path.split(/[\\/]/).filter(Boolean).pop() ?? path
 
-const time = (ms: number): string =>
-  new Date(ms).toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
+const time = (ms: number): string => timeSecondsFormat.format(ms)
 
 const duration = (ms: number): string => (ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`)
 
