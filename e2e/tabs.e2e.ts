@@ -103,8 +103,12 @@ describe('Tabs', () => {
     ])
     await choose.locator('select').selectOption('fork')
     await choose.locator('button[type=submit]:has-text("Push")').click()
-    await win.waitForSelector('.toast:has-text("Pushed")', { timeout: 30000 })
-    expect(git(gamma, 'rev-parse', '--abbrev-ref', 'feature@{u}')).toBe('fork/feature')
+    // The toast of the previous push can still be there: wait for git itself
+    await expect
+      .poll(() => git(gamma, 'for-each-ref', '--format=%(upstream:short)', 'refs/heads/feature'), {
+        timeout: 30000
+      })
+      .toBe('fork/feature')
     expect(git(`${dir}/fork.git`, 'branch', '--format=%(refname:short)')).toBe('feature')
 
     // Now it follows the branch there: the next push asks nothing
