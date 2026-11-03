@@ -68,7 +68,10 @@ export default function FileInspector({
   return (
     <div className="diff-view inspector">
       <div className="diff-header">
-        <span className="diff-path" title={shownPath}>
+        <span
+          className="diff-path"
+          title={shownPath !== inspect.path ? `${shownPath} → ${inspect.path}` : inspect.path}
+        >
           {shownPath !== inspect.path && <span className="muted">{shownPath} → </span>}
           {inspect.path}
         </span>

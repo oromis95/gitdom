@@ -109,7 +109,9 @@ function GroupRow({ group }: { group: Group }): React.JSX.Element {
         ) : (
           <CircleCheck size={14} className="activity-good" />
         )}
-        <span className="activity-label">{group.label}</span>
+        <span className="activity-label" title={group.label}>
+          {group.label}
+        </span>
         <span className="activity-repo">{baseName(group.repo)}</span>
         <span className="activity-meta">
           {group.entries.length} command{group.entries.length === 1 ? '' : 's'} ·{' '}

@@ -239,9 +239,12 @@ function Dialog(): React.JSX.Element {
                 ) : (
                   s && (
                     <>
-                      <span className="dashboard-branch" title={s.upstream ?? 'No upstream'}>
+                      <span
+                        className="dashboard-branch"
+                        title={`${s.branch ?? `detached ${s.head ?? ''}`}\n${s.upstream ? `Following ${s.upstream}` : 'No upstream'}`}
+                      >
                         <GitBranch size={13} />
-                        {s.branch ?? `detached ${s.head ?? ''}`}
+                        <span>{s.branch ?? `detached ${s.head ?? ''}`}</span>
                       </span>
                       <span className="dashboard-sync">
                         {s.ahead > 0 && (

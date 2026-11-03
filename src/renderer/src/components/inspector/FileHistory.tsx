@@ -52,7 +52,10 @@ export default function FileHistory({
       >
         <span className={`file-status status-${r.status ?? 'M'}`}>{r.status ?? '·'}</span>
         <span className="history-hash mono">{r.hash.slice(0, 7)}</span>
-        <span className="history-subject">
+        <span
+          className="history-subject"
+          title={r.oldPath ? `${r.subject}\nRenamed from ${r.oldPath}` : r.subject}
+        >
           {r.subject}
           {r.oldPath && <span className="muted"> (renamed from {r.oldPath})</span>}
         </span>

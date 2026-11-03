@@ -23,7 +23,10 @@ export default function FilePath({
     from && from.slice(0, Math.max(fromSlash, 0)) === folder ? from.slice(fromSlash + 1) : from
   const below = [folder, old && `renamed from ${old}`].filter(Boolean).join(' · ')
   return (
-    <span className={`path-cell${className ? ` ${className}` : ''}`} title={path}>
+    <span
+      className={`path-cell${className ? ` ${className}` : ''}`}
+      title={from ? `${from} → ${path}` : path}
+    >
       <span className="path-name mono">{name}</span>
       {below && (
         <span className="path-folder">

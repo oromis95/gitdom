@@ -229,7 +229,7 @@ export function CommitBox({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.E
         chips.length > 0 && (
           <div className="commit-chips">
             {chips.map((c) => (
-              <span key={c} className="commit-chip">
+              <span key={c} className="commit-chip" title={c}>
                 {c}
               </span>
             ))}

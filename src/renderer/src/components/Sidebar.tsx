@@ -44,6 +44,8 @@ const SUBMODULE_STATES: Record<SubmoduleState, string> = {
 
 interface TreeNode {
   name: string
+  /** The name with its folders, feature/login */
+  path: string
   children: Map<string, TreeNode>
   ref?: Ref
 }
@@ -53,14 +55,14 @@ interface TreeNode {
  * list of full names.
  */
 function buildTree(refs: Ref[], nameOf: (r: Ref) => string, folders: boolean): TreeNode {
-  const root: TreeNode = { name: '', children: new Map() }
+  const root: TreeNode = { name: '', path: '', children: new Map() }
   for (const ref of refs) {
     const parts = folders ? nameOf(ref).split('/') : [nameOf(ref)]
     let node = root
     parts.forEach((part, i) => {
       let child = node.children.get(part)
       if (!child) {
-        child = { name: part, children: new Map() }
+        child = { name: part, path: parts.slice(0, i + 1).join('/'), children: new Map() }
         node.children.set(part, child)
       }
       if (i === parts.length - 1) child.ref = ref
@@ -99,17 +101,17 @@ function Tree({
       {entries.map((child) => {
         const pad = { paddingLeft: 12 + depth * 16 }
         if (child.children.size > 0 && !child.ref) {
-          const isCollapsed = collapsed.has(child.name)
+          const isCollapsed = collapsed.has(child.path)
           const toggle = (): void =>
             setCollapsed((prev) => {
               const next = new Set(prev)
-              if (isCollapsed) next.delete(child.name)
-              else next.add(child.name)
+              if (isCollapsed) next.delete(child.path)
+              else next.add(child.path)
               return next
             })
           return (
             <div key={child.name}>
-              <button className="tree-item" style={pad} onClick={toggle}>
+              <button className="tree-item" style={pad} title={child.path} onClick={toggle}>
                 {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                 <Folder size={14} />
                 <span>{child.name}</span>

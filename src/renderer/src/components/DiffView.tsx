@@ -345,7 +345,14 @@ export default function DiffView({
   return (
     <div className="diff-view">
       <div className="diff-header">
-        <span className="diff-path" title={target.path}>
+        <span
+          className="diff-path"
+          title={
+            target.oldPath && target.oldPath !== target.path
+              ? `${target.oldPath} → ${target.path}`
+              : target.path
+          }
+        >
           {target.oldPath && target.oldPath !== target.path && (
             <span className="muted">{target.oldPath} → </span>
           )}

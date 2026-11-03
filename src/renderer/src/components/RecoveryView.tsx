@@ -87,7 +87,10 @@ function Reflog({ snapshot }: { snapshot: RepoSnapshot }): React.JSX.Element {
       >
         <span className="history-hash mono">{e.hash.slice(0, 7)}</span>
         <span className="reflog-action">{e.action}</span>
-        <span className="history-subject" title={e.message}>
+        <span
+          className="history-subject"
+          title={e.subject && e.subject !== e.message ? `${e.message}\n${e.subject}` : e.message}
+        >
           {e.message}
           {e.subject && e.subject !== e.message && <span className="muted"> · {e.subject}</span>}
         </span>

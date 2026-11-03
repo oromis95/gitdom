@@ -68,7 +68,7 @@ Windows is used every day; macOS and Linux run the automated tests, including th
 - Author pictures from Gravatar (or GitHub for its noreply addresses), with initials when offline
 - Stashes drawn as nodes on the commits they were made on
 - Hover a branch label to highlight its line; a minimap beside the graph marks HEAD, the selection and the search matches
-- Commit details, changed files as a list or a folder tree, and diffs with syntax highlighting
+- Commit details, changed files as a list or a folder tree (folders holding only one folder shown as one, `src/main/java`), and diffs with syntax highlighting
 
 ### Diffs
 

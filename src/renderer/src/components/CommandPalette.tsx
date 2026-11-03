@@ -75,6 +75,7 @@ function Palette(): React.JSX.Element {
             <button
               key={`${item.group}:${item.title}:${item.hint ?? ''}`}
               className={`palette-item${i === active ? ' active' : ''}`}
+              title={item.hint ? `${item.title}\n${item.hint}` : item.title}
               onMouseMove={() => i !== active && setActive(i)}
               onClick={() => runCommand(item)}
             >

@@ -85,7 +85,7 @@ function Authors({ stats }: { stats: RepoStatistics }): React.JSX.Element {
           return (
             <div key={a.email + a.name} className="stats-row">
               <Avatar name={a.name} email={a.email} size={22} />
-              <span className="stats-name" title={a.email}>
+              <span className="stats-name" title={`${a.name} <${a.email}>`}>
                 {a.name}
               </span>
               <span
@@ -211,7 +211,9 @@ function Knowledge({ stats }: { stats: RepoStatistics }): React.JSX.Element {
               onClick={() => inspectFile({ path: f.path, mode: 'blame', rev: null })}
             >
               <FilePath className="stats-path" path={f.path} />
-              <span className="stats-name">{f.owner}</span>
+              <span className="stats-name" title={f.owner}>
+                {f.owner}
+              </span>
               <span className="stats-number">{formatCount(f.changes)}×</span>
               <span className="stats-dates muted">{relativeTime(f.last)}</span>
             </div>

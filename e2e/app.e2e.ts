@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from 'fs'
+import { dirname, join } from 'path'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { cleanUp, git, launch, makeRepo, scratch, type Running } from './helpers'
 
@@ -40,6 +42,40 @@ describe('GitDom', () => {
     await expect(row.locator('.cell-date').innerText()).resolves.toBe(when)
     await row.click()
     await expect(win.locator('dt:has-text("authored") + dd').innerText()).resolves.toBe(when)
+  })
+
+  it('shows deep folders whole in the folder view, scrolling sideways', async () => {
+    const { win } = gitdom
+    const base = 'src/main/java/com/example/accounting/foundation'
+    for (const file of ['service/CapitalBudgetFoundationServiceImpl.java', 'dto/RequestDto.java']) {
+      mkdirSync(dirname(join(repo, base, file)), { recursive: true })
+      writeFileSync(join(repo, base, file), 'class Example {}\n')
+    }
+    git(repo, 'add', 'src')
+    git(repo, 'commit', '-q', '-m', 'Add the services')
+    await win.locator('.graph-row:has-text("Add the services")').click()
+    await win.locator('.view-toggle button[title="Tree view"]').click()
+    const rows = win.locator('.file-tree .file-row')
+    await expect
+      .poll(() => rows.allInnerTexts())
+      .toEqual([
+        base,
+        'dto',
+        'A\nRequestDto.java',
+        'service',
+        'A\nCapitalBudgetFoundationServiceImpl.java'
+      ])
+    await expect(rows.first().getAttribute('title')).resolves.toBe(base)
+    // No name is cut: the panel scrolls sideways instead
+    const cut = await win
+      .locator('.file-tree .file-path')
+      .evaluateAll((names) => names.filter((n) => n.scrollWidth > n.clientWidth).length)
+    expect(cut).toBe(0)
+    const panel = await win
+      .locator('.detail-scroll')
+      .evaluate((p) => ({ width: p.scrollWidth, visible: p.clientWidth }))
+    expect(panel.width).toBeGreaterThan(panel.visible)
+    await win.locator('.view-toggle button[title="Path view"]').click()
   })
 
   it('runs the interface in a sandbox, with only the GitDom API', async () => {

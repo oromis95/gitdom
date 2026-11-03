@@ -1,4 +1,4 @@
-// Shared pieces of the file lists: the remembered layout, diff sources, folder trees.
+// Shared pieces of the file lists: the remembered layout and the diff sources.
 import { useState } from 'react'
 import type { DiffSource, FileChange } from '../../../../shared/types'
 import type { CompareTarget } from '../../store'
@@ -38,37 +38,3 @@ export function sourceFor(
 /** Paths to pass to stage/unstage: renames need the old path too. */
 export const pathsOf = (files: FileChange[]): string[] =>
   files.flatMap((f) => (f.oldPath && f.oldPath !== f.path ? [f.oldPath, f.path] : [f.path]))
-
-export interface FolderNode<T = FileChange> {
-  name: string
-  path: string
-  folders: Map<string, FolderNode<T>>
-  files: T[]
-}
-
-export function buildFolders<T extends { path: string }>(files: T[]): FolderNode<T> {
-  const root: FolderNode<T> = { name: '', path: '', folders: new Map(), files: [] }
-  for (const file of files) {
-    const parts = file.path.split('/')
-    let node = root
-    for (const part of parts.slice(0, -1)) {
-      let child = node.folders.get(part)
-      if (!child) {
-        child = {
-          name: part,
-          path: node.path ? `${node.path}/${part}` : part,
-          folders: new Map(),
-          files: []
-        }
-        node.folders.set(part, child)
-      }
-      node = child
-    }
-    node.files.push(file)
-  }
-  return root
-}
-
-export function allFiles(node: FolderNode): FileChange[] {
-  return [...node.files, ...[...node.folders.values()].flatMap(allFiles)]
-}

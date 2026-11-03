@@ -81,7 +81,7 @@ function RecentItem({ path }: { path: string }): React.JSX.Element {
   const favorite = favorites.includes(path)
   return (
     <div className="recent-item">
-      <button className="recent-open" onClick={() => void openRepo(path)}>
+      <button className="recent-open" title={path} onClick={() => void openRepo(path)}>
         <span>{path.split(/[\\/]/).pop()}</span>
         <span className="muted">{path}</span>
       </button>

@@ -139,7 +139,9 @@ function Editor({ session }: { session: RebaseSession }): React.JSX.Element {
                 <span className="rebase-subject" title={row.original}>
                   {row.action === 'reword' ? row.message?.split('\n')[0] : row.subject}
                 </span>
-                <span className="rebase-author">{row.author}</span>
+                <span className="rebase-author" title={row.author}>
+                  {row.author}
+                </span>
               </div>
               {row.action === 'reword' && (
                 <textarea

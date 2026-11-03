@@ -357,6 +357,9 @@ input {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.tree-item > svg {
+  flex-shrink: 0;
+}
 .tree-badge {
   margin-left: auto;
   font-size: 11px;
@@ -574,6 +577,14 @@ input {
 }
 .file-row:hover {
   background: var(--bg-hover);
+}
+.file-row > svg {
+  flex-shrink: 0;
+}
+/* The folder tree gets wider than the panel instead of cutting the names: the panel scrolls sideways */
+.file-tree {
+  width: max-content;
+  min-width: 100%;
 }
 .file-path {
   overflow: hidden;

@@ -88,7 +88,10 @@ export default function FileLines({
               title="Select the commit; right-click for more"
             >
               <span className="history-hash mono">{r.hash.slice(0, 7)}</span>
-              <span className="history-subject">
+              <span
+                className="history-subject"
+                title={r.diff.oldPath ? `${r.subject}\nRenamed from ${r.diff.oldPath}` : r.subject}
+              >
                 {r.subject}
                 {r.diff.oldPath && <span className="muted"> (renamed from {r.diff.oldPath})</span>}
                 {r.diff.change === 'added' && <span className="muted"> (file created)</span>}

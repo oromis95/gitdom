@@ -36,17 +36,14 @@
   min-width: 0;
 }
 
+/* A card can't be scrolled or reached with the mouse: long names wrap rather than being cut */
 .hover-name {
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .hover-email {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   user-select: text;
 }
 

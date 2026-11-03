@@ -58,7 +58,9 @@ function Pane({
   const taken = (block: number): boolean => choices[block] === side || choices[block] === 'both'
   return (
     <div className="merge-pane">
-      <div className="merge-pane-title">{title}</div>
+      <div className="merge-pane-title" title={title}>
+        {title}
+      </div>
       <div className="merge-pane-body" ref={scrollRef} onScroll={onScroll}>
         {rows.map((row, i) => {
           const first = row.block !== undefined && rows[i - 1]?.block !== row.block

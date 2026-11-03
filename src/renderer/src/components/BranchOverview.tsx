@@ -286,7 +286,9 @@ function Dialog({ session }: { session: BranchesSession }): React.JSX.Element {
                   />
                   <span className="bo-name">
                     {b.worktree ? <FolderGit2 size={13} /> : <GitBranch size={13} />}
-                    <span className="bo-branch mono">{b.name}</span>
+                    <span className="bo-branch mono" title={b.name}>
+                      {b.name}
+                    </span>
                     {b.current && <span className="bo-tag">current</span>}
                     {b.isBase && <span className="bo-tag">base</span>}
                     {b.upstreamGone ? (
@@ -309,7 +311,7 @@ function Dialog({ session }: { session: BranchesSession }): React.JSX.Element {
                       )
                     )}
                   </span>
-                  <span className="bo-commit" title={b.subject}>
+                  <span className="bo-commit" title={`${b.subject}\n${b.author}`}>
                     {b.subject}
                     <span className="bo-author">{b.author}</span>
                   </span>

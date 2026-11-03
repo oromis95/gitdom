@@ -251,7 +251,9 @@ function CreateForm({
                   <div key={c.hash} className="create-commit">
                     <GitCommitHorizontal size={12} />
                     <span className="mono muted">{c.hash.slice(0, 7)}</span>
-                    <span className="pull-commit-subject">{c.subject}</span>
+                    <span className="pull-commit-subject" title={c.subject}>
+                      {c.subject}
+                    </span>
                   </div>
                 ))}
                 {list.length > 5 && <div className="muted">and {list.length - 5} more</div>}

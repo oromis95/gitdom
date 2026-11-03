@@ -195,8 +195,12 @@ function Dialog(): React.JSX.Element {
                       onClick={() => void show(c)}
                     >
                       <span className="my-week-time">{timeOf(c.date)}</span>
-                      <span className="my-week-subject">{c.subject}</span>
-                      <span className="my-week-ref">{c.ref}</span>
+                      <span className="my-week-subject" title={c.subject}>
+                        {c.subject}
+                      </span>
+                      <span className="my-week-ref" title={c.ref}>
+                        {c.ref}
+                      </span>
                     </button>
                   ))}
                 </div>

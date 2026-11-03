@@ -17,14 +17,8 @@ import {
   showInFolder,
   stashFiles
 } from '../../actions'
-import {
-  allFiles,
-  buildFolders,
-  sourceFor,
-  type FileView,
-  type FolderNode,
-  type ListKind
-} from './fileListing'
+import { sourceFor, type FileView, type ListKind } from './fileListing'
+import { allFiles, buildFolders, type FolderNode } from '../../folderTree'
 import { FILE_MANAGER } from '../../platform'
 
 /** Renders files as a flat list or a folder tree, with an optional hover action per file and folder. */
@@ -226,6 +220,7 @@ export function FileList({
           key={`dir:${folder.path}`}
           className="file-row"
           style={{ paddingLeft: 4 + depth * 16 }}
+          title={folder.path}
           tabIndex={0}
           onClick={toggle}
           onKeyDown={(e) => {
@@ -269,7 +264,10 @@ export function FileList({
   }
 
   return (
-    <div onKeyDown={(e) => moveFocus(e, e.currentTarget.closest('.detail'), '.file-row')}>
+    <div
+      className={tree ? 'file-tree' : undefined}
+      onKeyDown={(e) => moveFocus(e, e.currentTarget.closest('.detail'), '.file-row')}
+    >
       {tree ? folderRows(tree, 0) : files.map((f) => fileRow(f, 0, f.path))}
     </div>
   )

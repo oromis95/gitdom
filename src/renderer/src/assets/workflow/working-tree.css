@@ -44,6 +44,11 @@
 .file-row:hover .row-action {
   display: block;
 }
+/* In a tree wider than the panel, at the panel's edge rather than at the end of the row */
+.file-tree .row-action {
+  position: sticky;
+  right: 0;
+}
 .row-action:hover {
   border-color: var(--accent);
 }

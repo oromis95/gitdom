@@ -41,6 +41,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The file name stays in sight, the start of the folder gives way */
+.patch-path {
+  direction: rtl;
+  text-align: left;
+}
 .patch-added {
   color: var(--green);
 }

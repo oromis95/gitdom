@@ -116,7 +116,11 @@ const Row = memo(function Row(p: RowProps): React.JSX.Element {
             ? 'transparent'
             : `color-mix(in srgb, var(--accent) ${Math.round(p.recent * 100)}%, transparent)`
         }}
-        title={p.ghost ? 'Removed by this commit' : 'Click to go to the commit of this line'}
+        title={
+          p.ghost
+            ? 'Removed by this commit'
+            : `${p.commit ? `${revisionTitle(p.commit)}\n` : ''}Click to go to the commit of this line`
+        }
         onClick={() => !p.ghost && p.onGutter(p.id)}
         onContextMenu={(e) => !p.ghost && p.onGutterMenu(e, p.id)}
       >
@@ -617,7 +621,7 @@ function TimelapseView({
           </>
         )}
         {stepTags && (
-          <span className="timelapse-tags">
+          <span className="timelapse-tags" title={stepTags.join(', ')}>
             <Tag size={12} /> {stepTags.join(', ')}
           </span>
         )}

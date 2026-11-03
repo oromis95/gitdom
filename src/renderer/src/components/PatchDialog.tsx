@@ -68,7 +68,9 @@ function Dialog({ session }: { session: PatchSession }): React.JSX.Element {
                 {patch.commits.map((c, i) => (
                   <div key={i} className="patch-row">
                     <GitCommitHorizontal size={14} />
-                    <span className="patch-subject">{c.subject}</span>
+                    <span className="patch-subject" title={c.subject}>
+                      {c.subject}
+                    </span>
                     <span className="muted">{c.author}</span>
                   </div>
                 ))}
@@ -80,7 +82,9 @@ function Dialog({ session }: { session: PatchSession }): React.JSX.Element {
                 {patch.files.map((f) => (
                   <div key={f.path} className="patch-row">
                     <FileText size={14} />
-                    <span className="patch-subject mono">{f.path}</span>
+                    <span className="patch-subject patch-path mono" title={f.path}>
+                      <bdi>{f.path}</bdi>
+                    </span>
                     {f.added === null ? (
                       <span className="muted">binary</span>
                     ) : (

@@ -92,6 +92,10 @@
   flex-shrink: 0;
   color: var(--text-muted);
 }
+.dashboard-branch span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .dashboard-sync {
   display: flex;
   gap: 8px;

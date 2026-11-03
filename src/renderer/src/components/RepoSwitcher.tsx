@@ -134,7 +134,9 @@ function Panel({ anchor, onClose }: { anchor: DOMRect; onClose: () => void }): R
               ) : (
                 <FolderOpen size={14} className="muted" />
               )}
-              <span className="switcher-name">{entry.name}</span>
+              <span className="switcher-name" title={entry.name}>
+                {entry.name}
+              </span>
               <span className="switcher-path muted" title={entry.path}>
                 {entry.kind === 'workspace'
                   ? `${entry.workspace.paths.length} · ${entry.path}`

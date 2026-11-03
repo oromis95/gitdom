@@ -161,7 +161,7 @@ function Commits({
             <button
               key={c.hash}
               className="pull-commit"
-              title={inGraph ? 'Select it in the graph' : 'Show its changes'}
+              title={`${c.subject}\n${inGraph ? 'Select it in the graph' : 'Show its changes'}`}
               onClick={() =>
                 inGraph
                   ? select(c.hash, true)
@@ -206,7 +206,7 @@ function Checks({ pull }: { pull: PullRequest }): React.JSX.Element | null {
             key={`${c.name}${i}`}
             className="pull-check"
             disabled={!c.url}
-            title={c.url ? 'Open its log' : undefined}
+            title={c.url ? `${c.name}\nOpen its log` : c.name}
             onClick={() => c.url && openInBrowser(c.url)}
           >
             <CheckIcon state={c.state} size={12} /> <span>{c.name}</span>
@@ -432,7 +432,7 @@ export default function PullRequestView({
     <div className="diff-view inspector pull-view">
       <div className="diff-header">
         {pull ? <PullIcon pull={pull} size={16} /> : null}
-        <span className="diff-path pull-title">
+        <span className="diff-path pull-title" title={pull?.title}>
           <span className="muted">{pullLabel(kind, number)}</span> {pull?.title ?? ''}
         </span>
         <span className="toolbar-spacer" />
