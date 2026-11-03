@@ -438,6 +438,7 @@ input {
 
 .cell-refs {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   height: 100%;
   padding-left: 8px;
@@ -478,7 +479,8 @@ input {
   font-size: 13px;
   color: #fff;
   white-space: nowrap;
-  flex-shrink: 0;
+  /* In a narrow column the name gives way, so the icons and the line to the node still show */
+  min-width: 0;
 }
 .ref-pill span {
   overflow: hidden;

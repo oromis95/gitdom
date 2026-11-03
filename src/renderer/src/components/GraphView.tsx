@@ -13,13 +13,14 @@ import { buildRefLabels } from '../graph/refLabels'
 import { WIP_HASH, useApp } from '../store'
 import { openMenu, openMenuAt } from '../ui'
 import { useSettings } from '../settings'
+import { useTheme } from '../theme'
 import * as actions from '../actions'
 import GraphMinimap, { type MinimapMarker } from './GraphMinimap'
 import { ColumnHeader } from './graph/cells'
 import GraphRow from './graph/GraphRow'
 import GraphToolbar from './graph/GraphToolbar'
 import { useCommitReorder, useGraphCanvas, useGraphSearch } from './graph/hooks'
-import { columnsMenu, rowKey } from './graph/shared'
+import { columnsMenu, rowKey, shownColumns } from './graph/shared'
 
 const OVERSCAN = 6
 /** Rows before the end of the loaded commits at which the next page is requested (GRAPH-08) */
@@ -42,6 +43,7 @@ export default function GraphView({
   const scrollRequest = useApp((s) => s.scrollRequest)
   const graphFilter = useApp((s) => s.graphFilters[snapshot.path])
   const settings = useSettings()
+  const listOnly = useTheme((s) => s.layout === 'mail')
 
   const scrollerRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -180,9 +182,8 @@ export default function GraphView({
 
   const selectedRow = selected ? (rowIndex.get(selected) ?? -1) : -1
   const width = graphWidth(layout.laneCount)
-  const refsWidth = settings.graphShowRefs ? settings.graphRefsWidth : 0
 
-  const { canvasRef, viewportHeight } = useGraphCanvas(scrollerRef, {
+  const { canvasRef, viewportWidth, viewportHeight } = useGraphCanvas(scrollerRef, {
     layout,
     nodes,
     rows,
@@ -193,6 +194,13 @@ export default function GraphView({
     filtering,
     avatars: settings.graphAvatars
   })
+  // The columns fitted to the room beside the lanes, once the scroller is measured
+  const columns = shownColumns(
+    settings,
+    listOnly,
+    viewportWidth ? viewportWidth - width : undefined
+  )
+  const openColumnsMenu = (e: React.MouseEvent): void => columnsMenu(e, settings, columns, listOnly)
 
   useEffect(() => {
     const el = scrollerRef.current
@@ -250,7 +258,7 @@ export default function GraphView({
       const row = rows[selectedRow]
       if (!row) return
       const rect = e.currentTarget.getBoundingClientRect()
-      const x = rect.left + refsWidth + 24
+      const x = rect.left + columns.refs + 24
       const y = rect.top + (selectedRow + 1) * ROW_HEIGHT - e.currentTarget.scrollTop
       if (row.kind === 'commit')
         openMenuAt(x, y, actions.commitMenu(snapshot, row.commit.hash, row.commit.subject))
@@ -304,9 +312,8 @@ export default function GraphView({
         lane={layout.rows[i].lane}
         labels={row.kind === 'commit' ? labels.get(row.commit.hash) : undefined}
         className={classes.join(' ')}
-        refsWidth={refsWidth}
+        columns={columns}
         width={width}
-        settings={settings}
         commitKey={commitKey}
         bisectMark={bisectMarks.get(hash)}
         reorder={reorder}
@@ -336,18 +343,33 @@ export default function GraphView({
         setOnlyMatches={setOnlyMatches}
         goToMatch={goToMatch}
         onSearchKey={onSearchKey}
+        onColumns={openColumnsMenu}
       />
-      <div className="graph-header" onContextMenu={(e) => columnsMenu(e, settings)}>
-        {settings.graphShowRefs && (
-          <ColumnHeader title="BRANCH / TAG" width="graphRefsWidth" edge="right" />
+      <div className="graph-header" onContextMenu={openColumnsMenu}>
+        {columns.refs > 0 && (
+          <ColumnHeader
+            title="BRANCH / TAG"
+            width="graphRefsWidth"
+            shown={columns.refs}
+            edge="right"
+          />
         )}
-        <div style={{ width }}>GRAPH</div>
+        <div style={{ width, flexShrink: 0 }}>GRAPH</div>
         <div style={{ flex: 1 }}>COMMIT MESSAGE</div>
-        {settings.graphShowSha && <ColumnHeader title="SHA" width="graphShaWidth" edge="left" />}
-        {settings.graphShowAuthor && (
-          <ColumnHeader title="AUTHOR" width="graphAuthorWidth" edge="left" />
+        {columns.sha > 0 && (
+          <ColumnHeader title="SHA" width="graphShaWidth" shown={columns.sha} edge="left" />
         )}
-        {settings.graphShowDate && <ColumnHeader title="DATE" width="graphDateWidth" edge="left" />}
+        {columns.author > 0 && (
+          <ColumnHeader
+            title="AUTHOR"
+            width="graphAuthorWidth"
+            shown={columns.author}
+            edge="left"
+          />
+        )}
+        {columns.date > 0 && (
+          <ColumnHeader title="DATE" width="graphDateWidth" shown={columns.date} edge="left" />
+        )}
       </div>
       <div className="graph-body">
         <div
@@ -383,7 +405,7 @@ export default function GraphView({
             </div>
           )}
         </div>
-        <canvas ref={canvasRef} className="graph-canvas" style={{ left: refsWidth }} />
+        <canvas ref={canvasRef} className="graph-canvas" style={{ left: columns.refs }} />
         <GraphMinimap
           rows={rows.length}
           rowHeight={ROW_HEIGHT}

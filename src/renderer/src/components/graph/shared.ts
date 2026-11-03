@@ -3,6 +3,7 @@ import type { RepoSnapshot } from '../../../../shared/types'
 import type { GraphItem } from '../../graph/rows'
 import { WIP_HASH } from '../../store'
 import type { RefLabel } from '../../graph/refLabels'
+import { fitColumns, type Column, type ColumnWidths } from '../../graph/columns'
 import { openMenu, openMenuAt, type MenuItem } from '../../ui'
 import { DEFAULT_SETTINGS, updateSettings, type Settings } from '../../settings'
 import * as actions from '../../actions'
@@ -14,19 +15,41 @@ export type WidthKey = 'graphRefsWidth' | 'graphShaWidth' | 'graphAuthorWidth' |
 type ShowKey = 'graphShowRefs' | 'graphShowSha' | 'graphShowAuthor' | 'graphShowDate'
 
 /** Optional columns (GRAPH-03); the graph and the message always show. */
-const COLUMNS: { title: string; width: WidthKey; show: ShowKey }[] = [
-  { title: 'Branch / Tag', width: 'graphRefsWidth', show: 'graphShowRefs' },
-  { title: 'SHA', width: 'graphShaWidth', show: 'graphShowSha' },
-  { title: 'Author', width: 'graphAuthorWidth', show: 'graphShowAuthor' },
-  { title: 'Date', width: 'graphDateWidth', show: 'graphShowDate' }
+const COLUMNS: { key: Column; title: string; width: WidthKey; show: ShowKey }[] = [
+  { key: 'refs', title: 'Branch / Tag', width: 'graphRefsWidth', show: 'graphShowRefs' },
+  { key: 'sha', title: 'SHA', width: 'graphShaWidth', show: 'graphShowSha' },
+  { key: 'author', title: 'Author', width: 'graphAuthorWidth', show: 'graphShowAuthor' },
+  { key: 'date', title: 'Date', width: 'graphDateWidth', show: 'graphShowDate' }
 ]
 
-export function columnsMenu(e: React.MouseEvent, s: Settings): void {
+/** The columns the layout has: the list of the Mail layout, the branch labels only. */
+const columnsOf = (listOnly: boolean): typeof COLUMNS =>
+  listOnly ? COLUMNS.filter((c) => c.key === 'refs') : COLUMNS
+
+/**
+ * The columns shown and their widths in the window, where `room` beside the lanes is known: the
+ * message keeps a readable width.
+ */
+export function shownColumns(s: Settings, listOnly: boolean, room?: number): ColumnWidths {
+  const set: ColumnWidths = { refs: 0, sha: 0, author: 0, date: 0 }
+  for (const c of columnsOf(listOnly)) if (s[c.show]) set[c.key] = s[c.width]
+  return room === undefined ? set : fitColumns(set, room)
+}
+
+export function columnsMenu(
+  e: React.MouseEvent,
+  s: Settings,
+  shown: ColumnWidths,
+  listOnly: boolean
+): void {
   openMenu(e, [
-    ...COLUMNS.map((c): MenuItem => ({
-      label: `${s[c.show] ? 'Hide' : 'Show'} ${c.title} column`,
-      onClick: () => updateSettings({ [c.show]: !s[c.show] })
-    })),
+    ...columnsOf(listOnly).map((c): MenuItem => {
+      const noRoom = s[c.show] && !shown[c.key] ? ' (no room in the window)' : ''
+      return {
+        label: `${s[c.show] ? 'Hide' : 'Show'} ${c.title} column${noRoom}`,
+        onClick: () => updateSettings({ [c.show]: !s[c.show] })
+      }
+    }),
     'separator',
     {
       label: 'Reset column widths',

@@ -9,6 +9,7 @@ What's new in each GitDom version. GitDom shows this list after an update (**Hel
 - In the folder view of the changed files, deep folders no longer cut the names: a folder holding only one folder shows as one with it (`src/main/java/com/…`), the panel scrolls sideways when a name doesn't fit, and folders show their path on hover
 - Long branch, tag and pull request names, author names and emails wrap in the hover cards instead of being cut, so the sidebar, the graph labels and the pull requests show them whole; folders of branches in the sidebar show their path on hover, and their icons no longer shrink
 - Text cut by the room it has now shows whole on hover: branches in the Branches overview and the dashboard, the title, commits and checks of a pull request, the files and commits of a patch, What I did, the panes of the merge tool, the command palette, the commits in the time-lapse, recent repositories, both paths of a rename, file and line history, the reflog, the repository switcher, statistics, the rebase editor and the activity log. A patch's files keep their name in sight, cutting the start of the folder instead
+- In a narrow window the commit messages of the graph stay readable: the branch labels get narrower first, then the SHA, author and date columns narrow and hide until the window has room for them again, and the column headers stay over their cells. Wider windows look as before
 
 ## 1.16.2 — 2026-11-03
 

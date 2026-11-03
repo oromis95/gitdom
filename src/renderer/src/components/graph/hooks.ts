@@ -152,7 +152,7 @@ export function useCommitReorder(
 
 /**
  * Draws the lanes and the nodes of the rows in view, again when anything they show changes; the
- * height of the scroller is followed for it.
+ * height of the scroller is followed for it, and its width for the columns (0 until measured).
  */
 export function useGraphCanvas(
   scrollerRef: React.RefObject<HTMLDivElement | null>,
@@ -167,11 +167,16 @@ export function useGraphCanvas(
     filtering: boolean
     avatars: boolean
   }
-): { canvasRef: React.RefObject<HTMLCanvasElement | null>; viewportHeight: number } {
+): {
+  canvasRef: React.RefObject<HTMLCanvasElement | null>
+  viewportWidth: number
+  viewportHeight: number
+} {
   const { layout, nodes, rows, scrollTop, selectedRow, chain, matched, filtering, avatars } =
     options
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const theme = useTheme((s) => s.revision)
+  const [viewportWidth, setViewportWidth] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(0)
   /** Bumped when an author picture arrives, to redraw the nodes */
   const [avatarTick, setAvatarTick] = useState(0)
@@ -185,7 +190,13 @@ export function useGraphCanvas(
   useLayoutEffect(() => {
     const el = scrollerRef.current
     if (!el) return
-    const observer = new ResizeObserver(() => setViewportHeight(el.clientHeight))
+    const measure = (): void => {
+      setViewportWidth(el.clientWidth)
+      setViewportHeight(el.clientHeight)
+    }
+    // Before the first paint, so the columns don't show unfitted first
+    measure()
+    const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
   }, [scrollerRef])
@@ -229,5 +240,5 @@ export function useGraphCanvas(
     theme
   ])
 
-  return { canvasRef, viewportHeight }
+  return { canvasRef, viewportWidth, viewportHeight }
 }

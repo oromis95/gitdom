@@ -1,13 +1,14 @@
 // Pieces of the rows and the header of the graph: branch and tag labels, marked text, column headers.
-import { Fragment, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 import { Check, Cloud, Laptop, Tag } from 'lucide-react'
 import type { RepoSnapshot } from '../../../../shared/types'
 import { hoverCard } from '../../hover'
 import { markMatches } from '../../graph/search'
 import { readableOn } from '../../themes'
 import type { RefLabel } from '../../graph/refLabels'
+import { GRAPH_COLUMN_WIDTH } from '../../graph/columns'
 import { openMenu } from '../../ui'
-import { DEFAULT_SETTINGS, GRAPH_COLUMN_WIDTH, updateSettings, useSettings } from '../../settings'
+import { DEFAULT_SETTINGS, updateSettings, useSettings } from '../../settings'
 import * as actions from '../../actions'
 import { RefCard } from '../HoverCards'
 import { isReady, pullsByRef, useForgeStatus } from '../../forge'
@@ -24,21 +25,39 @@ const REF_MIME = 'application/x-gitdom-ref'
 export function ColumnHeader({
   title,
   width,
+  shown,
   edge
 }: {
   title: string
   width: WidthKey
+  /** Its width in the window, narrower than set when the message needs the room */
+  shown: number
   edge: 'left' | 'right'
 }): React.JSX.Element {
   const value = useSettings((s) => s[width])
+  // Dragged outwards, a column the window narrows keeps the wider width set before
+  const start = useRef({ value, shown })
+  const resize = (w: number | null): void =>
+    updateSettings({
+      [width]:
+        w === null
+          ? DEFAULT_SETTINGS[width]
+          : w < start.current.shown
+            ? w
+            : Math.max(w, start.current.value)
+    })
   return (
-    <div className={`graph-col col-${width}`} style={{ width: value }}>
+    <div
+      className={`graph-col col-${width}`}
+      style={{ width: shown }}
+      onMouseDownCapture={() => (start.current = { value, shown })}
+    >
       {title}
       <ResizeHandle
         edge={edge}
         min={GRAPH_COLUMN_WIDTH.min}
         max={() => GRAPH_COLUMN_WIDTH.max}
-        onResize={(w) => updateSettings({ [width]: w ?? DEFAULT_SETTINGS[width] })}
+        onResize={resize}
       />
     </div>
   )

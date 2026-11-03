@@ -8,7 +8,7 @@ import type { GraphItem } from '../../graph/rows'
 import type { RefLabel } from '../../graph/refLabels'
 import { hoverCard } from '../../hover'
 import { dateTimeFormat, describeDate } from '../../time'
-import type { Settings } from '../../settings'
+import type { ColumnWidths } from '../../graph/columns'
 import * as actions from '../../actions'
 import { AuthorCard, CommitCard, StashCard } from '../HoverCards'
 import { Marked, RefPill } from './cells'
@@ -25,9 +25,8 @@ export default function GraphRow({
   lane,
   labels,
   className,
-  refsWidth,
+  columns,
   width,
-  settings,
   commitKey,
   bisectMark,
   reorder,
@@ -41,10 +40,10 @@ export default function GraphRow({
   lane: number
   labels: RefLabel[] | undefined
   className: string
-  refsWidth: number
+  /** Widths of the optional columns, 0 for those not shown */
+  columns: ColumnWidths
   /** Width of the graph's lanes */
   width: number
-  settings: Settings
   /** The search in commits, marked in the message, SHA and author */
   commitKey: string
   bisectMark: string | undefined
@@ -111,8 +110,8 @@ export default function GraphRow({
       }}
       onContextMenu={onContextMenu}
     >
-      <div className="cell-refs" style={{ width: refsWidth + laneX(lane) }}>
-        {settings.graphShowRefs && labels && (
+      <div className="cell-refs" style={{ width: columns.refs + laneX(lane) }}>
+        {columns.refs > 0 && labels && (
           <>
             <RefPill label={labels[0]} color={color} snapshot={snapshot} onHover={onHoverRef} />
             {labels.length > 1 && (
@@ -129,7 +128,7 @@ export default function GraphRow({
             <div className="ref-connector" style={{ background: color }} />
           </>
         )}
-        {settings.graphShowRefs && row.kind === 'stash' && (
+        {columns.refs > 0 && row.kind === 'stash' && (
           <>
             <div className="ref-pill stash-pill" {...stashCard(row.stash)}>
               <Archive size={12} />
@@ -144,7 +143,7 @@ export default function GraphRow({
         <div
           className="graph-node-hover"
           style={{
-            left: refsWidth + laneX(lane) - NODE_RADIUS,
+            left: columns.refs + laneX(lane) - NODE_RADIUS,
             top: ROW_HEIGHT / 2 - NODE_RADIUS,
             width: NODE_RADIUS * 2,
             height: NODE_RADIUS * 2
@@ -171,27 +170,27 @@ export default function GraphRow({
               mark={commitKey}
             />
           </div>
-          {settings.graphShowSha && (
-            <div className="cell-sha" style={{ width: settings.graphShaWidth }}>
+          {columns.sha > 0 && (
+            <div className="cell-sha" style={{ width: columns.sha }}>
               <Marked
                 text={hash.slice(0, 7)}
                 mark={commitKey && hash.startsWith(commitKey) ? commitKey : ''}
               />
             </div>
           )}
-          {settings.graphShowAuthor && (
+          {columns.author > 0 && (
             <div
               className="cell-author"
-              style={{ width: settings.graphAuthorWidth }}
+              style={{ width: columns.author }}
               {...(row.kind === 'commit' ? authorCard(row.commit) : {})}
             >
               {row.kind === 'commit' && <Marked text={row.commit.authorName} mark={commitKey} />}
             </div>
           )}
-          {settings.graphShowDate && (
+          {columns.date > 0 && (
             <div
               className="cell-date"
-              style={{ width: settings.graphDateWidth }}
+              style={{ width: columns.date }}
               title={describeDate(row.kind === 'commit' ? row.commit.authorDate : row.stash.date)}
             >
               {dateTimeFormat.format(

@@ -5,9 +5,8 @@ import { useShortcutLabel } from '../../shortcuts'
 import { NO_GRAPH_FILTER, useApp } from '../../store'
 import { openMenu } from '../../ui'
 import { tipAfter } from '../../tips'
-import { useSettings } from '../../settings'
 import type { GraphSearch } from './hooks'
-import { branchName, columnsMenu } from './shared'
+import { branchName } from './shared'
 
 export default function GraphToolbar({
   repo,
@@ -19,7 +18,8 @@ export default function GraphToolbar({
   onlyMatches,
   setOnlyMatches,
   goToMatch,
-  onSearchKey
+  onSearchKey,
+  onColumns
 }: {
   repo: string
   graphFilter: GraphFilter | undefined
@@ -32,9 +32,10 @@ export default function GraphToolbar({
   setOnlyMatches(only: boolean): void
   goToMatch(backwards: boolean): void
   onSearchKey(e: React.KeyboardEvent<HTMLInputElement>): void
+  /** Opens the menu of the columns */
+  onColumns(e: React.MouseEvent): void
 }): React.JSX.Element {
   const setGraphFilter = useApp((s) => s.setGraphFilter)
-  const settings = useSettings()
   const searchShortcut = useShortcutLabel('search')
   const { key, mode, regex, error } = search
 
@@ -170,7 +171,7 @@ export default function GraphToolbar({
           </button>
         )
       )}
-      <button className="graph-tool" title="Columns" onClick={(e) => columnsMenu(e, settings)}>
+      <button className="graph-tool" title="Columns" onClick={onColumns}>
         <Columns3 size={15} />
       </button>
     </div>

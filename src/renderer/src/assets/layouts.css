@@ -276,19 +276,11 @@
   background: var(--accent-soft);
 }
 
-/* The list: branches and messages only, the rest is in the reading pane */
+/* The list: branches and messages only (GraphView), the rest is in the reading pane */
 .app.mail .workspace:not(.reading) > .graph {
   flex: 0 0 auto;
   width: clamp(400px, 42vw, 760px);
   border-right: 1px solid var(--border);
-}
-.app.mail .cell-sha,
-.app.mail .cell-author,
-.app.mail .cell-date,
-.app.mail .col-graphShaWidth,
-.app.mail .col-graphAuthorWidth,
-.app.mail .col-graphDateWidth {
-  display: none;
 }
 .app.mail .graph-header {
   background: var(--bg);

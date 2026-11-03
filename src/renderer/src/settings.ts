@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import type { ToolSettings } from '../../shared/api'
 import type { CommitCheckKind } from '../../shared/commitChecks'
+import { GRAPH_COLUMN_WIDTH } from './graph/columns'
 import { storage } from './storage'
 
 export interface Settings extends ToolSettings {
@@ -113,7 +114,6 @@ export const COMMIT_CHECKS: {
 export const ZOOM_STEPS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]
 export const CODE_FONT_SIZES = { min: 9, max: 24 }
 export const DIFF_CONTEXT_MAX = 100
-export const GRAPH_COLUMN_WIDTH = { min: 60, max: 600 }
 
 const SETTINGS_KEY = 'gitdom.settings'
 
